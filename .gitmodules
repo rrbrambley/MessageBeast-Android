@@ -1,0 +1,3 @@
+[submodule "ADNLib"]
+	path = ADNLib
+	url = git@github.com:alwaysallthetime/ADNLib.git
