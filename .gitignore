@@ -26,3 +26,7 @@ build/
 .idea/workspace.xml
 .idea/tasks.xml
 .gradle/
+
+# For now, let's just remove make this independent of any IDE
+build.gradle
+ADNLibUtils.iml
