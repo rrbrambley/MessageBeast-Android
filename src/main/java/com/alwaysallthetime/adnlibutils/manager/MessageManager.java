@@ -167,7 +167,7 @@ public class MessageManager {
         retrieveMessages(channelId, null, getMinMaxPair(channelId).minId, listener);
     }
 
-    private synchronized  void retrieveMessages(final String channelId, final String sinceId, final String beforeId, final MessageManagerResponseHandler listener) {
+    private synchronized  void retrieveMessages(final String channelId, final String sinceId, final String beforeId, final MessageManagerResponseHandler handler) {
         QueryParameters params = (QueryParameters) mParameters.get(channelId).clone();
         params.put("since_id", sinceId);
         params.put("before_id", beforeId);
@@ -206,8 +206,8 @@ public class MessageManager {
                     }
                 }
 
-                if(listener != null) {
-                    listener.onSuccess(responseData, appended);
+                if(handler != null) {
+                    handler.onSuccess(responseData, appended);
                 }
             }
 
@@ -215,8 +215,8 @@ public class MessageManager {
             public void onError(Exception error) {
                 Log.d(TAG, error.getMessage(), error);
 
-                if(listener != null) {
-                    listener.onError(error);
+                if(handler != null) {
+                    handler.onError(error);
                 }
             }
         });
