@@ -8,6 +8,7 @@ import com.alwaysallthetime.adnlib.QueryParameters;
 import com.alwaysallthetime.adnlib.data.Message;
 import com.alwaysallthetime.adnlib.data.MessageList;
 import com.alwaysallthetime.adnlib.response.MessageListResponseHandler;
+import com.alwaysallthetime.adnlib.response.MessageResponseHandler;
 import com.alwaysallthetime.adnlibutils.db.ADNDatabase;
 import com.alwaysallthetime.adnlibutils.db.OrderedMessageBatch;
 
@@ -39,6 +40,11 @@ public class MessageManager {
      */
     public interface MessageManagerResponseHandler {
         public void onSuccess(final MessageList responseData, final boolean appended);
+        public void onError(Exception exception);
+    }
+
+    public interface MessageRefreshResponseHandler {
+        public void onSuccess(final Message responseData);
         public void onError(Exception exception);
     }
 
@@ -163,8 +169,31 @@ public class MessageManager {
         retrieveMessages(channelId, getMinMaxPair(channelId).maxId, null, listener);
     }
 
-    public synchronized  void retrieveMoreMessages(String channelId, MessageManagerResponseHandler listener) {
+    public synchronized void retrieveMoreMessages(String channelId, MessageManagerResponseHandler listener) {
         retrieveMessages(channelId, null, getMinMaxPair(channelId).minId, listener);
+    }
+
+    public synchronized void refreshMessage(final Message message, final MessageRefreshResponseHandler handler) {
+        final String channelId = message.getChannelId();
+        mClient.retrieveMessage(channelId, message.getId(), mParameters.get(channelId), new MessageResponseHandler() {
+            @Override
+            public void onSuccess(Message responseData) {
+                LinkedHashMap<String, Message> channelMessages = mMessages.get(channelId);
+                channelMessages.put(responseData.getId(), responseData);
+                if(mIsDatabaseInsertionEnabled) {
+                    ADNDatabase database = ADNDatabase.getInstance(mContext);
+                    database.insertOrReplaceMessage(responseData, getAdjustedDate(responseData));
+                }
+                Log.d(TAG, "successfully refreshedMessage");
+                handler.onSuccess(responseData);
+            }
+
+            @Override
+            public void onError(Exception error) {
+                super.onError(error);
+                handler.onError(error);
+            }
+        });
     }
 
     private synchronized  void retrieveMessages(final String channelId, final String sinceId, final String beforeId, final MessageManagerResponseHandler handler) {
