@@ -44,12 +44,6 @@ public class MessageManager {
     /*
      * private data structures
      */
-
-    private class MinMaxPair {
-        public String minId;
-        public String maxId;
-
-        public MinMaxPair() {}
     }
 
     private AppDotNetClient mClient;
