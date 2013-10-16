@@ -266,11 +266,20 @@ public class MessageManager {
                 }
 
                 ArrayList<MessagePlus> newMessages = new ArrayList<MessagePlus>(responseData.size());
-                for(Message m : responseData) {
-                    MessagePlus mPlus = new MessagePlus(m);
-                    if(appended) {
+
+                if(appended) {
+                    for(Message m : responseData) {
+                        MessagePlus mPlus = new MessagePlus(m);
                         channelMessages.put(m.getId(), mPlus);
-                    } else {
+
+                        newMessages.add(mPlus);
+                        adjustDateAndInsert(mPlus, database);
+                    }
+                } else {
+                    for(int i = responseData.size() - 1; i >= 0; i--) {
+                        Message m = responseData.get(i);
+                        MessagePlus mPlus = new MessagePlus(m);
+
                         //this probably has terrible performance, but in practice, responseData will probably
                         //only have one Message in the prepend (!appended) case – when the user just posted
                         //a new message.
@@ -279,13 +288,9 @@ public class MessageManager {
                         newChannelMessages.putAll(channelMessages);
                         channelMessages = newChannelMessages;
                         mMessages.put(channelId, channelMessages);
-                    }
-                    newMessages.add(mPlus);
 
-                    Date adjustedDate = getAdjustedDate(m);
-                    mPlus.setDisplayDate(adjustedDate);
-                    if(mIsDatabaseInsertionEnabled) {
-                        database.insertOrReplaceMessage(mPlus);
+                        newMessages.add(mPlus);
+                        adjustDateAndInsert(mPlus, database);
                     }
                 }
 
@@ -303,6 +308,14 @@ public class MessageManager {
                 }
             }
         });
+    }
+
+    private void adjustDateAndInsert(MessagePlus mPlus, ADNDatabase database) {
+        Date adjustedDate = getAdjustedDate(mPlus.getMessage());
+        mPlus.setDisplayDate(adjustedDate);
+        if(mIsDatabaseInsertionEnabled) {
+            database.insertOrReplaceMessage(mPlus);
+        }
     }
 
     private Date getAdjustedDate(Message message) {
