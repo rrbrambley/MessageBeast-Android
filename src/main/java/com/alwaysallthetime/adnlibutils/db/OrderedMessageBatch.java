@@ -1,20 +1,20 @@
 package com.alwaysallthetime.adnlibutils.db;
 
-import com.alwaysallthetime.adnlib.data.Message;
+import com.alwaysallthetime.adnlibutils.MessagePlus;
 import com.alwaysallthetime.adnlibutils.manager.MinMaxPair;
 
 import java.util.LinkedHashMap;
 
 public class OrderedMessageBatch {
-    private LinkedHashMap<String, Message> mMessages;
+    private LinkedHashMap<String, MessagePlus> mMessages;
     private MinMaxPair mMinMaxPair;
 
-    public OrderedMessageBatch(LinkedHashMap<String, Message> messages, MinMaxPair minMaxPair) {
+    public OrderedMessageBatch(LinkedHashMap<String, MessagePlus> messages, MinMaxPair minMaxPair) {
         mMessages = messages;
         mMinMaxPair = minMaxPair;
     }
 
-    public LinkedHashMap<String, Message> getMessages() {
+    public LinkedHashMap<String, MessagePlus> getMessages() {
         return mMessages;
     }
 

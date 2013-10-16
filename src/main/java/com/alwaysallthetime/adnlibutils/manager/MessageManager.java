@@ -9,9 +9,11 @@ import com.alwaysallthetime.adnlib.data.Message;
 import com.alwaysallthetime.adnlib.data.MessageList;
 import com.alwaysallthetime.adnlib.response.MessageListResponseHandler;
 import com.alwaysallthetime.adnlib.response.MessageResponseHandler;
+import com.alwaysallthetime.adnlibutils.MessagePlus;
 import com.alwaysallthetime.adnlibutils.db.ADNDatabase;
 import com.alwaysallthetime.adnlibutils.db.OrderedMessageBatch;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
@@ -39,12 +41,12 @@ public class MessageManager {
      * public data structures
      */
     public interface MessageManagerResponseHandler {
-        public void onSuccess(final MessageList responseData, final boolean appended);
+        public void onSuccess(final List<MessagePlus> responseData, final boolean appended);
         public void onError(Exception exception);
     }
 
     public interface MessageRefreshResponseHandler {
-        public void onSuccess(final Message responseData);
+        public void onSuccess(final MessagePlus responseData);
         public void onError(Exception exception);
     }
 
@@ -62,7 +64,7 @@ public class MessageManager {
     private MessageDisplayDateAdapter mDateAdapter;
     private boolean mIsDatabaseInsertionEnabled;
 
-    private HashMap<String, LinkedHashMap<String, Message>> mMessages;
+    private HashMap<String, LinkedHashMap<String, MessagePlus>> mMessages;
     private HashMap<String, QueryParameters> mParameters;
     private HashMap<String, MinMaxPair> mMinMaxPairs;
 
@@ -70,7 +72,7 @@ public class MessageManager {
         mContext = context;
         mClient = client;
 
-        mMessages = new HashMap<String, LinkedHashMap<String, Message>>();
+        mMessages = new HashMap<String, LinkedHashMap<String, MessagePlus>>();
         mMinMaxPairs = new HashMap<String, MinMaxPair>();
         mParameters = new HashMap<String, QueryParameters>();
     }
@@ -85,23 +87,23 @@ public class MessageManager {
      *
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#setDatabaseInsertionEnabled(boolean)
      */
-    public synchronized LinkedHashMap<String, Message> loadPersistedMessages(String channelId, int limit) {
+    public synchronized LinkedHashMap<String, MessagePlus> loadPersistedMessages(String channelId, int limit) {
         ADNDatabase database = ADNDatabase.getInstance(mContext);
 
         Date beforeDate = null;
         MinMaxPair minMaxPair = getMinMaxPair(channelId);
         if(minMaxPair.minId != null) {
-            Message message = mMessages.get(channelId).get(minMaxPair.minId);
-            beforeDate = getAdjustedDate(message);
+            MessagePlus message = mMessages.get(channelId).get(minMaxPair.minId);
+            beforeDate = message.getDisplayDate();
         }
         OrderedMessageBatch orderedMessageBatch = database.getMessages(channelId, beforeDate, limit);
-        LinkedHashMap<String, Message> messages = orderedMessageBatch.getMessages();
+        LinkedHashMap<String, MessagePlus> messages = orderedMessageBatch.getMessages();
         MinMaxPair dbMinMaxPair = orderedMessageBatch.getMinMaxPair();
         minMaxPair = minMaxPair.combine(dbMinMaxPair);
 
         Log.d(TAG, "loaded " + messages.size() + " from database");
 
-        LinkedHashMap<String, Message> channelMessages = mMessages.get(channelId);
+        LinkedHashMap<String, MessagePlus> channelMessages = mMessages.get(channelId);
         if(channelMessages != null) {
             channelMessages.putAll(messages);
         } else {
@@ -134,16 +136,16 @@ public class MessageManager {
         mDateAdapter = adapter;
     }
 
-    public Map<String, Message> getMessageMap(String channelId) {
+    public Map<String, MessagePlus> getMessageMap(String channelId) {
         return mMessages.get(channelId);
     }
 
-    public List<Message> getMessageList(String channelId) {
-        Map<String, Message> messageMap = mMessages.get(channelId);
+    public List<MessagePlus> getMessageList(String channelId) {
+        Map<String, MessagePlus> messageMap = mMessages.get(channelId);
         if(messageMap == null) {
             return null;
         }
-        Message[] messages = messageMap.values().toArray(new Message[0]);
+        MessagePlus[] messages = messageMap.values().toArray(new MessagePlus[0]);
         return Arrays.asList(messages);
     }
 
@@ -178,14 +180,17 @@ public class MessageManager {
         mClient.retrieveMessage(channelId, message.getId(), mParameters.get(channelId), new MessageResponseHandler() {
             @Override
             public void onSuccess(Message responseData) {
-                LinkedHashMap<String, Message> channelMessages = mMessages.get(channelId);
-                channelMessages.put(responseData.getId(), responseData);
+                LinkedHashMap<String, MessagePlus> channelMessages = mMessages.get(channelId);
+                MessagePlus mPlus = new MessagePlus(responseData);
+                mPlus.setDisplayDate(getAdjustedDate(responseData));
+                channelMessages.put(responseData.getId(), mPlus);
+
                 if(mIsDatabaseInsertionEnabled) {
                     ADNDatabase database = ADNDatabase.getInstance(mContext);
-                    database.insertOrReplaceMessage(responseData, getAdjustedDate(responseData));
+                    database.insertOrReplaceMessage(mPlus);
                 }
                 Log.d(TAG, "successfully refreshedMessage");
-                handler.onSuccess(responseData);
+                handler.onSuccess(mPlus);
             }
 
             @Override
@@ -223,20 +228,27 @@ public class MessageManager {
                     minMaxPair.maxId = getMaxId();
                 }
 
-                LinkedHashMap<String, Message> channelMessages = mMessages.get(channelId);
+                LinkedHashMap<String, MessagePlus> channelMessages = mMessages.get(channelId);
                 if(channelMessages == null) {
-                    channelMessages = new LinkedHashMap<String, Message>(responseData.size());
+                    channelMessages = new LinkedHashMap<String, MessagePlus>(responseData.size());
                     mMessages.put(channelId, channelMessages);
                 }
+
+                ArrayList<MessagePlus> newMessages = new ArrayList<MessagePlus>(responseData.size());
                 for(Message m : responseData) {
-                    channelMessages.put(m.getId(), m);
+                    MessagePlus mPlus = new MessagePlus(m);
+                    channelMessages.put(m.getId(), mPlus);
+                    newMessages.add(mPlus);
+
+                    Date adjustedDate = getAdjustedDate(m);
+                    mPlus.setDisplayDate(adjustedDate);
                     if(mIsDatabaseInsertionEnabled) {
-                        database.insertOrReplaceMessage(m, getAdjustedDate(m));
+                        database.insertOrReplaceMessage(mPlus);
                     }
                 }
 
                 if(handler != null) {
-                    handler.onSuccess(responseData, appended);
+                    handler.onSuccess(newMessages, appended);
                 }
             }
 

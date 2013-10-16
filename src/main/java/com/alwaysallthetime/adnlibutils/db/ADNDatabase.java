@@ -8,6 +8,7 @@ import android.util.Log;
 
 import com.alwaysallthetime.adnlib.data.Message;
 import com.alwaysallthetime.adnlib.gson.AppDotNetGson;
+import com.alwaysallthetime.adnlibutils.MessagePlus;
 import com.alwaysallthetime.adnlibutils.manager.MinMaxPair;
 import com.google.gson.Gson;
 
@@ -54,13 +55,15 @@ public class ADNDatabase {
         mGson = AppDotNetGson.getPersistenceInstance();
     }
 
-    public void insertOrReplaceMessage(Message message, Date displayDate) {
+    public void insertOrReplaceMessage(MessagePlus messagePlus) {
         if(mInsertOrReplaceMessage == null) {
             mInsertOrReplaceMessage = mDatabase.compileStatement(INSERT_OR_REPLACE_MESSAGE);
         }
         mDatabase.beginTransaction();
 
         try {
+            Message message = messagePlus.getMessage();
+            Date displayDate = messagePlus.getDisplayDate();
             mInsertOrReplaceMessage.bindString(1, message.getId());
             mInsertOrReplaceMessage.bindString(2, message.getChannelId());
             mInsertOrReplaceMessage.bindLong(3, displayDate.getTime());
@@ -81,7 +84,7 @@ public class ADNDatabase {
     }
 
     public OrderedMessageBatch getMessages(String channelId, Date beforeDate, int limit) {
-        LinkedHashMap<String, Message> messages = new LinkedHashMap<String, Message>();
+        LinkedHashMap<String, MessagePlus> messages = new LinkedHashMap<String, MessagePlus>();
         String maxId = null;
         String minId = null;
         Cursor cursor = null;
@@ -103,9 +106,13 @@ public class ADNDatabase {
             if(cursor.moveToNext()) {
                 do {
                     String messageId = cursor.getString(0);
+                    long date = cursor.getLong(2);
                     String messageJson = cursor.getString(3);
                     message = mGson.fromJson(messageJson, Message.class);
-                    messages.put(messageId, message);
+
+                    MessagePlus messagePlus = new MessagePlus(message);
+                    messagePlus.setDisplayDate(new Date(date));
+                    messages.put(messageId, messagePlus);
 
                     if(maxId == null) {
                         maxId = messageId;
