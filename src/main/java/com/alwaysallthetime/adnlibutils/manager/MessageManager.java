@@ -26,18 +26,6 @@ public class MessageManager {
     private static final String TAG = "ADNLibUtils_MessageManager";
 
     /*
-     * Singleton stuff
-     */
-    private static MessageManager sInstance;
-
-    public static MessageManager getInstance(Context context, AppDotNetClient client) {
-        if(sInstance == null) {
-            sInstance = new MessageManager(context, client);
-        }
-        return sInstance;
-    }
-
-    /*
      * public data structures
      */
     public interface MessageManagerResponseHandler {
