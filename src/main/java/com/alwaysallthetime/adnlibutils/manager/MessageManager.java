@@ -168,6 +168,23 @@ public class MessageManager {
         retrieveMessages(channelId, null, getMinMaxPair(channelId).minId, listener);
     }
 
+    public synchronized void createMessage(final String channelId, final Message message, final MessageManagerResponseHandler handler) {
+        mClient.createMessage(channelId, message, new MessageResponseHandler() {
+            @Override
+            public void onSuccess(Message responseData) {
+                //we finish this off by retrieving the newest messages in case we were missing any
+                //that came before the one we just created.
+                retrieveNewestMessages(channelId, handler);
+            }
+
+            @Override
+            public void onError(Exception error) {
+                super.onError(error);
+                handler.onError(error);
+            }
+        });
+    }
+
     public synchronized void deleteMessage(final Message message, final MessageDeletionResponseHandler handler) {
         mClient.deleteMessage(message, new MessageResponseHandler() {
             @Override
