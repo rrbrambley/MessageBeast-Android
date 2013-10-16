@@ -50,6 +50,11 @@ public class MessageManager {
         public void onError(Exception exception);
     }
 
+    public interface MessageDeletionResponseHandler {
+        public void onSuccess();
+        public void onError(Exception exception);
+    }
+
     /**
      * A MessageDisplayDateAdapter can be used to return a date for which a Message should be
      * associated. This is most typically used when Message.getCreatedAt() should not be used
@@ -173,6 +178,27 @@ public class MessageManager {
 
     public synchronized void retrieveMoreMessages(String channelId, MessageManagerResponseHandler listener) {
         retrieveMessages(channelId, null, getMinMaxPair(channelId).minId, listener);
+    }
+
+    public synchronized void deleteMessage(final Message message, final MessageDeletionResponseHandler handler) {
+        mClient.deleteMessage(message, new MessageResponseHandler() {
+            @Override
+            public void onSuccess(Message responseData) {
+                LinkedHashMap<String, MessagePlus> channelMessages = mMessages.get(responseData.getChannelId());
+                channelMessages.remove(responseData.getId());
+
+                ADNDatabase database = ADNDatabase.getInstance(mContext);
+                database.deleteMessage(responseData);
+
+                handler.onSuccess();
+            }
+
+            @Override
+            public void onError(Exception error) {
+                super.onError(error);
+                handler.onError(error);
+            }
+        });
     }
 
     public synchronized void refreshMessage(final Message message, final MessageRefreshResponseHandler handler) {

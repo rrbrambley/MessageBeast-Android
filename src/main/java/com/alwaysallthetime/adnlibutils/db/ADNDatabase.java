@@ -132,4 +132,18 @@ public class ADNDatabase {
         }
         return new OrderedMessageBatch(messages, new MinMaxPair(minId, maxId));
     }
+
+    public void deleteMessage(Message message) {
+        mDatabase.beginTransaction();
+
+        try {
+            String where = COL_MESSAGE_ID + " = '" + message.getId() + "'";
+            mDatabase.delete(TABLE_MESSAGES, where, null);
+            mDatabase.setTransactionSuccessful();
+        } catch(Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+        } finally {
+            mDatabase.endTransaction();
+        }
+    }
 }
