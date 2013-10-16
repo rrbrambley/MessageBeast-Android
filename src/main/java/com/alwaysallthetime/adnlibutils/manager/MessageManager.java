@@ -237,7 +237,18 @@ public class MessageManager {
                 ArrayList<MessagePlus> newMessages = new ArrayList<MessagePlus>(responseData.size());
                 for(Message m : responseData) {
                     MessagePlus mPlus = new MessagePlus(m);
-                    channelMessages.put(m.getId(), mPlus);
+                    if(appended) {
+                        channelMessages.put(m.getId(), mPlus);
+                    } else {
+                        //this probably has terrible performance, but in practice, responseData will probably
+                        //only have one Message in the prepend (!appended) case – when the user just posted
+                        //a new message.
+                        LinkedHashMap<String, MessagePlus> newChannelMessages = new LinkedHashMap<String, MessagePlus>(channelMessages.size() + 1);
+                        newChannelMessages.put(m.getId(), mPlus);
+                        newChannelMessages.putAll(channelMessages);
+                        channelMessages = newChannelMessages;
+                        mMessages.put(channelId, channelMessages);
+                    }
                     newMessages.add(mPlus);
 
                     Date adjustedDate = getAdjustedDate(m);
