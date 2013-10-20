@@ -1,0 +1,95 @@
+package com.alwaysallthetime.adnlibutils;
+
+import android.content.SharedPreferences;
+import android.preference.PreferenceManager;
+
+import com.alwaysallthetime.adnlib.data.Configuration;
+import com.alwaysallthetime.adnlib.data.Token;
+import com.alwaysallthetime.adnlib.data.User;
+import com.alwaysallthetime.adnlib.gson.AppDotNetGson;
+import com.google.gson.Gson;
+
+import java.util.Date;
+
+public class ADNSharedPreferences {
+    private static final String ACCESS_TOKEN = "accessToken";
+    private static final String TOKEN_OBJECT = "tokenObject";
+    private static final String CONFIGURATION_OBJECT = "configurationObject";
+    private static final String CONFIGURATION_DATE = "configurationDate";
+    private static final String USER_OBJECT = "user";
+
+    private static SharedPreferences sPrefs;
+    private static Gson gson;
+
+    static {
+        sPrefs = PreferenceManager.getDefaultSharedPreferences(ADNApplication.getContext());
+        gson = AppDotNetGson.getPersistenceInstance();
+    }
+
+    public static boolean isLoggedIn() {
+        return getAccessToken() != null;
+    }
+
+    public static String getAccessToken() {
+        return sPrefs.getString(ACCESS_TOKEN, null);
+    }
+
+    public static Token getToken() {
+        final String tokenJson = sPrefs.getString(TOKEN_OBJECT, null);
+        return gson.fromJson(tokenJson, Token.class);
+    }
+
+    public static void saveCredentials(String accessToken, Token token) {
+        final SharedPreferences.Editor editor = sPrefs.edit();
+        final String tokenJson = gson.toJson(token);
+        editor.putString(TOKEN_OBJECT, tokenJson);
+        editor.putString(ACCESS_TOKEN, accessToken);
+        editor.commit();
+    }
+
+    public static void clearCredentials() {
+        final SharedPreferences.Editor editor = sPrefs.edit();
+        editor.remove(TOKEN_OBJECT);
+        editor.remove(ACCESS_TOKEN);
+        editor.commit();
+    }
+
+    public static Configuration getConfiguration() {
+        final String configurationJson = sPrefs.getString(CONFIGURATION_OBJECT, null);
+        if(configurationJson != null) {
+            return gson.fromJson(configurationJson, Configuration.class);
+        }
+        return null;
+    }
+
+    public static Date getConfigurationSaveDate() {
+        final long configTime = sPrefs.getLong(CONFIGURATION_DATE, 0);
+        if(configTime != 0) {
+            return new Date(configTime);
+        }
+        return null;
+    }
+
+    public static void saveConfiguration(Configuration configuration) {
+        final SharedPreferences.Editor editor = sPrefs.edit();
+        final String configJson = gson.toJson(configuration);
+        editor.putString(CONFIGURATION_OBJECT, configJson);
+        editor.putLong(CONFIGURATION_DATE, new Date().getTime());
+        editor.commit();
+    }
+
+    public static User getUser(String userId) {
+        final String json = sPrefs.getString(USER_OBJECT + "_" + userId, null);
+        if(json != null) {
+            return gson.fromJson(json, User.class);
+        }
+        return null;
+    }
+
+    public static void saveUser(User user) {
+        final SharedPreferences.Editor editor = sPrefs.edit();
+        final String json = gson.toJson(user);
+        editor.putString(USER_OBJECT + "_" + user.getId(), json);
+        editor.commit();
+    }
+}
