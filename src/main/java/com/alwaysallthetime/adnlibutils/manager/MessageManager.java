@@ -155,6 +155,15 @@ public class MessageManager {
         return minMaxPair;
     }
 
+    public synchronized void clearMessages(String channelId) {
+        mMinMaxPairs.put(channelId, null);
+        LinkedHashMap<String, MessagePlus> channelMessages = mMessages.get(channelId);
+        if(channelMessages != null) {
+            channelMessages.clear();
+            ADNDatabase.getInstance(mContext).deleteMessages(channelId);
+        }
+    }
+
     public synchronized void retrieveMessages(String channelId, MessageManagerResponseHandler listener) {
         MinMaxPair minMaxPair = getMinMaxPair(channelId);
         retrieveMessages(channelId, minMaxPair.maxId, minMaxPair.minId, listener);
