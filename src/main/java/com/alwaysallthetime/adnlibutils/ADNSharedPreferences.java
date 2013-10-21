@@ -109,4 +109,11 @@ public class ADNSharedPreferences {
         editor.putString(CHANNEL_OBJECT + "_" + channel.getType(), json);
         editor.commit();
     }
+
+    public static void deletePrivateChannel(Channel channel) {
+        final SharedPreferences.Editor editor = sPrefs.edit();
+        final String json = gson.toJson(channel);
+        editor.remove(CHANNEL_OBJECT + "_" + channel.getType());
+        editor.commit();
+    }
 }

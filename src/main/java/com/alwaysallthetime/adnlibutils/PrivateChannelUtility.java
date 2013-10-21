@@ -105,4 +105,21 @@ public class PrivateChannelUtility {
             }
         });
     }
+
+    public static void unsubscribe(final AppDotNetClient client, final Channel channel, final PrivateChannelHandler handler) {
+        client.unsubscribeChannel(channel, new ChannelResponseHandler() {
+            @Override
+            public void onSuccess(Channel responseData) {
+                sChannels.remove(channel.getType());
+                ADNSharedPreferences.deletePrivateChannel(channel);
+                handler.onResponse(responseData);
+            }
+
+            @Override
+            public void onError(Exception error) {
+                super.onError(error);
+                handler.onError(error);
+            }
+        });
+    }
 }
