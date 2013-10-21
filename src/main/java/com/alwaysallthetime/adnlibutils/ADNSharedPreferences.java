@@ -3,6 +3,7 @@ package com.alwaysallthetime.adnlibutils;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
 
+import com.alwaysallthetime.adnlib.data.Channel;
 import com.alwaysallthetime.adnlib.data.Configuration;
 import com.alwaysallthetime.adnlib.data.Token;
 import com.alwaysallthetime.adnlib.data.User;
@@ -17,6 +18,7 @@ public class ADNSharedPreferences {
     private static final String CONFIGURATION_OBJECT = "configurationObject";
     private static final String CONFIGURATION_DATE = "configurationDate";
     private static final String USER_OBJECT = "user";
+    private static final String CHANNEL_OBJECT = "channel";
 
     private static SharedPreferences sPrefs;
     private static Gson gson;
@@ -90,6 +92,21 @@ public class ADNSharedPreferences {
         final SharedPreferences.Editor editor = sPrefs.edit();
         final String json = gson.toJson(user);
         editor.putString(USER_OBJECT + "_" + user.getId(), json);
+        editor.commit();
+    }
+
+    public static Channel getPrivateChannel(String channelType) {
+        final String json = sPrefs.getString(CHANNEL_OBJECT + "_" + channelType, null);
+        if(json != null) {
+            return gson.fromJson(json, Channel.class);
+        }
+        return null;
+    }
+
+    public static void savePrivateChannel(Channel channel) {
+        final SharedPreferences.Editor editor = sPrefs.edit();
+        final String json = gson.toJson(channel);
+        editor.putString(CHANNEL_OBJECT + "_" + channel.getType(), json);
         editor.commit();
     }
 }

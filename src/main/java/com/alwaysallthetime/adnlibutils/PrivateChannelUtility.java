@@ -25,7 +25,12 @@ public class PrivateChannelUtility {
     }
 
     public static Channel getChannel(String channelType) {
-        return sChannels.get(channelType);
+        Channel c = sChannels.get(channelType);
+        if(c == null) {
+            c = ADNSharedPreferences.getPrivateChannel(channelType);
+            sChannels.put(channelType, c);
+        }
+        return c;
     }
 
     public static void retrieveChannel(AppDotNetClient client, final String channelType, final PrivateChannelHandler handler) {
@@ -52,6 +57,9 @@ public class PrivateChannelUtility {
                     }
                 }
 
+                if(theChannel != null) {
+                    ADNSharedPreferences.savePrivateChannel(theChannel);
+                }
                 sChannels.put(channelType, theChannel);
                 handler.onResponse(theChannel);
             }
@@ -84,6 +92,7 @@ public class PrivateChannelUtility {
                 client.subscribeChannel(responseData, new ChannelResponseHandler() {
                     @Override
                     public void onSuccess(Channel responseData) {
+                        ADNSharedPreferences.savePrivateChannel(responseData);
                         sChannels.put(channelType, responseData);
                         handler.onResponse(responseData);
                     }
