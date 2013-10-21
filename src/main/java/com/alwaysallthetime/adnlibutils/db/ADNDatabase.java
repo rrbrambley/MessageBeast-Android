@@ -146,4 +146,18 @@ public class ADNDatabase {
             mDatabase.endTransaction();
         }
     }
+
+    public void deleteMessages(String channelId) {
+        mDatabase.beginTransaction();
+
+        try {
+            String where = COL_CHANNEL_ID + " = '" + channelId + "'";
+            mDatabase.delete(TABLE_MESSAGES, where, null);
+            mDatabase.setTransactionSuccessful();
+        } catch(Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+        } finally {
+            mDatabase.endTransaction();
+        }
+    }
 }
