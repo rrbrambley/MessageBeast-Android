@@ -24,6 +24,10 @@ public class PrivateChannelUtility {
         public void onError(Exception error);
     }
 
+    public static void clearChannels() {
+        sChannels.clear();
+    }
+
     public static Channel getChannel(String channelType) {
         Channel c = sChannels.get(channelType);
         if(c == null) {
