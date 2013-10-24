@@ -15,6 +15,7 @@ import com.alwaysallthetime.adnlibutils.db.OrderedMessageBatch;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -301,6 +302,7 @@ public class MessageManager {
                         newMessages.add(mPlus);
                         adjustDateAndInsert(mPlus, database);
                     }
+                    Collections.reverse(newMessages);
                 }
 
                 if(handler != null) {
