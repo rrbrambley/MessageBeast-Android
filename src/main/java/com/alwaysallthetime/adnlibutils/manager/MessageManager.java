@@ -15,7 +15,6 @@ import com.alwaysallthetime.adnlibutils.db.OrderedMessageBatch;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -275,38 +274,26 @@ public class MessageManager {
                     mMessages.put(channelId, channelMessages);
                 }
 
-                ArrayList<MessagePlus> newMessages = new ArrayList<MessagePlus>(responseData.size());
+                ArrayList<MessagePlus> newestMessages = new ArrayList<MessagePlus>(responseData.size());
+                LinkedHashMap<String, MessagePlus> newFullChannelMessagesMap = new LinkedHashMap<String, MessagePlus>(channelMessages.size() + responseData.size());
 
                 if(appended) {
-                    for(Message m : responseData) {
-                        MessagePlus mPlus = new MessagePlus(m);
-                        channelMessages.put(m.getId(), mPlus);
-
-                        newMessages.add(mPlus);
-                        adjustDateAndInsert(mPlus, database);
-                    }
-                } else {
-                    for(int i = responseData.size() - 1; i >= 0; i--) {
-                        Message m = responseData.get(i);
-                        MessagePlus mPlus = new MessagePlus(m);
-
-                        //this probably has terrible performance, but in practice, responseData will probably
-                        //only have one Message in the prepend (!appended) case – when the user just posted
-                        //a new message.
-                        LinkedHashMap<String, MessagePlus> newChannelMessages = new LinkedHashMap<String, MessagePlus>(channelMessages.size() + 1);
-                        newChannelMessages.put(m.getId(), mPlus);
-                        newChannelMessages.putAll(channelMessages);
-                        channelMessages = newChannelMessages;
-                        mMessages.put(channelId, channelMessages);
-
-                        newMessages.add(mPlus);
-                        adjustDateAndInsert(mPlus, database);
-                    }
-                    Collections.reverse(newMessages);
+                    newFullChannelMessagesMap.putAll(channelMessages);
                 }
+                for(Message m : responseData) {
+                    MessagePlus mPlus = new MessagePlus(m);
+                    newestMessages.add(mPlus);
+                    adjustDateAndInsert(mPlus, database);
+
+                    newFullChannelMessagesMap.put(m.getId(), mPlus);
+                }
+                if(!appended) {
+                    newFullChannelMessagesMap.putAll(channelMessages);
+                }
+                mMessages.put(channelId, newFullChannelMessagesMap);
 
                 if(handler != null) {
-                    handler.onSuccess(newMessages, appended);
+                    handler.onSuccess(newestMessages, appended);
                 }
             }
 
