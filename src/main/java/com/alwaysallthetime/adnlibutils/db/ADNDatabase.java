@@ -6,13 +6,17 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteStatement;
 import android.util.Log;
 
+import com.alwaysallthetime.adnlib.data.Entities;
 import com.alwaysallthetime.adnlib.data.Message;
 import com.alwaysallthetime.adnlib.gson.AppDotNetGson;
 import com.alwaysallthetime.adnlibutils.MessagePlus;
 import com.alwaysallthetime.adnlibutils.manager.MinMaxPair;
 import com.google.gson.Gson;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 
 public class ADNDatabase {
@@ -27,6 +31,11 @@ public class ADNDatabase {
     public static final String COL_MESSAGE_DATE = "message_date";
     public static final String COL_MESSAGE_JSON = "message_json";
 
+    public static final String TABLE_HASHTAGS = "hashtags";
+    public static final String COL_HASHTAG_NAME = "hashtag_name";
+    public static final String COL_HASHTAG_MESSAGE_ID = "hashtag_message_id";
+    public static final String COL_HASHTAG_CHANNEL_ID = "hashtag_channel_id";
+
     private static final String INSERT_OR_REPLACE_MESSAGE = "INSERT OR REPLACE INTO " + TABLE_MESSAGES + " " +
             "(" +
             COL_MESSAGE_ID + ", " +
@@ -36,10 +45,19 @@ public class ADNDatabase {
             ") " +
             "VALUES(?, ?, ?, ?)";
 
+    private static final String INSERT_OR_REPLACE_HASHTAG = "INSERT OR REPLACE INTO " + TABLE_HASHTAGS + " " +
+            "(" +
+            COL_HASHTAG_NAME + ", " +
+            COL_HASHTAG_MESSAGE_ID + ", " +
+            COL_HASHTAG_CHANNEL_ID +
+            ") " +
+            "VALUES(?, ?, ?)";
+
     private static ADNDatabase sInstance;
 
     private SQLiteDatabase mDatabase;
     private SQLiteStatement mInsertOrReplaceMessage;
+    private SQLiteStatement mInsertOrReplaceHashtag;
     private Gson mGson;
 
     public static synchronized ADNDatabase getInstance(Context context) {
@@ -77,6 +95,59 @@ public class ADNDatabase {
             mDatabase.endTransaction();
             mInsertOrReplaceMessage.clearBindings();
         }
+    }
+
+    public void insertOrReplaceHashtags(Message message) {
+        if(mInsertOrReplaceHashtag == null) {
+            mInsertOrReplaceHashtag = mDatabase.compileStatement(INSERT_OR_REPLACE_HASHTAG);
+        }
+        ArrayList<Entities.Hashtag> hashtags = message.getEntities().getHashtags();
+        mDatabase.beginTransaction();
+        try {
+            for(Entities.Hashtag h : hashtags) {
+                mInsertOrReplaceHashtag.bindString(1, h.getName());
+                mInsertOrReplaceHashtag.bindString(2, message.getId());
+                mInsertOrReplaceHashtag.bindString(3, message.getChannelId());
+                mInsertOrReplaceHashtag.execute();
+            }
+            mDatabase.setTransactionSuccessful();
+        } catch(Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+        } finally {
+            mDatabase.endTransaction();
+            mInsertOrReplaceHashtag.clearBindings();
+        }
+    }
+
+    public Collection<HashtagInstances> getHashtags(String channelId) {
+        HashMap<String, HashtagInstances> instances = new HashMap<String, HashtagInstances>();
+        Cursor cursor = null;
+        try {
+            String where = COL_HASHTAG_CHANNEL_ID + " =?";
+            String[] args = new String[] { channelId };
+            cursor = mDatabase.query(TABLE_HASHTAGS, null, where, args, null, null, null, null);
+
+            if(cursor.moveToNext()) {
+                do {
+                    String hashtag = cursor.getString(0);
+                    String messageId = cursor.getString(1);
+                    HashtagInstances c = instances.get(hashtag);
+                    if(c == null) {
+                        c = new HashtagInstances(hashtag, messageId);
+                        instances.put(hashtag, c);
+                    } else {
+                        c.addInstance(messageId);
+                    }
+                } while(cursor.moveToNext());
+            }
+        } catch(Exception e) {
+            Log.d(TAG, e.getMessage(), e);
+        } finally {
+            if(cursor != null) {
+                cursor.close();
+            }
+        }
+        return instances.values();
     }
 
     public OrderedMessageBatch getMessages(String channelId, int limit) {
