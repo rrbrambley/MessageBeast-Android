@@ -241,7 +241,7 @@ public class MessageManager {
         });
     }
 
-    private synchronized  void retrieveMessages(final String channelId, final String sinceId, final String beforeId, final MessageManagerResponseHandler handler) {
+    private synchronized void retrieveMessages(final String channelId, final String sinceId, final String beforeId, final MessageManagerResponseHandler handler) {
         QueryParameters params = (QueryParameters) mParameters.get(channelId).clone();
         params.put("since_id", sinceId);
         params.put("before_id", beforeId);
@@ -313,6 +313,7 @@ public class MessageManager {
         mPlus.setDisplayDate(adjustedDate);
         if(mIsDatabaseInsertionEnabled) {
             database.insertOrReplaceMessage(mPlus);
+            database.insertOrReplaceHashtags(mPlus.getMessage());
         }
     }
 
