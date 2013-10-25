@@ -1,6 +1,6 @@
 package com.alwaysallthetime.adnlibutils;
 
-import android.text.SpannableString;
+import android.text.SpannableStringBuilder;
 import android.text.style.CharacterStyle;
 
 import com.alwaysallthetime.adnlib.data.AbstractPost;
@@ -10,8 +10,9 @@ import java.util.List;
 
 public class EntityStyler {
 
-    public static SpannableString getStyledText(AbstractPost post, List<CharacterStyle> mentionStyles, List<CharacterStyle> hashtagStyles, List<CharacterStyle> linkStyles) {
-        SpannableString string = new SpannableString(post.getText());
+    public static CharSequence getStyledText(AbstractPost post, List<CharacterStyle> mentionStyles, List<CharacterStyle> hashtagStyles, List<CharacterStyle> linkStyles) {
+        SpannableStringBuilder string = new SpannableStringBuilder(post.getText());
+
         Entities entities = post.getEntities();
 
         if(mentionStyles != null) {
@@ -27,10 +28,10 @@ public class EntityStyler {
         return string;
     }
 
-    private static void applyStylesToEntities(SpannableString spannableString, List<? extends Entities.Entity> entities, List<CharacterStyle> styles) {
+    private static void applyStylesToEntities(SpannableStringBuilder spannableString, List<? extends Entities.Entity> entities, List<CharacterStyle> styles) {
         for(Entities.Entity e : entities) {
             for(CharacterStyle s : styles) {
-                spannableString.setSpan(s, e.getPos(), e.getPos() + e.getLen(), 0);
+                spannableString.setSpan(CharacterStyle.wrap(s), e.getPos(), e.getPos() + e.getLen(), 0);
             }
         }
     }
