@@ -202,7 +202,7 @@ public class MessageManager {
                 channelMessages.remove(responseData.getId());
 
                 ADNDatabase database = ADNDatabase.getInstance(mContext);
-                database.deleteMessage(responseData);
+                database.deleteMessage(message); //this one because the deleted one doesn't have the entities.
 
                 handler.onSuccess();
             }

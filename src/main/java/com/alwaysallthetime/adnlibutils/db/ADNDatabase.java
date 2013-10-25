@@ -27,7 +27,7 @@ public class ADNDatabase {
 
     public static final String TABLE_MESSAGES = "messages";
     public static final String COL_MESSAGE_ID = "message_id";
-    public static final String COL_CHANNEL_ID = "message_channel_id";
+    public static final String COL_MESSAGE_CHANNEL_ID = "message_channel_id";
     public static final String COL_MESSAGE_DATE = "message_date";
     public static final String COL_MESSAGE_JSON = "message_json";
 
@@ -39,7 +39,7 @@ public class ADNDatabase {
     private static final String INSERT_OR_REPLACE_MESSAGE = "INSERT OR REPLACE INTO " + TABLE_MESSAGES + " " +
             "(" +
             COL_MESSAGE_ID + ", " +
-            COL_CHANNEL_ID + ", " +
+            COL_MESSAGE_CHANNEL_ID + ", " +
             COL_MESSAGE_DATE + ", " +
             COL_MESSAGE_JSON +
             ") " +
@@ -160,7 +160,7 @@ public class ADNDatabase {
         String minId = null;
         Cursor cursor = null;
         try {
-            String where = COL_CHANNEL_ID + " =?";
+            String where = COL_MESSAGE_CHANNEL_ID + " =?";
             if(beforeDate != null) {
                 where += " AND " + COL_MESSAGE_DATE + " < ?";
             }
@@ -208,8 +208,13 @@ public class ADNDatabase {
         mDatabase.beginTransaction();
 
         try {
-            String where = COL_MESSAGE_ID + " = '" + message.getId() + "'";
-            mDatabase.delete(TABLE_MESSAGES, where, null);
+            mDatabase.delete(TABLE_MESSAGES, COL_MESSAGE_ID + " = '" + message.getId() + "'", null);
+
+            ArrayList<Entities.Hashtag> hashtags = message.getEntities().getHashtags();
+            for(Entities.Hashtag h : hashtags) {
+                String where = COL_HASHTAG_NAME + " = '" + h.getName() + "' AND " + COL_HASHTAG_MESSAGE_ID + " = '" + message.getId() + "'";
+                mDatabase.delete(TABLE_HASHTAGS, where, null);
+            }
             mDatabase.setTransactionSuccessful();
         } catch(Exception e) {
             Log.e(TAG, e.getMessage(), e);
@@ -222,8 +227,8 @@ public class ADNDatabase {
         mDatabase.beginTransaction();
 
         try {
-            String where = COL_CHANNEL_ID + " = '" + channelId + "'";
-            mDatabase.delete(TABLE_MESSAGES, where, null);
+            mDatabase.delete(TABLE_MESSAGES, COL_MESSAGE_CHANNEL_ID + " = '" + channelId + "'", null);
+            mDatabase.delete(TABLE_HASHTAGS, COL_HASHTAG_CHANNEL_ID + " = '" + channelId + "'", null);
             mDatabase.setTransactionSuccessful();
         } catch(Exception e) {
             Log.e(TAG, e.getMessage(), e);

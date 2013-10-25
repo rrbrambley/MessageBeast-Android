@@ -11,7 +11,7 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
 
     private static final String CREATE_MESSAGES_TABLE = "CREATE TABLE IF NOT EXISTS " + ADNDatabase.TABLE_MESSAGES + "(" +
             ADNDatabase.COL_MESSAGE_ID + " STRING PRIMARY KEY, " +
-            ADNDatabase.COL_CHANNEL_ID + " STRING NOT NULL, " +
+            ADNDatabase.COL_MESSAGE_CHANNEL_ID + " STRING NOT NULL, " +
             ADNDatabase.COL_MESSAGE_DATE + " INTEGER NOT NULL, " +
             ADNDatabase.COL_MESSAGE_JSON + " STRING NOT NULL " +
             ")";
