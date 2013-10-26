@@ -35,6 +35,7 @@ public class ADNDatabase {
     public static final String COL_HASHTAG_NAME = "hashtag_name";
     public static final String COL_HASHTAG_MESSAGE_ID = "hashtag_message_id";
     public static final String COL_HASHTAG_CHANNEL_ID = "hashtag_channel_id";
+    public static final String COL_HASHTAG_DATE = "hashtag_date";
 
     private static final String INSERT_OR_REPLACE_MESSAGE = "INSERT OR REPLACE INTO " + TABLE_MESSAGES + " " +
             "(" +
@@ -49,9 +50,10 @@ public class ADNDatabase {
             "(" +
             COL_HASHTAG_NAME + ", " +
             COL_HASHTAG_MESSAGE_ID + ", " +
-            COL_HASHTAG_CHANNEL_ID +
+            COL_HASHTAG_CHANNEL_ID + ", " +
+            COL_HASHTAG_DATE +
             ") " +
-            "VALUES(?, ?, ?)";
+            "VALUES(?, ?, ?, ?)";
 
     private static ADNDatabase sInstance;
 
@@ -97,20 +99,22 @@ public class ADNDatabase {
         }
     }
 
-    public Map<String, HashtagInstances> insertOrReplaceHashtags(Message message) {
+    public Map<String, HashtagInstances> insertOrReplaceHashtags(MessagePlus message) {
         HashMap<String, HashtagInstances> instances = new HashMap<String, HashtagInstances>();
         if(mInsertOrReplaceHashtag == null) {
             mInsertOrReplaceHashtag = mDatabase.compileStatement(INSERT_OR_REPLACE_HASHTAG);
         }
-        ArrayList<Entities.Hashtag> hashtags = message.getEntities().getHashtags();
+        Message m = message.getMessage();
+        ArrayList<Entities.Hashtag> hashtags = m.getEntities().getHashtags();
         mDatabase.beginTransaction();
         try {
             for(Entities.Hashtag h : hashtags) {
                 String name = h.getName();
-                String messageId = message.getId();
+                String messageId = m.getId();
                 mInsertOrReplaceHashtag.bindString(1, name);
                 mInsertOrReplaceHashtag.bindString(2, messageId);
-                mInsertOrReplaceHashtag.bindString(3, message.getChannelId());
+                mInsertOrReplaceHashtag.bindString(3, m.getChannelId());
+                mInsertOrReplaceHashtag.bindLong(4, message.getDisplayDate().getTime());
                 mInsertOrReplaceHashtag.execute();
 
                 HashtagInstances hashtagInstances = instances.get(name);
@@ -131,12 +135,40 @@ public class ADNDatabase {
         return instances;
     }
 
-    public Map<String, HashtagInstances> getHashtags(String channelId) {
+    /**
+     * Get all Hashtags for a channel whose associated messages were created since a specified date.
+     *
+     * @param channelId The id of the channel
+     * @param sinceDate The earliest date for which hashtags should be returned.
+     * @return a Map whose keys are hashtag names, mapped to HashtagInstances
+     */
+    public Map<String, HashtagInstances> getHashtags(String channelId, Date sinceDate) {
+        return getHashtags(channelId, null, sinceDate);
+    }
+
+    /**
+     * Get all Hashtags for a channel whose associated messages were created within the provided
+     * date window, i.e. (beforeDate, sinceDate]
+     *
+     * @param channelId The id of the channel
+     * @param beforeDate The date before which all hashtags' associated messages were created. Can be null.
+     * @param sinceDate The earliest date for which hashtags should be returned. May not be null.
+     * @return a Map whose keys are hashtag names, mapped to HashtagInstances
+     *
+     * @see com.alwaysallthetime.adnlibutils.db.ADNDatabase#getHashtags(String, java.util.Date)
+     */
+    public Map<String, HashtagInstances> getHashtags(String channelId, Date beforeDate, Date sinceDate) {
         HashMap<String, HashtagInstances> instances = new HashMap<String, HashtagInstances>();
         Cursor cursor = null;
         try {
-            String where = COL_HASHTAG_CHANNEL_ID + " =?";
-            String[] args = new String[] { channelId };
+            String[] args = null;
+            String where = COL_HASHTAG_CHANNEL_ID + " =? AND " + COL_HASHTAG_DATE + " >= ?";
+            if(beforeDate != null) {
+                where += " AND " + COL_HASHTAG_DATE + " < ?";
+                args = new String[] { channelId,  String.valueOf(sinceDate.getTime()), String.valueOf(beforeDate.getTime()) };
+            } else {
+                args = new String[] { channelId,  String.valueOf(sinceDate.getTime()) };
+            }
             cursor = mDatabase.query(TABLE_HASHTAGS, null, where, args, null, null, null, null);
 
             if(cursor.moveToNext()) {

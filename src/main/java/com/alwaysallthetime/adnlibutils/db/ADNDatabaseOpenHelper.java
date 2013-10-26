@@ -20,6 +20,7 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
             ADNDatabase.COL_HASHTAG_NAME + " STRING NOT NULL, " +
             ADNDatabase.COL_HASHTAG_MESSAGE_ID + " STRING NOT NULL, " +
             ADNDatabase.COL_HASHTAG_CHANNEL_ID + " STRING NOT NULL, " +
+            ADNDatabase.COL_HASHTAG_DATE + " INTEGER NOT NULL, " +
             "PRIMARY KEY (" + ADNDatabase.COL_HASHTAG_NAME + ", " + ADNDatabase.COL_HASHTAG_MESSAGE_ID + " ))";
 
     public ADNDatabaseOpenHelper(Context context, String name, SQLiteDatabase.CursorFactory factory, int version) {
