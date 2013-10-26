@@ -194,6 +194,39 @@ public class ADNDatabase {
         return instances;
     }
 
+    /**
+     * Get a HashtagInstances object representing all Messages in whichh the specified
+     * hashtag was used.
+     *
+     * @param channelId The id of the channel
+     * @param hashtagName the hashtag for which instances should be retrieved.
+     *
+     * @return HashtagInstances
+     */
+    public HashtagInstances getHashtagInstances(String channelId, String hashtagName) {
+        Cursor cursor = null;
+        HashtagInstances instances = new HashtagInstances(hashtagName);
+        try {
+            String where = COL_HASHTAG_CHANNEL_ID + " =? AND " + COL_HASHTAG_NAME + " >= ?";
+            String[] args = new String[] { channelId, hashtagName };
+            cursor = mDatabase.query(TABLE_HASHTAGS, null, where, args, null, null, null, null);
+
+            if(cursor.moveToNext()) {
+                do {
+                    String messageId = cursor.getString(1);
+                    instances.addInstance(messageId);
+                } while(cursor.moveToNext());
+            }
+        } catch(Exception e) {
+            Log.d(TAG, e.getMessage(), e);
+        } finally {
+            if(cursor != null) {
+                cursor.close();
+            }
+        }
+        return instances;
+    }
+
     public OrderedMessageBatch getMessages(String channelId, int limit) {
         return getMessages(channelId, null, limit);
     }

@@ -7,9 +7,13 @@ public class HashtagInstances {
     private String mName;
     private HashSet<String> mMessageIds;
 
-    public HashtagInstances(String name, String messageId) {
+    public HashtagInstances(String name) {
         mName = name;
         mMessageIds = new HashSet<String>();
+    }
+
+    public HashtagInstances(String name, String messageId) {
+        this(name);
         mMessageIds.add(messageId);
     }
 
