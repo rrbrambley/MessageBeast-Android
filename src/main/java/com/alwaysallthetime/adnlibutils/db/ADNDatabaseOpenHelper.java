@@ -16,12 +16,12 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
             ADNDatabase.COL_MESSAGE_JSON + " STRING NOT NULL " +
             ")";
 
-    private static final String CREATE_HASHTAGS_TABLE = "CREATE TABLE IF NOT EXISTS " + ADNDatabase.TABLE_HASHTAGS + "(" +
-            ADNDatabase.COL_HASHTAG_NAME + " STRING NOT NULL, " +
-            ADNDatabase.COL_HASHTAG_MESSAGE_ID + " STRING NOT NULL, " +
-            ADNDatabase.COL_HASHTAG_CHANNEL_ID + " STRING NOT NULL, " +
-            ADNDatabase.COL_HASHTAG_DATE + " INTEGER NOT NULL, " +
-            "PRIMARY KEY (" + ADNDatabase.COL_HASHTAG_NAME + ", " + ADNDatabase.COL_HASHTAG_MESSAGE_ID + " ))";
+    private static final String CREATE_HASHTAG_INSTANCES_TABLE = "CREATE TABLE IF NOT EXISTS " + ADNDatabase.TABLE_HASHTAG_INSTANCES + "(" +
+            ADNDatabase.COL_HASHTAG_INSTANCE_NAME + " STRING NOT NULL, " +
+            ADNDatabase.COL_HASHTAG_INSTANCE_MESSAGE_ID + " STRING NOT NULL, " +
+            ADNDatabase.COL_HASHTAG_INSTANCE_CHANNEL_ID + " STRING NOT NULL, " +
+            ADNDatabase.COL_HASHTAG_INSTANCE_DATE + " INTEGER NOT NULL, " +
+            "PRIMARY KEY (" + ADNDatabase.COL_HASHTAG_INSTANCE_NAME + ", " + ADNDatabase.COL_HASHTAG_INSTANCE_MESSAGE_ID + " ))";
 
     public ADNDatabaseOpenHelper(Context context, String name, SQLiteDatabase.CursorFactory factory, int version) {
         super(context, name, factory, version);
@@ -33,7 +33,7 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
 
         try {
             db.execSQL(CREATE_MESSAGES_TABLE);
-            db.execSQL(CREATE_HASHTAGS_TABLE);
+            db.execSQL(CREATE_HASHTAG_INSTANCES_TABLE);
             db.setTransactionSuccessful();
         } catch(Exception exception) {
             Log.d(TAG, exception.getMessage(), exception);

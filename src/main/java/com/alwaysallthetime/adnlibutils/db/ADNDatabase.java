@@ -33,11 +33,11 @@ public class ADNDatabase {
     public static final String COL_MESSAGE_DATE = "message_date";
     public static final String COL_MESSAGE_JSON = "message_json";
 
-    public static final String TABLE_HASHTAGS = "hashtags";
-    public static final String COL_HASHTAG_NAME = "hashtag_name";
-    public static final String COL_HASHTAG_MESSAGE_ID = "hashtag_message_id";
-    public static final String COL_HASHTAG_CHANNEL_ID = "hashtag_channel_id";
-    public static final String COL_HASHTAG_DATE = "hashtag_date";
+    public static final String TABLE_HASHTAG_INSTANCES = "hashtags";
+    public static final String COL_HASHTAG_INSTANCE_NAME = "hashtag_name";
+    public static final String COL_HASHTAG_INSTANCE_MESSAGE_ID = "hashtag_message_id";
+    public static final String COL_HASHTAG_INSTANCE_CHANNEL_ID = "hashtag_channel_id";
+    public static final String COL_HASHTAG_INSTANCE_DATE = "hashtag_date";
 
     private static final String INSERT_OR_REPLACE_MESSAGE = "INSERT OR REPLACE INTO " + TABLE_MESSAGES + " " +
             "(" +
@@ -48,12 +48,12 @@ public class ADNDatabase {
             ") " +
             "VALUES(?, ?, ?, ?)";
 
-    private static final String INSERT_OR_REPLACE_HASHTAG = "INSERT OR REPLACE INTO " + TABLE_HASHTAGS + " " +
+    private static final String INSERT_OR_REPLACE_HASHTAG = "INSERT OR REPLACE INTO " + TABLE_HASHTAG_INSTANCES + " " +
             "(" +
-            COL_HASHTAG_NAME + ", " +
-            COL_HASHTAG_MESSAGE_ID + ", " +
-            COL_HASHTAG_CHANNEL_ID + ", " +
-            COL_HASHTAG_DATE +
+            COL_HASHTAG_INSTANCE_NAME + ", " +
+            COL_HASHTAG_INSTANCE_MESSAGE_ID + ", " +
+            COL_HASHTAG_INSTANCE_CHANNEL_ID + ", " +
+            COL_HASHTAG_INSTANCE_DATE +
             ") " +
             "VALUES(?, ?, ?, ?)";
 
@@ -101,7 +101,7 @@ public class ADNDatabase {
         }
     }
 
-    public Map<String, HashtagInstances> insertOrReplaceHashtags(MessagePlus message) {
+    public Map<String, HashtagInstances> insertOrReplaceHashtagInstances(MessagePlus message) {
         HashMap<String, HashtagInstances> instances = new HashMap<String, HashtagInstances>();
         if(mInsertOrReplaceHashtag == null) {
             mInsertOrReplaceHashtag = mDatabase.compileStatement(INSERT_OR_REPLACE_HASHTAG);
@@ -144,8 +144,8 @@ public class ADNDatabase {
      * @param sinceDate The earliest date for which hashtags should be returned.
      * @return a Map whose keys are hashtag names, mapped to HashtagInstances
      */
-    public Map<String, HashtagInstances> getHashtags(String channelId, Date sinceDate) {
-        return getHashtags(channelId, null, sinceDate);
+    public Map<String, HashtagInstances> getHashtagInstances(String channelId, Date sinceDate) {
+        return getHashtagInstances(channelId, null, sinceDate);
     }
 
     /**
@@ -157,21 +157,21 @@ public class ADNDatabase {
      * @param sinceDate The earliest date for which hashtags should be returned. May not be null.
      * @return a Map whose keys are hashtag names, mapped to HashtagInstances
      *
-     * @see com.alwaysallthetime.adnlibutils.db.ADNDatabase#getHashtags(String, java.util.Date)
+     * @see com.alwaysallthetime.adnlibutils.db.ADNDatabase#getHashtagInstances(String, java.util.Date)
      */
-    public Map<String, HashtagInstances> getHashtags(String channelId, Date beforeDate, Date sinceDate) {
+    public Map<String, HashtagInstances> getHashtagInstances(String channelId, Date beforeDate, Date sinceDate) {
         HashMap<String, HashtagInstances> instances = new HashMap<String, HashtagInstances>();
         Cursor cursor = null;
         try {
             String[] args = null;
-            String where = COL_HASHTAG_CHANNEL_ID + " =? AND " + COL_HASHTAG_DATE + " >= ?";
+            String where = COL_HASHTAG_INSTANCE_CHANNEL_ID + " =? AND " + COL_HASHTAG_INSTANCE_DATE + " >= ?";
             if(beforeDate != null) {
-                where += " AND " + COL_HASHTAG_DATE + " < ?";
+                where += " AND " + COL_HASHTAG_INSTANCE_DATE + " < ?";
                 args = new String[] { channelId,  String.valueOf(sinceDate.getTime()), String.valueOf(beforeDate.getTime()) };
             } else {
                 args = new String[] { channelId,  String.valueOf(sinceDate.getTime()) };
             }
-            cursor = mDatabase.query(TABLE_HASHTAGS, null, where, args, null, null, null, null);
+            cursor = mDatabase.query(TABLE_HASHTAG_INSTANCES, null, where, args, null, null, null, null);
 
             if(cursor.moveToNext()) {
                 do {
@@ -209,9 +209,9 @@ public class ADNDatabase {
         Cursor cursor = null;
         HashtagInstances instances = new HashtagInstances(hashtagName);
         try {
-            String where = COL_HASHTAG_CHANNEL_ID + " =? AND " + COL_HASHTAG_NAME + " = ?";
+            String where = COL_HASHTAG_INSTANCE_CHANNEL_ID + " =? AND " + COL_HASHTAG_INSTANCE_NAME + " = ?";
             String[] args = new String[] { channelId, hashtagName };
-            cursor = mDatabase.query(TABLE_HASHTAGS, null, where, args, null, null, null, null);
+            cursor = mDatabase.query(TABLE_HASHTAG_INSTANCES, null, where, args, null, null, null, null);
 
             if(cursor.moveToNext()) {
                 do {
@@ -354,8 +354,8 @@ public class ADNDatabase {
 
             ArrayList<Entities.Hashtag> hashtags = message.getEntities().getHashtags();
             for(Entities.Hashtag h : hashtags) {
-                String where = COL_HASHTAG_NAME + " = '" + h.getName() + "' AND " + COL_HASHTAG_MESSAGE_ID + " = '" + message.getId() + "'";
-                mDatabase.delete(TABLE_HASHTAGS, where, null);
+                String where = COL_HASHTAG_INSTANCE_NAME + " = '" + h.getName() + "' AND " + COL_HASHTAG_INSTANCE_MESSAGE_ID + " = '" + message.getId() + "'";
+                mDatabase.delete(TABLE_HASHTAG_INSTANCES, where, null);
             }
             mDatabase.setTransactionSuccessful();
         } catch(Exception e) {
@@ -370,7 +370,7 @@ public class ADNDatabase {
 
         try {
             mDatabase.delete(TABLE_MESSAGES, COL_MESSAGE_CHANNEL_ID + " = '" + channelId + "'", null);
-            mDatabase.delete(TABLE_HASHTAGS, COL_HASHTAG_CHANNEL_ID + " = '" + channelId + "'", null);
+            mDatabase.delete(TABLE_HASHTAG_INSTANCES, COL_HASHTAG_INSTANCE_CHANNEL_ID + " = '" + channelId + "'", null);
             mDatabase.setTransactionSuccessful();
         } catch(Exception e) {
             Log.e(TAG, e.getMessage(), e);
