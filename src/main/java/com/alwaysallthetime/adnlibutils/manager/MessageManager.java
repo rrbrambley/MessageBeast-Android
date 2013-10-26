@@ -94,8 +94,6 @@ public class MessageManager {
         MinMaxPair dbMinMaxPair = orderedMessageBatch.getMinMaxPair();
         minMaxPair = minMaxPair.combine(dbMinMaxPair);
 
-        Log.d(TAG, "loaded " + messages.size() + " from database");
-
         LinkedHashMap<String, MessagePlus> channelMessages = mMessages.get(channelId);
         if(channelMessages != null) {
             channelMessages.putAll(messages);
@@ -232,7 +230,6 @@ public class MessageManager {
                     ADNDatabase database = ADNDatabase.getInstance(mContext);
                     database.insertOrReplaceMessage(mPlus);
                 }
-                Log.d(TAG, "successfully refreshedMessage");
                 handler.onSuccess(mPlus);
             }
 
