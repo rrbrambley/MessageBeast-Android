@@ -220,10 +220,13 @@ public class MessageManager {
         mClient.retrieveMessage(channelId, message.getId(), mParameters.get(channelId), new MessageResponseHandler() {
             @Override
             public void onSuccess(Message responseData) {
-                LinkedHashMap<String, MessagePlus> channelMessages = mMessages.get(channelId);
                 MessagePlus mPlus = new MessagePlus(responseData);
                 mPlus.setDisplayDate(getAdjustedDate(responseData));
-                channelMessages.put(responseData.getId(), mPlus);
+
+                LinkedHashMap<String, MessagePlus> channelMessages = mMessages.get(channelId);
+                if(channelMessages != null) { //could be null of channel messages weren't loaded first, etc.
+                    channelMessages.put(responseData.getId(), mPlus);
+                }
 
                 if(mIsDatabaseInsertionEnabled) {
                     ADNDatabase database = ADNDatabase.getInstance(mContext);
