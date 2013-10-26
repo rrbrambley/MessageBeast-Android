@@ -14,10 +14,10 @@ import com.alwaysallthetime.adnlibutils.manager.MinMaxPair;
 import com.google.gson.Gson;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class ADNDatabase {
 
@@ -97,7 +97,8 @@ public class ADNDatabase {
         }
     }
 
-    public void insertOrReplaceHashtags(Message message) {
+    public Map<String, HashtagInstances> insertOrReplaceHashtags(Message message) {
+        HashMap<String, HashtagInstances> instances = new HashMap<String, HashtagInstances>();
         if(mInsertOrReplaceHashtag == null) {
             mInsertOrReplaceHashtag = mDatabase.compileStatement(INSERT_OR_REPLACE_HASHTAG);
         }
@@ -105,10 +106,20 @@ public class ADNDatabase {
         mDatabase.beginTransaction();
         try {
             for(Entities.Hashtag h : hashtags) {
-                mInsertOrReplaceHashtag.bindString(1, h.getName());
-                mInsertOrReplaceHashtag.bindString(2, message.getId());
+                String name = h.getName();
+                String messageId = message.getId();
+                mInsertOrReplaceHashtag.bindString(1, name);
+                mInsertOrReplaceHashtag.bindString(2, messageId);
                 mInsertOrReplaceHashtag.bindString(3, message.getChannelId());
                 mInsertOrReplaceHashtag.execute();
+
+                HashtagInstances hashtagInstances = instances.get(name);
+                if(hashtagInstances == null) {
+                    hashtagInstances = new HashtagInstances(name, messageId);
+                    instances.put(name, hashtagInstances);
+                } else {
+                    hashtagInstances.addInstance(messageId);
+                }
             }
             mDatabase.setTransactionSuccessful();
         } catch(Exception e) {
@@ -117,9 +128,10 @@ public class ADNDatabase {
             mDatabase.endTransaction();
             mInsertOrReplaceHashtag.clearBindings();
         }
+        return instances;
     }
 
-    public Collection<HashtagInstances> getHashtags(String channelId) {
+    public Map<String, HashtagInstances> getHashtags(String channelId) {
         HashMap<String, HashtagInstances> instances = new HashMap<String, HashtagInstances>();
         Cursor cursor = null;
         try {
@@ -147,7 +159,7 @@ public class ADNDatabase {
                 cursor.close();
             }
         }
-        return instances.values();
+        return instances;
     }
 
     public OrderedMessageBatch getMessages(String channelId, int limit) {

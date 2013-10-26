@@ -1,6 +1,7 @@
 package com.alwaysallthetime.adnlibutils.db;
 
 import java.util.HashSet;
+import java.util.Set;
 
 public class HashtagInstances {
     private String mName;
@@ -16,7 +17,15 @@ public class HashtagInstances {
         mMessageIds.add(messageId);
     }
 
+    public void addAll(Set<String> messageIds) {
+        mMessageIds.addAll(messageIds);
+    }
+
     public int getNumInstances() {
         return mMessageIds.size();
+    }
+
+    public Set<String> getMessageIds() {
+        return mMessageIds;
     }
 }
