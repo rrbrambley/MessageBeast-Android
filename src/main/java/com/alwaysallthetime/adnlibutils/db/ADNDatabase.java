@@ -14,8 +14,10 @@ import com.alwaysallthetime.adnlibutils.manager.MinMaxPair;
 import com.google.gson.Gson;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -225,6 +227,69 @@ public class ADNDatabase {
             }
         }
         return instances;
+    }
+
+    /**
+     * Get Messages in a Channel
+     *
+     * @param channelId The id of the Channel.
+     * @param messageIds The ids of the Messages to get.
+     * @return OrderedMessageBatch
+     */
+    public OrderedMessageBatch getMessages(String channelId, Collection<String> messageIds) {
+        LinkedHashMap<String, MessagePlus> messages = new LinkedHashMap<String, MessagePlus>();
+        String maxId = null;
+        String minId = null;
+        Cursor cursor = null;
+        try {
+            String where = COL_MESSAGE_CHANNEL_ID + " =? AND " + COL_MESSAGE_ID + " IN (";
+            String[] args = new String[messageIds.size() + 1];
+            args[0] = channelId;
+
+            int index = 1;
+            Iterator<String> iterator = messageIds.iterator();
+            while(iterator.hasNext()) {
+                args[index] = iterator.next();
+                if(index > 1) {
+                    where += ", ?";
+                } else {
+                    where += " ?";
+                }
+                index++;
+            }
+            where += ")";
+            String orderBy = COL_MESSAGE_DATE + " DESC";
+            cursor = mDatabase.query(TABLE_MESSAGES, null, where, args, null, null, orderBy, null);
+
+            Message message = null;
+            if(cursor.moveToNext()) {
+                do {
+                    String messageId = cursor.getString(0);
+                    long date = cursor.getLong(2);
+                    String messageJson = cursor.getString(3);
+                    message = mGson.fromJson(messageJson, Message.class);
+
+                    MessagePlus messagePlus = new MessagePlus(message);
+                    messagePlus.setDisplayDate(new Date(date));
+                    messages.put(messageId, messagePlus);
+
+                    if(maxId == null) {
+                        maxId = messageId;
+                    }
+                } while(cursor.moveToNext());
+
+                if(message != null) {
+                    minId = message.getId();
+                }
+            }
+        } catch(Exception e) {
+            Log.d(TAG, e.getMessage(), e);
+        } finally {
+            if(cursor != null) {
+                cursor.close();
+            }
+        }
+        return new OrderedMessageBatch(messages, new MinMaxPair(minId, maxId));
     }
 
     public OrderedMessageBatch getMessages(String channelId, int limit) {
