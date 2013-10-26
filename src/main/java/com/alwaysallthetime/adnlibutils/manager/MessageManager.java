@@ -316,7 +316,7 @@ public class MessageManager {
         mPlus.setDisplayDate(adjustedDate);
         if(mIsDatabaseInsertionEnabled) {
             database.insertOrReplaceMessage(mPlus);
-            database.insertOrReplaceHashtags(mPlus.getMessage());
+            database.insertOrReplaceHashtags(mPlus);
         }
     }
 
