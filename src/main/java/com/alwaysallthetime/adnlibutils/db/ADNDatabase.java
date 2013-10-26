@@ -207,7 +207,7 @@ public class ADNDatabase {
         Cursor cursor = null;
         HashtagInstances instances = new HashtagInstances(hashtagName);
         try {
-            String where = COL_HASHTAG_CHANNEL_ID + " =? AND " + COL_HASHTAG_NAME + " >= ?";
+            String where = COL_HASHTAG_CHANNEL_ID + " =? AND " + COL_HASHTAG_NAME + " = ?";
             String[] args = new String[] { channelId, hashtagName };
             cursor = mDatabase.query(TABLE_HASHTAGS, null, where, args, null, null, null, null);
 
