@@ -29,6 +29,17 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
             ADNDatabase.COL_GEOLOCATION_LONGITUDE + " REAL NOT NULL, " +
             "PRIMARY KEY (" + ADNDatabase.COL_GEOLOCATION_LATITUDE + ", " + ADNDatabase.COL_GEOLOCATION_LONGITUDE + " ))";
 
+    private static final String CREATE_LOCATION_INSTANCES_TABLE = "CREATE TABLE IF NOT EXISTS " + ADNDatabase.TABLE_LOCATION_INSTANCES + "(" +
+            ADNDatabase.COL_LOCATION_INSTANCE_NAME + " STRING NOT NULL, " +
+            ADNDatabase.COL_LOCATION_INSTANCE_MESSAGE_ID + " STRING NOT NULL, " +
+            ADNDatabase.COL_LOCATION_INSTANCE_CHANNEL_ID + " STRING NOT NULL, " +
+            ADNDatabase.COL_LOCATION_INSTANCE_LATITUDE + " REAL NOT NULL, " +
+            ADNDatabase.COL_LOCATION_INSTANCE_LONGITUDE + " REAL NOT NULL, " +
+            ADNDatabase.COL_LOCATION_INSTANCE_FACTUAL_ID + " STRING, " +
+            ADNDatabase.COL_LOCATION_INSTANCE_DATE + " INTEGER NOT NULL, " +
+            "PRIMARY KEY (" + ADNDatabase.COL_LOCATION_INSTANCE_NAME + ", " + ADNDatabase.COL_LOCATION_INSTANCE_MESSAGE_ID + ", " +
+                              ADNDatabase.COL_LOCATION_INSTANCE_LATITUDE + ", " + ADNDatabase.COL_LOCATION_INSTANCE_LONGITUDE + " ))";
+
     public ADNDatabaseOpenHelper(Context context, String name, SQLiteDatabase.CursorFactory factory, int version) {
         super(context, name, factory, version);
     }
@@ -41,6 +52,7 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
             db.execSQL(CREATE_MESSAGES_TABLE);
             db.execSQL(CREATE_HASHTAG_INSTANCES_TABLE);
             db.execSQL(CREATE_GEOLOCATIONS_TABLE);
+            db.execSQL(CREATE_LOCATION_INSTANCES_TABLE);
             db.setTransactionSuccessful();
         } catch(Exception exception) {
             Log.e(TAG, exception.getMessage(), exception);

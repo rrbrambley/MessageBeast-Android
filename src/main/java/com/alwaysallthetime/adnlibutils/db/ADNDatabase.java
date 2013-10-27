@@ -11,6 +11,7 @@ import com.alwaysallthetime.adnlib.data.Message;
 import com.alwaysallthetime.adnlib.gson.AppDotNetGson;
 import com.alwaysallthetime.adnlibutils.MessagePlus;
 import com.alwaysallthetime.adnlibutils.manager.MinMaxPair;
+import com.alwaysallthetime.adnlibutils.model.DisplayLocation;
 import com.alwaysallthetime.adnlibutils.model.Geolocation;
 import com.google.gson.Gson;
 
@@ -41,13 +42,22 @@ public class ADNDatabase {
     public static final String COL_HASHTAG_INSTANCE_CHANNEL_ID = "hashtag_channel_id";
     public static final String COL_HASHTAG_INSTANCE_DATE = "hashtag_date";
 
-    private static final String INSERT_OR_REPLACE_MESSAGE = "INSERT OR REPLACE INTO " + TABLE_MESSAGES + " " +
-            "(" +
     public static final String TABLE_GEOLOCATIONS = "geolocations";
     public static final String COL_GEOLOCATION_NAME = "geolocation_name";
     public static final String COL_GEOLOCATION_LATITUDE = "geolocation_latitude";
     public static final String COL_GEOLOCATION_LONGITUDE = "geolocation_longitude";
 
+    public static final String TABLE_LOCATION_INSTANCES = "locations";
+    public static final String COL_LOCATION_INSTANCE_NAME = "location_name";
+    public static final String COL_LOCATION_INSTANCE_MESSAGE_ID = "location_message_id";
+    public static final String COL_LOCATION_INSTANCE_CHANNEL_ID = "location_channel_id";
+    public static final String COL_LOCATION_INSTANCE_FACTUAL_ID = "location_factual_id";
+    public static final String COL_LOCATION_INSTANCE_LATITUDE = "location_latitude";
+    public static final String COL_LOCATION_INSTANCE_LONGITUDE = "location_longitude";
+    public static final String COL_LOCATION_INSTANCE_DATE = "location_date";
+
+    private static final String INSERT_OR_REPLACE_MESSAGE = "INSERT OR REPLACE INTO " + TABLE_MESSAGES +
+            " (" +
             COL_MESSAGE_ID + ", " +
             COL_MESSAGE_CHANNEL_ID + ", " +
             COL_MESSAGE_DATE + ", " +
@@ -55,8 +65,8 @@ public class ADNDatabase {
             ") " +
             "VALUES(?, ?, ?, ?)";
 
-    private static final String INSERT_OR_REPLACE_HASHTAG = "INSERT OR REPLACE INTO " + TABLE_HASHTAG_INSTANCES + " " +
-            "(" +
+    private static final String INSERT_OR_REPLACE_HASHTAG = "INSERT OR REPLACE INTO " + TABLE_HASHTAG_INSTANCES +
+            " (" +
             COL_HASHTAG_INSTANCE_NAME + ", " +
             COL_HASHTAG_INSTANCE_MESSAGE_ID + ", " +
             COL_HASHTAG_INSTANCE_CHANNEL_ID + ", " +
@@ -72,12 +82,26 @@ public class ADNDatabase {
             ") " +
             "VALUES(?, ?, ?)";
 
+    private static final String INSERT_OR_REPLACE_LOCATION_INSTANCE = "INSERT OR REPLACE INTO " + TABLE_LOCATION_INSTANCES +
+            " (" +
+            COL_LOCATION_INSTANCE_NAME + ", " +
+            COL_LOCATION_INSTANCE_MESSAGE_ID + ", " +
+            COL_LOCATION_INSTANCE_CHANNEL_ID + ", " +
+            COL_LOCATION_INSTANCE_LATITUDE + ", " +
+            COL_LOCATION_INSTANCE_LONGITUDE + ", " +
+            COL_LOCATION_INSTANCE_FACTUAL_ID + ", " +
+            COL_LOCATION_INSTANCE_DATE +
+            ") " +
+            "VALUES(?, ?, ?, ?, ?, ?, ?)";
+
+
     private static ADNDatabase sInstance;
 
     private SQLiteDatabase mDatabase;
     private SQLiteStatement mInsertOrReplaceMessage;
     private SQLiteStatement mInsertOrReplaceHashtag;
     private SQLiteStatement mInsertOrReplaceGeolocation;
+    private SQLiteStatement mInsertOrReplaceLocationInstance;
     private Gson mGson;
 
     public static synchronized ADNDatabase getInstance(Context context) {
@@ -176,6 +200,89 @@ public class ADNDatabase {
             mDatabase.endTransaction();
             mInsertOrReplaceGeolocation.clearBindings();
         }
+    }
+
+    public void insertOrReplaceLocationInstance(MessagePlus messagePlus) {
+        if(mInsertOrReplaceLocationInstance == null) {
+            mInsertOrReplaceLocationInstance = mDatabase.compileStatement(INSERT_OR_REPLACE_LOCATION_INSTANCE);
+        }
+        DisplayLocation location = messagePlus.getDisplayLocation();
+        if(location != null) {
+            String name = location.getName();
+            String messageId = messagePlus.getMessage().getId();
+            String channelId = messagePlus.getMessage().getChannelId();
+            String factualId = location.getFactualId();
+
+            BigDecimal latitude = new BigDecimal(location.getLatitude());
+            latitude = latitude.setScale(3, BigDecimal.ROUND_HALF_UP);
+
+            BigDecimal longitude = new BigDecimal(location.getLongitude());
+            longitude = longitude.setScale(3, BigDecimal.ROUND_HALF_UP);
+
+            mDatabase.beginTransaction();
+            try {
+                mInsertOrReplaceLocationInstance.bindString(1, name);
+                mInsertOrReplaceLocationInstance.bindString(2, messageId);
+                mInsertOrReplaceLocationInstance.bindString(3, channelId);
+                mInsertOrReplaceLocationInstance.bindDouble(4, latitude.doubleValue());
+                mInsertOrReplaceLocationInstance.bindDouble(5, longitude.doubleValue());
+                if(factualId != null) {
+                    mInsertOrReplaceLocationInstance.bindString(6, factualId);
+                }
+                mInsertOrReplaceLocationInstance.bindLong(7, messagePlus.getDisplayDate().getTime());
+                mInsertOrReplaceLocationInstance.execute();
+                mDatabase.setTransactionSuccessful();
+            } catch(Exception e) {
+                Log.e(TAG, e.getMessage(), e);
+            } finally {
+                mDatabase.endTransaction();
+                mInsertOrReplaceLocationInstance.clearBindings();
+            }
+        }
+    }
+
+    /**
+     * Get a DisplayLocationInstances object representing the complete set of messages with which
+     * the specified DisplayLocation is associated.
+     *
+     * Display locations are unique by name + latitude + longitude, where latitude and longitude are
+     *
+     *
+     * @param channelId The id of the channel
+     * @param location the DisplayLocation
+     *
+     * @return DisplayLocationInstances
+     */
+    public DisplayLocationInstances getDisplayLocationInstances(String channelId, DisplayLocation location) {
+        Cursor cursor = null;
+        DisplayLocationInstances instances = new DisplayLocationInstances(location);
+        try {
+            String where = COL_LOCATION_INSTANCE_CHANNEL_ID + " = ? AND " +
+                           COL_LOCATION_INSTANCE_NAME + " = ? AND " +
+                           COL_LOCATION_INSTANCE_LATITUDE + " = ? AND " +
+                           COL_LOCATION_INSTANCE_LONGITUDE + " = ?";
+
+            String[] args = new String[] { channelId,
+                                            location.getName(),
+                                            String.format("%.3f", location.getLatitude()),
+                                            String.format("%.3f", location.getLongitude()) };
+            String[] cols = new String[] { COL_LOCATION_INSTANCE_MESSAGE_ID };
+            cursor = mDatabase.query(TABLE_LOCATION_INSTANCES, cols, where, args, null, null, null, null);
+
+            if(cursor.moveToNext()) {
+                do {
+                    String messageId = cursor.getString(0);
+                    instances.addInstance(messageId);
+                } while(cursor.moveToNext());
+            }
+        } catch(Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+        } finally {
+            if(cursor != null) {
+                cursor.close();
+            }
+        }
+        return instances;
     }
 
     /**

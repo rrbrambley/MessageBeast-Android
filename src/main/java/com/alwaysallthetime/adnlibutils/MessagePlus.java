@@ -28,6 +28,10 @@ public class MessagePlus {
         return mHasSetDisplayLocation;
     }
 
+    public boolean hasDisplayLocation() {
+        return mDisplayLocation != null;
+    }
+
     public DisplayLocation getDisplayLocation() {
         return mDisplayLocation;
     }

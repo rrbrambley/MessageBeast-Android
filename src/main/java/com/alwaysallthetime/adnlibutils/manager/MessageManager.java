@@ -130,12 +130,18 @@ public class MessageManager {
             Annotation checkin = message.getFirstAnnotationOfType(Annotations.CHECKIN);
             if(checkin != null) {
                 messagePlus.setDisplayLocation(DisplayLocation.fromCheckinAnnotation(checkin));
+                if(mConfiguration.isDatabaseInsertionEnabled) {
+                    database.insertOrReplaceLocationInstance(messagePlus);
+                }
                 continue;
             }
 
             Annotation ohaiLocation = message.getFirstAnnotationOfType(Annotations.OHAI_LOCATION);
             if(ohaiLocation != null) {
                 messagePlus.setDisplayLocation(DisplayLocation.fromOhaiLocation(ohaiLocation));
+                if(mConfiguration.isDatabaseInsertionEnabled) {
+                    database.insertOrReplaceLocationInstance(messagePlus);
+                }
                 continue;
             }
 
@@ -147,6 +153,9 @@ public class MessageManager {
                 Geolocation geolocationObj = database.getGeolocation(latitude, longitude);
                 if(geolocationObj != null) {
                     messagePlus.setDisplayLocation(DisplayLocation.fromGeolocation(geolocationObj));
+                    if(mConfiguration.isDatabaseInsertionEnabled) {
+                        database.insertOrReplaceLocationInstance(messagePlus);
+                    }
                     continue;
                 } else {
                     reverseGeocode(messagePlus, latitude, longitude);
@@ -162,11 +171,14 @@ public class MessageManager {
                 public void onSuccess(final List<Address> addresses) {
                     final String loc = AddressUtility.getAddressString(addresses);
                     if(loc != null) {
-                        final Geolocation geolocation = new Geolocation(loc, latitude, longitude);
-                        if(mConfiguration.isDatabaseInsertionEnabled) {
-                            ADNDatabase.getInstance(mContext).insertOrReplaceGeolocation(geolocation);
-                        }
+                        ADNDatabase database = ADNDatabase.getInstance(mContext);
+                        Geolocation geolocation = new Geolocation(loc, latitude, longitude);
                         messagePlus.setDisplayLocation(DisplayLocation.fromGeolocation(geolocation));
+
+                        if(mConfiguration.isDatabaseInsertionEnabled) {
+                            database.insertOrReplaceGeolocation(geolocation);
+                            database.insertOrReplaceLocationInstance(messagePlus);
+                        }
                     }
                     if(mConfiguration.locationLookupHandler != null) {
                         mConfiguration.locationLookupHandler.onSuccess(messagePlus);
@@ -348,7 +360,6 @@ public class MessageManager {
                     newFullChannelMessagesMap.putAll(channelMessages);
                 }
                 mMessages.put(channelId, newFullChannelMessagesMap);
-
 
                 if(mConfiguration.isLocationLookupEnabled) {
                     lookupLocation(newestMessages);
