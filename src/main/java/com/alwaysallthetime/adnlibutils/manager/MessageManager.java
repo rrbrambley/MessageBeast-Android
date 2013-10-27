@@ -54,16 +54,16 @@ public class MessageManager {
 
     private Context mContext;
     private AppDotNetClient mClient;
-    private MessageDisplayDateAdapter mDateAdapter;
-    private boolean mIsDatabaseInsertionEnabled;
+    private MessageManagerConfiguration mConfiguration;
 
     private HashMap<String, LinkedHashMap<String, MessagePlus>> mMessages;
     private HashMap<String, QueryParameters> mParameters;
     private HashMap<String, MinMaxPair> mMinMaxPairs;
 
-    public MessageManager(Context context, AppDotNetClient client) {
+    public MessageManager(Context context, AppDotNetClient client, MessageManagerConfiguration configuration) {
         mContext = context;
         mClient = client;
+        mConfiguration = configuration;
 
         mMessages = new HashMap<String, LinkedHashMap<String, MessagePlus>>();
         mMinMaxPairs = new HashMap<String, MinMaxPair>();
@@ -78,7 +78,7 @@ public class MessageManager {
      * @return a LinkedHashMap containing the newly loaded messages, mapped from message id
      * to Message Object. If no messages were loaded, then an empty Map is returned.
      *
-     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#setDatabaseInsertionEnabled(boolean)
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager.MessageManagerConfiguration#setDatabaseInsertionEnabled(boolean)
      */
     public synchronized LinkedHashMap<String, MessagePlus> loadPersistedMessages(String channelId, int limit) {
         ADNDatabase database = ADNDatabase.getInstance(mContext);
@@ -105,26 +105,6 @@ public class MessageManager {
 
         //this should always return only the newly loaded messages.
         return messages;
-    }
-
-    /**
-     * Enable or disable automatic insertion of Messages into a sqlite database
-     * upon retrieval. By default, this feature is turned off.
-     *
-     * @param isEnabled true if all retrieved Messages should be stashed in a sqlite
-     *                  database, false otherwise.
-     */
-    public void setDatabaseInsertionEnabled(boolean isEnabled) {
-        mIsDatabaseInsertionEnabled = isEnabled;
-    }
-
-    /**
-     * Set a MessageDisplayDateAdapter.
-     *
-     * @param adapter
-     */
-    public void setMessageDisplayDateAdapter(MessageDisplayDateAdapter adapter) {
-        mDateAdapter = adapter;
     }
 
     public Map<String, MessagePlus> getMessageMap(String channelId) {
@@ -226,7 +206,7 @@ public class MessageManager {
                     channelMessages.put(responseData.getId(), mPlus);
                 }
 
-                if(mIsDatabaseInsertionEnabled) {
+                if(mConfiguration.isDatabaseInsertionEnabled) {
                     ADNDatabase database = ADNDatabase.getInstance(mContext);
                     database.insertOrReplaceMessage(mPlus);
                 }
@@ -311,13 +291,38 @@ public class MessageManager {
     private void adjustDateAndInsert(MessagePlus mPlus, ADNDatabase database) {
         Date adjustedDate = getAdjustedDate(mPlus.getMessage());
         mPlus.setDisplayDate(adjustedDate);
-        if(mIsDatabaseInsertionEnabled) {
+        if(mConfiguration.isDatabaseInsertionEnabled) {
             database.insertOrReplaceMessage(mPlus);
             database.insertOrReplaceHashtagInstances(mPlus);
         }
     }
 
     private Date getAdjustedDate(Message message) {
-        return mDateAdapter == null ? message.getCreatedAt() : mDateAdapter.getDisplayDate(message);
+        return mConfiguration.dateAdapter == null ? message.getCreatedAt() : mConfiguration.dateAdapter.getDisplayDate(message);
+    }
+
+    public static class MessageManagerConfiguration {
+        boolean isDatabaseInsertionEnabled;
+        MessageDisplayDateAdapter dateAdapter;
+
+        /**
+         * Enable or disable automatic insertion of Messages into a sqlite database
+         * upon retrieval. By default, this feature is turned off.
+         *
+         * @param isEnabled true if all retrieved Messages should be stashed in a sqlite
+         *                  database, false otherwise.
+         */
+        public void setDatabaseInsertionEnabled(boolean isEnabled) {
+            this.isDatabaseInsertionEnabled = isEnabled;
+        }
+
+        /**
+         * Set a MessageDisplayDateAdapter.
+         *
+         * @param adapter
+         */
+        public void setMessageDisplayDateAdapter(MessageDisplayDateAdapter adapter) {
+            this.dateAdapter = adapter;
+        }
     }
 }
