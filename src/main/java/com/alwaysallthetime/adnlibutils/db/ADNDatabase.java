@@ -187,7 +187,7 @@ public class ADNDatabase {
                 } while(cursor.moveToNext());
             }
         } catch(Exception e) {
-            Log.d(TAG, e.getMessage(), e);
+            Log.e(TAG, e.getMessage(), e);
         } finally {
             if(cursor != null) {
                 cursor.close();
@@ -220,7 +220,7 @@ public class ADNDatabase {
                 } while(cursor.moveToNext());
             }
         } catch(Exception e) {
-            Log.d(TAG, e.getMessage(), e);
+            Log.e(TAG, e.getMessage(), e);
         } finally {
             if(cursor != null) {
                 cursor.close();
@@ -283,7 +283,7 @@ public class ADNDatabase {
                 }
             }
         } catch(Exception e) {
-            Log.d(TAG, e.getMessage(), e);
+            Log.e(TAG, e.getMessage(), e);
         } finally {
             if(cursor != null) {
                 cursor.close();
@@ -337,7 +337,7 @@ public class ADNDatabase {
                 }
             }
         } catch(Exception e) {
-            Log.d(TAG, e.getMessage(), e);
+            Log.e(TAG, e.getMessage(), e);
         } finally {
             if(cursor != null) {
                 cursor.close();

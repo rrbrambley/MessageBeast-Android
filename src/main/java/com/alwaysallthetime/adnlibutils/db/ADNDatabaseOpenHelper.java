@@ -36,7 +36,7 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
             db.execSQL(CREATE_HASHTAG_INSTANCES_TABLE);
             db.setTransactionSuccessful();
         } catch(Exception exception) {
-            Log.d(TAG, exception.getMessage(), exception);
+            Log.e(TAG, exception.getMessage(), exception);
         } finally {
             db.endTransaction();
         }
