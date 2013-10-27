@@ -23,6 +23,12 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
             ADNDatabase.COL_HASHTAG_INSTANCE_DATE + " INTEGER NOT NULL, " +
             "PRIMARY KEY (" + ADNDatabase.COL_HASHTAG_INSTANCE_NAME + ", " + ADNDatabase.COL_HASHTAG_INSTANCE_MESSAGE_ID + " ))";
 
+    private static final String CREATE_GEOLOCATIONS_TABLE = "CREATE TABLE IF NOT EXISTS " + ADNDatabase.TABLE_GEOLOCATIONS + "(" +
+            ADNDatabase.COL_GEOLOCATION_NAME + " STRING NOT NULL, " +
+            ADNDatabase.COL_GEOLOCATION_LATITUDE + " REAL NOT NULL, " +
+            ADNDatabase.COL_GEOLOCATION_LONGITUDE + " REAL NOT NULL, " +
+            "PRIMARY KEY (" + ADNDatabase.COL_GEOLOCATION_LATITUDE + ", " + ADNDatabase.COL_GEOLOCATION_LONGITUDE + " ))";
+
     public ADNDatabaseOpenHelper(Context context, String name, SQLiteDatabase.CursorFactory factory, int version) {
         super(context, name, factory, version);
     }
@@ -34,6 +40,7 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
         try {
             db.execSQL(CREATE_MESSAGES_TABLE);
             db.execSQL(CREATE_HASHTAG_INSTANCES_TABLE);
+            db.execSQL(CREATE_GEOLOCATIONS_TABLE);
             db.setTransactionSuccessful();
         } catch(Exception exception) {
             Log.e(TAG, exception.getMessage(), exception);

@@ -11,8 +11,10 @@ import com.alwaysallthetime.adnlib.data.Message;
 import com.alwaysallthetime.adnlib.gson.AppDotNetGson;
 import com.alwaysallthetime.adnlibutils.MessagePlus;
 import com.alwaysallthetime.adnlibutils.manager.MinMaxPair;
+import com.alwaysallthetime.adnlibutils.model.Geolocation;
 import com.google.gson.Gson;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -41,6 +43,11 @@ public class ADNDatabase {
 
     private static final String INSERT_OR_REPLACE_MESSAGE = "INSERT OR REPLACE INTO " + TABLE_MESSAGES + " " +
             "(" +
+    public static final String TABLE_GEOLOCATIONS = "geolocations";
+    public static final String COL_GEOLOCATION_NAME = "geolocation_name";
+    public static final String COL_GEOLOCATION_LATITUDE = "geolocation_latitude";
+    public static final String COL_GEOLOCATION_LONGITUDE = "geolocation_longitude";
+
             COL_MESSAGE_ID + ", " +
             COL_MESSAGE_CHANNEL_ID + ", " +
             COL_MESSAGE_DATE + ", " +
@@ -57,11 +64,20 @@ public class ADNDatabase {
             ") " +
             "VALUES(?, ?, ?, ?)";
 
+    private static final String INSERT_OR_REPLACE_GEOLOCATION = "INSERT OR REPLACE INTO " + TABLE_GEOLOCATIONS +
+            " (" +
+            COL_GEOLOCATION_NAME + ", " +
+            COL_GEOLOCATION_LATITUDE + ", " +
+            COL_GEOLOCATION_LONGITUDE +
+            ") " +
+            "VALUES(?, ?, ?)";
+
     private static ADNDatabase sInstance;
 
     private SQLiteDatabase mDatabase;
     private SQLiteStatement mInsertOrReplaceMessage;
     private SQLiteStatement mInsertOrReplaceHashtag;
+    private SQLiteStatement mInsertOrReplaceGeolocation;
     private Gson mGson;
 
     public static synchronized ADNDatabase getInstance(Context context) {
@@ -135,6 +151,60 @@ public class ADNDatabase {
             mInsertOrReplaceHashtag.clearBindings();
         }
         return instances;
+    }
+
+    public void insertOrReplaceGeolocation(Geolocation geolocation) {
+        if(mInsertOrReplaceGeolocation == null) {
+            mInsertOrReplaceGeolocation = mDatabase.compileStatement(INSERT_OR_REPLACE_GEOLOCATION);
+        }
+        mDatabase.beginTransaction();
+        try {
+            BigDecimal latitude = new BigDecimal(geolocation.getLatitude());
+            latitude = latitude.setScale(3, BigDecimal.ROUND_HALF_UP);
+
+            BigDecimal longitude = new BigDecimal(geolocation.getLongitude());
+            longitude = longitude.setScale(3, BigDecimal.ROUND_HALF_UP);
+
+            mInsertOrReplaceGeolocation.bindString(1, geolocation.getName());
+            mInsertOrReplaceGeolocation.bindDouble(2, latitude.doubleValue());
+            mInsertOrReplaceGeolocation.bindDouble(3, longitude.doubleValue());
+            mInsertOrReplaceGeolocation.execute();
+            mDatabase.setTransactionSuccessful();
+        } catch(Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+        } finally {
+            mDatabase.endTransaction();
+            mInsertOrReplaceGeolocation.clearBindings();
+        }
+    }
+
+    /**
+     * Look for a Gelocation by latitude and longitude. Coordinates are rounded to three decimal
+     * places (0.001 = 111 meters).
+     *
+     * @param latitude
+     * @param longitude
+     * @return a Geolocation if one exists, null otherwise.
+     */
+    public Geolocation getGeolocation(double latitude, double longitude) {
+        Cursor cursor = null;
+        try {
+            String[] args = new String[] { String.format("%.3f", latitude), String.format("%.3f", longitude)};
+            String where = COL_GEOLOCATION_LATITUDE + " = ? AND " + COL_GEOLOCATION_LONGITUDE + " = ?";
+            cursor = mDatabase.query(TABLE_GEOLOCATIONS, new String[] { COL_GEOLOCATION_NAME }, where, args, null, null, null, null);
+
+            if(cursor.moveToNext()) {
+                String name = cursor.getString(0);
+                return new Geolocation(name, latitude, longitude);
+            }
+        } catch(Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+        } finally {
+            if(cursor != null) {
+                cursor.close();
+            }
+        }
+        return null;
     }
 
     /**
