@@ -1,3 +1,6 @@
 [submodule "ADNLib"]
 	path = ADNLib
 	url = git@github.com:alwaysallthetime/ADNLib.git
+[submodule "AsyncGeocoder"]
+	path = AsyncGeocoder
+	url = git@github.com:rrbrambley/AsyncGeocoder.git
