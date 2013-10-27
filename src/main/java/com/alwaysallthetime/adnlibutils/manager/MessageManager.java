@@ -1,10 +1,14 @@
 package com.alwaysallthetime.adnlibutils.manager;
 
 import android.content.Context;
+import android.location.Address;
+import android.location.Geocoder;
 import android.util.Log;
 
+import com.alwaysallthetime.adnlib.Annotations;
 import com.alwaysallthetime.adnlib.AppDotNetClient;
 import com.alwaysallthetime.adnlib.QueryParameters;
+import com.alwaysallthetime.adnlib.data.Annotation;
 import com.alwaysallthetime.adnlib.data.Message;
 import com.alwaysallthetime.adnlib.data.MessageList;
 import com.alwaysallthetime.adnlib.response.MessageListResponseHandler;
@@ -12,9 +16,15 @@ import com.alwaysallthetime.adnlib.response.MessageResponseHandler;
 import com.alwaysallthetime.adnlibutils.MessagePlus;
 import com.alwaysallthetime.adnlibutils.db.ADNDatabase;
 import com.alwaysallthetime.adnlibutils.db.OrderedMessageBatch;
+import com.alwaysallthetime.adnlibutils.model.DisplayLocation;
+import com.alwaysallthetime.adnlibutils.model.Geolocation;
+import com.alwaysallthetime.asyncgeocoder.AsyncGeocoder;
+import com.alwaysallthetime.asyncgeocoder.response.AsyncGeocoderResponseHandler;
+import com.alwaysallthetime.asyncgeocoder.util.AddressUtility;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -103,8 +113,75 @@ public class MessageManager {
 
         mMinMaxPairs.put(channelId, minMaxPair);
 
+        if(mConfiguration.isLocationLookupEnabled) {
+            lookupLocation(messages.values());
+        }
+
         //this should always return only the newly loaded messages.
         return messages;
+    }
+
+    private void lookupLocation(Collection<MessagePlus> messages) {
+        final ADNDatabase database = ADNDatabase.getInstance(mContext);
+
+        for(MessagePlus messagePlus : messages) {
+            Message message = messagePlus.getMessage();
+
+            Annotation checkin = message.getFirstAnnotationOfType(Annotations.CHECKIN);
+            if(checkin != null) {
+                messagePlus.setDisplayLocation(DisplayLocation.fromCheckinAnnotation(checkin));
+                continue;
+            }
+
+            Annotation ohaiLocation = message.getFirstAnnotationOfType(Annotations.OHAI_LOCATION);
+            if(ohaiLocation != null) {
+                messagePlus.setDisplayLocation(DisplayLocation.fromOhaiLocation(ohaiLocation));
+                continue;
+            }
+
+            Annotation geoAnnotation = message.getFirstAnnotationOfType(Annotations.GEOLOCATION);
+            if(geoAnnotation != null) {
+                HashMap<String,Object> value = geoAnnotation.getValue();
+                final double latitude = (Double)value.get("latitude");
+                final double longitude = (Double)value.get("longitude");
+                Geolocation geolocationObj = database.getGeolocation(latitude, longitude);
+                if(geolocationObj != null) {
+                    messagePlus.setDisplayLocation(DisplayLocation.fromGeolocation(geolocationObj));
+                    continue;
+                } else {
+                    reverseGeocode(messagePlus, latitude, longitude);
+                }
+            }
+        }
+    }
+
+    private void reverseGeocode(final MessagePlus messagePlus, final double latitude, final double longitude) {
+        if(Geocoder.isPresent()) {
+            AsyncGeocoder.getInstance(mContext).getFromLocation(latitude, longitude, 5, new AsyncGeocoderResponseHandler() {
+                @Override
+                public void onSuccess(final List<Address> addresses) {
+                    final String loc = AddressUtility.getAddressString(addresses);
+                    if(loc != null) {
+                        final Geolocation geolocation = new Geolocation(loc, latitude, longitude);
+                        if(mConfiguration.isDatabaseInsertionEnabled) {
+                            ADNDatabase.getInstance(mContext).insertOrReplaceGeolocation(geolocation);
+                        }
+                        messagePlus.setDisplayLocation(DisplayLocation.fromGeolocation(geolocation));
+                    }
+                    if(mConfiguration.locationLookupHandler != null) {
+                        mConfiguration.locationLookupHandler.onSuccess(messagePlus);
+                    }
+                }
+
+                @Override
+                public void onException(Exception exception) {
+                    Log.d(TAG, exception.getMessage(), exception);
+                    if(mConfiguration.locationLookupHandler != null) {
+                        mConfiguration.locationLookupHandler.onException(messagePlus, exception);
+                    }
+                }
+            });
+        }
     }
 
     public Map<String, MessagePlus> getMessageMap(String channelId) {
@@ -272,6 +349,11 @@ public class MessageManager {
                 }
                 mMessages.put(channelId, newFullChannelMessagesMap);
 
+
+                if(mConfiguration.isLocationLookupEnabled) {
+                    lookupLocation(newestMessages);
+                }
+
                 if(handler != null) {
                     handler.onSuccess(newestMessages, appended);
                 }
@@ -302,8 +384,16 @@ public class MessageManager {
     }
 
     public static class MessageManagerConfiguration {
+
+        public static interface MessageLocationLookupHandler {
+            public void onSuccess(MessagePlus messagePlus);
+            public void onException(MessagePlus messagePlus, Exception exception);
+        }
+
         boolean isDatabaseInsertionEnabled;
+        boolean isLocationLookupEnabled;
         MessageDisplayDateAdapter dateAdapter;
+        MessageLocationLookupHandler locationLookupHandler;
 
         /**
          * Enable or disable automatic insertion of Messages into a sqlite database
@@ -320,9 +410,48 @@ public class MessageManager {
          * Set a MessageDisplayDateAdapter.
          *
          * @param adapter
+         * @see com.alwaysallthetime.adnlibutils.manager.MessageManager.MessageDisplayDateAdapter
          */
         public void setMessageDisplayDateAdapter(MessageDisplayDateAdapter adapter) {
             this.dateAdapter = adapter;
+        }
+
+        /**
+         * Enable location lookup on Messages. If enabled, annotations will be examined in order
+         * to construct a DisplayLocation. A DisplayLocation will be set on the associated MessagePlus
+         * Object, based off one of these three annotations, if they exist:
+         *
+         * net.app.core.checkin
+         * net.app.ohai.location
+         * net.app.core.geolocation
+         *
+         * In the case of net.app.core.geolocation, an asynchronous task will be fired off to
+         * perform reverse geolocation on the latitude/longitude coordinates. For this reason, you
+         * should set a MessageLocationLookupHandler on this configuration if you want to perform
+         * a task such as update UI after a location is obtained.
+         *
+         * If none of these annotations is found, then a null DisplayLocation is set on the
+         * associated MessagePlus.
+         *
+         * @param isEnabled true if location lookup should be performed on all Messages
+         *
+         * @see com.alwaysallthetime.adnlibutils.MessagePlus#getDisplayLocation()
+         * @see com.alwaysallthetime.adnlibutils.MessagePlus#hasSetDisplayLocation()
+         * @see com.alwaysallthetime.adnlibutils.MessagePlus#hasDisplayLocation()
+         */
+        public void setLocationLookupEnabled(boolean isEnabled) {
+            this.isLocationLookupEnabled = isEnabled;
+        }
+
+        /**
+         * Specify a handler to be notified when location lookup has completed for a MessagePlus.
+         * This is particularly useful when a geolocation annotation requires an asynchronous
+         * reverse geocoding task.
+         *
+         * @param handler
+         */
+        public void setLocationLookupHandler(MessageLocationLookupHandler handler) {
+            this.locationLookupHandler = handler;
         }
     }
 }
