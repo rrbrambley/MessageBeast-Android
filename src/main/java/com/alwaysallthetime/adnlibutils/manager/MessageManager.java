@@ -37,12 +37,23 @@ public class MessageManager {
 
     private static final String TAG = "ADNLibUtils_MessageManager";
 
+    private static final int MAX_MESSAGES_RETURNED_ON_SYNC = 100;
+
     /*
      * public data structures
      */
-    public interface MessageManagerResponseHandler {
-        public void onSuccess(final List<MessagePlus> responseData, final boolean appended);
-        public void onError(Exception exception);
+    public static abstract class MessageManagerResponseHandler {
+        private boolean isMore;
+
+        public abstract void onSuccess(final List<MessagePlus> responseData, final boolean appended);
+        public abstract void onError(Exception exception);
+        void setIsMore(boolean isMore) {
+            this.isMore = isMore;
+        }
+
+        public boolean isMore() {
+            return this.isMore;
+        }
     }
 
     public interface MessageRefreshResponseHandler {
@@ -327,14 +338,78 @@ public class MessageManager {
         });
     }
 
+    /**
+     * Sync and persist all Messages in a Channel.
+     *
+     * This is intended to be used as a one-time sync, e.g. after a user signs in. For this reason,
+     * it is required that your MessageManagerConfiguration has its isDatabaseInsertionEnabled property
+     * set to true.
+     *
+     * Because this could potentially result in a very large amount of Messages being obtained,
+     * the provided MessageManagerResponseHandler will only be passed the first 100 Messages that are
+     * obtained, while the others will be persisted to the sqlite database, but not kept in memory.
+     * However, these can easily be loaded into memory afterwards by calling loadPersistedMessages().
+     *
+     * @param channelId The id of the Channel from which to obtain Messages.
+     * @param responseHandler MessageManagerResponseHandler
+     *
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager.MessageManagerConfiguration#setDatabaseInsertionEnabled(boolean)
+     * @see MessageManager#loadPersistedMessages(String, int)
+     */
+    public synchronized void retrieveAndPersistAllMessages(String channelId, MessageManagerResponseHandler responseHandler) {
+        if(!mConfiguration.isDatabaseInsertionEnabled) {
+            throw new RuntimeException("Database insertion must be enabled to use this functionality.");
+        }
+        final ArrayList<MessagePlus> messages = new ArrayList<MessagePlus>(MAX_MESSAGES_RETURNED_ON_SYNC);
+        String sinceId = null;
+        String beforeId = null;
+        retrieveAllMessages(messages, sinceId, beforeId, channelId, responseHandler);
+    }
+
+    private synchronized void retrieveAllMessages(final ArrayList<MessagePlus> messages, String sinceId, String beforeId, final String channelId, final MessageManagerResponseHandler responseHandler) {
+        QueryParameters params = (QueryParameters) mParameters.get(channelId).clone();
+        params.put("since_id", sinceId);
+        params.put("before_id", beforeId);
+        params.put("count", String.valueOf(MAX_MESSAGES_RETURNED_ON_SYNC));
+
+        retrieveMessages(params, channelId, new MessageManagerResponseHandler() {
+            @Override
+            public void onSuccess(List<MessagePlus> responseData, boolean appended) {
+                if(messages.size() == 0) {
+                    messages.addAll(responseData);
+                }
+                if(isMore()) {
+                    MinMaxPair minMaxPair = getMinMaxPair(channelId);
+                    Log.d(TAG, "size is " + messages.size() + "; " + minMaxPair.maxId + ", " + minMaxPair.minId);
+                    retrieveAllMessages(messages, null, minMaxPair.minId, channelId, responseHandler);
+                } else {
+                    Log.d(TAG, "no more. size is " + messages.size());
+                    responseHandler.onSuccess(messages, true);
+                }
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                Log.e(TAG, exception.getMessage(), exception);
+                responseHandler.onError(exception);
+            }
+        });
+    }
+
     private synchronized void retrieveMessages(final String channelId, final String sinceId, final String beforeId, final MessageManagerResponseHandler handler) {
         QueryParameters params = (QueryParameters) mParameters.get(channelId).clone();
         params.put("since_id", sinceId);
         params.put("before_id", beforeId);
-        mClient.retrieveMessagesInChannel(channelId, params, new MessageListResponseHandler() {
+        retrieveMessages(params, channelId, handler);
+    }
+
+    private synchronized void retrieveMessages(final QueryParameters queryParameters, final String channelId, final MessageManagerResponseHandler handler) {
+        mClient.retrieveMessagesInChannel(channelId, queryParameters, new MessageListResponseHandler() {
             @Override
             public void onSuccess(final MessageList responseData) {
                 boolean appended = true;
+                String beforeId  = queryParameters.get("before_id");
+                String sinceId  = queryParameters.get("since_id");
 
                 MinMaxPair minMaxPair = getMinMaxPair(channelId);
                 if(beforeId != null && sinceId == null) {
@@ -382,6 +457,7 @@ public class MessageManager {
                 }
 
                 if(handler != null) {
+                    handler.setIsMore(isMore());
                     handler.onSuccess(newestMessages, appended);
                 }
             }
