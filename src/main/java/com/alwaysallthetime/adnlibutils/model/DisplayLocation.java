@@ -1,10 +1,32 @@
 package com.alwaysallthetime.adnlibutils.model;
 
+import android.os.Parcel;
+import android.os.Parcelable;
+
 import com.alwaysallthetime.adnlib.data.Annotation;
 
 import java.util.HashMap;
 
-public class DisplayLocation {
+public class DisplayLocation implements Parcelable {
+    public enum LocationType {
+        CHECKIN,
+        OHAI,
+        GEOLOCATION;
+
+        public static LocationType fromInt(int ordinal) {
+            switch(ordinal) {
+                case 0:
+                    return CHECKIN;
+                case 1:
+                    return OHAI;
+                case 2:
+                default:
+                    return GEOLOCATION;
+            }
+        }
+    }
+
+    private LocationType mType;
     private String mName;
     private String mFactualId;
     private double mLatitude;
@@ -15,6 +37,7 @@ public class DisplayLocation {
         String locationName = (String) value.get("name");
         String factualId = (String) value.get("factual_id");
         DisplayLocation loc = new DisplayLocation(locationName, factualId, (Double)value.get("latitude"), (Double)value.get("longitude"));
+        loc.setType(LocationType.CHECKIN);
         return loc;
     }
 
@@ -28,26 +51,29 @@ public class DisplayLocation {
                 name = getLatLongString(latitude, longitude);
             }
         }
-        return new DisplayLocation(name, (Double)value.get("latitude"), (Double)value.get("longitude"));
+        DisplayLocation loc = new DisplayLocation(name, (Double)value.get("latitude"), (Double)value.get("longitude"));
+        loc.setType(LocationType.OHAI);
+        return loc;
     }
 
     public static DisplayLocation fromGeolocation(Geolocation geolocation) {
-        return new DisplayLocation(geolocation.getName(), geolocation.getLatitude(), geolocation.getLongitude());
-    }
-
-    public DisplayLocation(double latitude, double longitude) {
-        mLatitude = latitude;
-        mLongitude = longitude;
+        DisplayLocation loc = new DisplayLocation(geolocation.getName(), geolocation.getLatitude(), geolocation.getLongitude());
+        loc.setType(LocationType.GEOLOCATION);
+        return loc;
     }
 
     public DisplayLocation(String name, double latitude, double longitude) {
-        this(latitude, longitude);
+        mLatitude = latitude;
+        mLongitude = longitude;
         mName = name;
     }
 
-    public DisplayLocation(String name, String factualId, double latitude, double longitude) {
-        this(latitude, longitude);
-        mName = name;
+    protected void setType(LocationType type) {
+        mType = type;
+    }
+
+    protected DisplayLocation(String name, String factualId, double latitude, double longitude) {
+        this(name, latitude, longitude);
         mFactualId = factualId;
     }
 
@@ -70,4 +96,51 @@ public class DisplayLocation {
     private static String getLatLongString(double latitude, double longitude) {
         return String.format("%s, %s", String.valueOf(latitude), String.valueOf(longitude));
     }
+
+    public LocationType getType() {
+        return mType;
+    }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeString(mName);
+        dest.writeDouble(mLatitude);
+        dest.writeDouble(mLongitude);
+        dest.writeInt(mType.ordinal());
+        if(mFactualId != null) {
+            dest.writeInt(1);
+            dest.writeString(mFactualId);
+        } else {
+            dest.writeInt(0);
+        }
+    }
+
+    public final static Parcelable.Creator<DisplayLocation> CREATOR = new Parcelable.Creator<DisplayLocation>() {
+
+        @Override
+        public DisplayLocation createFromParcel(Parcel source) {
+            String name = source.readString();
+            double latitude= source.readDouble();
+            double longitude = source.readDouble();
+            int type = source.readInt();
+            int hasFactualId = source.readInt();
+            String factualId = null;
+            if(hasFactualId == 1) {
+                factualId = source.readString();
+            }
+            DisplayLocation loc = new DisplayLocation(name, factualId, latitude, longitude);
+            loc.setType(LocationType.fromInt(type));
+            return loc;
+        }
+
+        @Override
+        public DisplayLocation[] newArray(int size) {
+            return new DisplayLocation[size];
+        }
+    };
 }
