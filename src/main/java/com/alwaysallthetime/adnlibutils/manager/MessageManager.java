@@ -16,6 +16,7 @@ import com.alwaysallthetime.adnlib.response.MessageResponseHandler;
 import com.alwaysallthetime.adnlibutils.MessagePlus;
 import com.alwaysallthetime.adnlibutils.db.ADNDatabase;
 import com.alwaysallthetime.adnlibutils.db.DisplayLocationInstances;
+import com.alwaysallthetime.adnlibutils.db.HashtagInstances;
 import com.alwaysallthetime.adnlibutils.db.OrderedMessageBatch;
 import com.alwaysallthetime.adnlibutils.model.DisplayLocation;
 import com.alwaysallthetime.adnlibutils.model.Geolocation;
@@ -64,6 +65,7 @@ public class MessageManager {
     }
 
     private Context mContext;
+    private ADNDatabase mDatabase;
     private AppDotNetClient mClient;
     private MessageManagerConfiguration mConfiguration;
 
@@ -75,6 +77,7 @@ public class MessageManager {
         mContext = context;
         mClient = client;
         mConfiguration = configuration;
+        mDatabase = ADNDatabase.getInstance(mContext);
 
         mMessages = new HashMap<String, LinkedHashMap<String, MessagePlus>>();
         mMinMaxPairs = new HashMap<String, MinMaxPair>();
@@ -92,15 +95,13 @@ public class MessageManager {
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager.MessageManagerConfiguration#setDatabaseInsertionEnabled(boolean)
      */
     public synchronized LinkedHashMap<String, MessagePlus> loadPersistedMessages(String channelId, int limit) {
-        ADNDatabase database = ADNDatabase.getInstance(mContext);
-
         Date beforeDate = null;
         MinMaxPair minMaxPair = getMinMaxPair(channelId);
         if(minMaxPair.minId != null) {
             MessagePlus message = mMessages.get(channelId).get(minMaxPair.minId);
             beforeDate = message.getDisplayDate();
         }
-        OrderedMessageBatch orderedMessageBatch = database.getMessages(channelId, beforeDate, limit);
+        OrderedMessageBatch orderedMessageBatch = mDatabase.getMessages(channelId, beforeDate, limit);
         LinkedHashMap<String, MessagePlus> messages = orderedMessageBatch.getMessages();
         MinMaxPair dbMinMaxPair = orderedMessageBatch.getMinMaxPair();
         minMaxPair = minMaxPair.combine(dbMinMaxPair);
@@ -123,9 +124,17 @@ public class MessageManager {
     }
 
     public LinkedHashMap<String, MessagePlus> loadPersistedMessagesTemporarily(String channelId, DisplayLocation location, ADNDatabase.LocationPrecision precision) {
-        ADNDatabase database = ADNDatabase.getInstance(mContext);
-        DisplayLocationInstances locationInstances = database.getDisplayLocationInstances(channelId, location, precision);
-        OrderedMessageBatch orderedMessageBatch = database.getMessages(channelId, locationInstances.getMessageIds());
+        DisplayLocationInstances locationInstances = mDatabase.getDisplayLocationInstances(channelId, location, precision);
+        return loadAndConfigureTemporaryMessages(channelId, locationInstances.getMessageIds());
+    }
+
+    public LinkedHashMap<String, MessagePlus> loadPersistedMessagesTemporarily(String channelId, String hashtagName) {
+        HashtagInstances hashtagInstances = mDatabase.getHashtagInstances(channelId, hashtagName);
+        return loadAndConfigureTemporaryMessages(channelId, hashtagInstances.getMessageIds());
+    }
+
+    private LinkedHashMap<String, MessagePlus> loadAndConfigureTemporaryMessages(String channelId, Collection<String> messageIds) {
+        OrderedMessageBatch orderedMessageBatch = mDatabase.getMessages(channelId, messageIds);
         LinkedHashMap<String, MessagePlus> messages = orderedMessageBatch.getMessages();
 
         if(mConfiguration.isLocationLookupEnabled) {
@@ -136,8 +145,6 @@ public class MessageManager {
     }
 
     private void lookupLocation(Collection<MessagePlus> messages) {
-        final ADNDatabase database = ADNDatabase.getInstance(mContext);
-
         for(MessagePlus messagePlus : messages) {
             Message message = messagePlus.getMessage();
 
@@ -145,7 +152,7 @@ public class MessageManager {
             if(checkin != null) {
                 messagePlus.setDisplayLocation(DisplayLocation.fromCheckinAnnotation(checkin));
                 if(mConfiguration.isDatabaseInsertionEnabled) {
-                    database.insertOrReplaceLocationInstance(messagePlus);
+                    mDatabase.insertOrReplaceLocationInstance(messagePlus);
                 }
                 continue;
             }
@@ -154,7 +161,7 @@ public class MessageManager {
             if(ohaiLocation != null) {
                 messagePlus.setDisplayLocation(DisplayLocation.fromOhaiLocation(ohaiLocation));
                 if(mConfiguration.isDatabaseInsertionEnabled) {
-                    database.insertOrReplaceLocationInstance(messagePlus);
+                    mDatabase.insertOrReplaceLocationInstance(messagePlus);
                 }
                 continue;
             }
@@ -164,11 +171,11 @@ public class MessageManager {
                 HashMap<String,Object> value = geoAnnotation.getValue();
                 final double latitude = (Double)value.get("latitude");
                 final double longitude = (Double)value.get("longitude");
-                Geolocation geolocationObj = database.getGeolocation(latitude, longitude);
+                Geolocation geolocationObj = mDatabase.getGeolocation(latitude, longitude);
                 if(geolocationObj != null) {
                     messagePlus.setDisplayLocation(DisplayLocation.fromGeolocation(geolocationObj));
                     if(mConfiguration.isDatabaseInsertionEnabled) {
-                        database.insertOrReplaceLocationInstance(messagePlus);
+                        mDatabase.insertOrReplaceLocationInstance(messagePlus);
                     }
                     continue;
                 } else {
@@ -185,13 +192,12 @@ public class MessageManager {
                 public void onSuccess(final List<Address> addresses) {
                     final String loc = AddressUtility.getAddressString(addresses);
                     if(loc != null) {
-                        ADNDatabase database = ADNDatabase.getInstance(mContext);
                         Geolocation geolocation = new Geolocation(loc, latitude, longitude);
                         messagePlus.setDisplayLocation(DisplayLocation.fromGeolocation(geolocation));
 
                         if(mConfiguration.isDatabaseInsertionEnabled) {
-                            database.insertOrReplaceGeolocation(geolocation);
-                            database.insertOrReplaceLocationInstance(messagePlus);
+                            mDatabase.insertOrReplaceGeolocation(geolocation);
+                            mDatabase.insertOrReplaceLocationInstance(messagePlus);
                         }
                     }
                     if(mConfiguration.locationLookupHandler != null) {
@@ -241,7 +247,7 @@ public class MessageManager {
         LinkedHashMap<String, MessagePlus> channelMessages = mMessages.get(channelId);
         if(channelMessages != null) {
             channelMessages.clear();
-            ADNDatabase.getInstance(mContext).deleteMessages(channelId);
+            mDatabase.deleteMessages(channelId);
         }
     }
 
@@ -281,9 +287,7 @@ public class MessageManager {
             public void onSuccess(Message responseData) {
                 LinkedHashMap<String, MessagePlus> channelMessages = mMessages.get(responseData.getChannelId());
                 channelMessages.remove(responseData.getId());
-
-                ADNDatabase database = ADNDatabase.getInstance(mContext);
-                database.deleteMessage(message); //this one because the deleted one doesn't have the entities.
+                mDatabase.deleteMessage(message); //this one because the deleted one doesn't have the entities.
 
                 handler.onSuccess();
             }
@@ -310,8 +314,7 @@ public class MessageManager {
                 }
 
                 if(mConfiguration.isDatabaseInsertionEnabled) {
-                    ADNDatabase database = ADNDatabase.getInstance(mContext);
-                    database.insertOrReplaceMessage(mPlus);
+                    mDatabase.insertOrReplaceMessage(mPlus);
                 }
                 handler.onSuccess(mPlus);
             }
@@ -331,7 +334,6 @@ public class MessageManager {
         mClient.retrieveMessagesInChannel(channelId, params, new MessageListResponseHandler() {
             @Override
             public void onSuccess(final MessageList responseData) {
-                ADNDatabase database = ADNDatabase.getInstance(mContext);
                 boolean appended = true;
 
                 MinMaxPair minMaxPair = getMinMaxPair(channelId);
@@ -366,7 +368,7 @@ public class MessageManager {
                 for(Message m : responseData) {
                     MessagePlus mPlus = new MessagePlus(m);
                     newestMessages.add(mPlus);
-                    adjustDateAndInsert(mPlus, database);
+                    adjustDateAndInsert(mPlus);
 
                     newFullChannelMessagesMap.put(m.getId(), mPlus);
                 }
@@ -395,12 +397,12 @@ public class MessageManager {
         });
     }
 
-    private void adjustDateAndInsert(MessagePlus mPlus, ADNDatabase database) {
+    private void adjustDateAndInsert(MessagePlus mPlus) {
         Date adjustedDate = getAdjustedDate(mPlus.getMessage());
         mPlus.setDisplayDate(adjustedDate);
         if(mConfiguration.isDatabaseInsertionEnabled) {
-            database.insertOrReplaceMessage(mPlus);
-            database.insertOrReplaceHashtagInstances(mPlus);
+            mDatabase.insertOrReplaceMessage(mPlus);
+            mDatabase.insertOrReplaceHashtagInstances(mPlus);
         }
     }
 
