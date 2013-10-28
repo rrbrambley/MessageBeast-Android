@@ -15,6 +15,7 @@ import com.alwaysallthetime.adnlib.response.MessageListResponseHandler;
 import com.alwaysallthetime.adnlib.response.MessageResponseHandler;
 import com.alwaysallthetime.adnlibutils.MessagePlus;
 import com.alwaysallthetime.adnlibutils.db.ADNDatabase;
+import com.alwaysallthetime.adnlibutils.db.DisplayLocationInstances;
 import com.alwaysallthetime.adnlibutils.db.OrderedMessageBatch;
 import com.alwaysallthetime.adnlibutils.model.DisplayLocation;
 import com.alwaysallthetime.adnlibutils.model.Geolocation;
@@ -118,6 +119,19 @@ public class MessageManager {
         }
 
         //this should always return only the newly loaded messages.
+        return messages;
+    }
+
+    public LinkedHashMap<String, MessagePlus> loadPersistedMessagesTemporarily(String channelId, DisplayLocation location, ADNDatabase.LocationPrecision precision) {
+        ADNDatabase database = ADNDatabase.getInstance(mContext);
+        DisplayLocationInstances locationInstances = database.getDisplayLocationInstances(channelId, location, precision);
+        OrderedMessageBatch orderedMessageBatch = database.getMessages(channelId, locationInstances.getMessageIds());
+        LinkedHashMap<String, MessagePlus> messages = orderedMessageBatch.getMessages();
+
+        if(mConfiguration.isLocationLookupEnabled) {
+            lookupLocation(messages.values());
+        }
+
         return messages;
     }
 
