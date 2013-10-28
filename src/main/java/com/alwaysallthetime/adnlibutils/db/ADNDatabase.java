@@ -56,6 +56,17 @@ public class ADNDatabase {
     public static final String COL_LOCATION_INSTANCE_LONGITUDE = "location_longitude";
     public static final String COL_LOCATION_INSTANCE_DATE = "location_date";
 
+    /**
+     * Precision values to be used when retrieving location instances.
+     *
+     * These values are approximate.
+     */
+    public enum LocationPrecision {
+        ONE_HUNDRED_METERS, //actually 111 m
+        ONE_THOUSAND_METERS, //actually 1.11 km
+        TEN_THOUSAND_METERS //actually 11.1 km
+    };
+
     private static final String INSERT_OR_REPLACE_MESSAGE = "INSERT OR REPLACE INTO " + TABLE_MESSAGES +
             " (" +
             COL_MESSAGE_ID + ", " +
@@ -183,15 +194,12 @@ public class ADNDatabase {
         }
         mDatabase.beginTransaction();
         try {
-            BigDecimal latitude = new BigDecimal(geolocation.getLatitude());
-            latitude = latitude.setScale(3, BigDecimal.ROUND_HALF_UP);
-
-            BigDecimal longitude = new BigDecimal(geolocation.getLongitude());
-            longitude = longitude.setScale(3, BigDecimal.ROUND_HALF_UP);
+            double latitude = getRoundedValue(geolocation.getLatitude(), 3);
+            double longitude = getRoundedValue(geolocation.getLongitude(), 3);
 
             mInsertOrReplaceGeolocation.bindString(1, geolocation.getName());
-            mInsertOrReplaceGeolocation.bindDouble(2, latitude.doubleValue());
-            mInsertOrReplaceGeolocation.bindDouble(3, longitude.doubleValue());
+            mInsertOrReplaceGeolocation.bindDouble(2, latitude);
+            mInsertOrReplaceGeolocation.bindDouble(3, longitude);
             mInsertOrReplaceGeolocation.execute();
             mDatabase.setTransactionSuccessful();
         } catch(Exception e) {
@@ -213,21 +221,20 @@ public class ADNDatabase {
             String channelId = messagePlus.getMessage().getChannelId();
             String factualId = location.getFactualId();
 
-            BigDecimal latitude = new BigDecimal(location.getLatitude());
-            latitude = latitude.setScale(3, BigDecimal.ROUND_HALF_UP);
-
-            BigDecimal longitude = new BigDecimal(location.getLongitude());
-            longitude = longitude.setScale(3, BigDecimal.ROUND_HALF_UP);
+            double latValue = getRoundedValue(location.getLatitude(), 3);
+            double longValue = getRoundedValue(location.getLongitude(), 3);
 
             mDatabase.beginTransaction();
             try {
                 mInsertOrReplaceLocationInstance.bindString(1, name);
                 mInsertOrReplaceLocationInstance.bindString(2, messageId);
                 mInsertOrReplaceLocationInstance.bindString(3, channelId);
-                mInsertOrReplaceLocationInstance.bindDouble(4, latitude.doubleValue());
-                mInsertOrReplaceLocationInstance.bindDouble(5, longitude.doubleValue());
+                mInsertOrReplaceLocationInstance.bindDouble(4, latValue);
+                mInsertOrReplaceLocationInstance.bindDouble(5, longValue);
                 if(factualId != null) {
                     mInsertOrReplaceLocationInstance.bindString(6, factualId);
+                } else {
+                    mInsertOrReplaceLocationInstance.bindNull(6);
                 }
                 mInsertOrReplaceLocationInstance.bindLong(7, messagePlus.getDisplayDate().getTime());
                 mInsertOrReplaceLocationInstance.execute();
@@ -243,7 +250,8 @@ public class ADNDatabase {
 
     /**
      * Get a DisplayLocationInstances object representing the complete set of messages with which
-     * the specified DisplayLocation is associated.
+     * the specified DisplayLocation is associated. This defaults the lookup to a precision of
+     * LocationPrecision.ONE_HUNDRED_METERS (actually ~111 m)
      *
      * Display locations are unique by name + latitude + longitude, where latitude and longitude are
      *
@@ -252,23 +260,54 @@ public class ADNDatabase {
      * @param location the DisplayLocation
      *
      * @return DisplayLocationInstances
+     *
+     * @see com.alwaysallthetime.adnlibutils.db.ADNDatabase#getDisplayLocationInstances(String, com.alwaysallthetime.adnlibutils.model.DisplayLocation, com.alwaysallthetime.adnlibutils.db.ADNDatabase.LocationPrecision)
      */
     public DisplayLocationInstances getDisplayLocationInstances(String channelId, DisplayLocation location) {
+        return getDisplayLocationInstances(channelId, location, LocationPrecision.ONE_HUNDRED_METERS);
+    }
+
+    /**
+     * Get a DisplayLocationInstances object representing the complete set of messages with which
+     * the specified DisplayLocation is associated. Because DisplayLocations might have names that
+     * represent larger geographic areas, this method accepts a LocationPrecision that acts as
+     * a filter. For example, if a location was simply, "Mission District, San Francisco," you might want
+     * to provide a wider LocationPrecision so that a location that has the same name, but slightly different
+     * coordinates are returned.
+     *
+     * Display locations are unique by name + latitude + longitude, where latitude and longitude are
+     *
+     * @param channelId The id of the channel
+     * @param location the DisplayLocation
+     * @param precision The
+     *
+     * @return DisplayLocationInstances
+     */
+    public DisplayLocationInstances getDisplayLocationInstances(String channelId, DisplayLocation location, LocationPrecision precision) {
         Cursor cursor = null;
         DisplayLocationInstances instances = new DisplayLocationInstances(location);
         try {
-            String where = COL_LOCATION_INSTANCE_CHANNEL_ID + " = ? AND " +
-                           COL_LOCATION_INSTANCE_NAME + " = ? AND " +
-                           COL_LOCATION_INSTANCE_LATITUDE + " = ? AND " +
-                           COL_LOCATION_INSTANCE_LONGITUDE + " = ?";
+            String where = COL_LOCATION_INSTANCE_CHANNEL_ID + " = ? AND " + COL_LOCATION_INSTANCE_NAME + " = ? AND ";
 
-            String[] args = new String[] { channelId,
-                                            location.getName(),
-                                            String.format("%.3f", location.getLatitude()),
-                                            String.format("%.3f", location.getLongitude()) };
+            String latArg = null;
+            String longArg = null;
+            if(precision == LocationPrecision.ONE_HUNDRED_METERS) {
+                latArg = String.format("%s", String.valueOf(getRoundedValue(location.getLatitude(), 3)));
+                longArg = String.format("%s", String.valueOf(getRoundedValue(location.getLongitude(), 3)));
+                where += COL_LOCATION_INSTANCE_LATITUDE + " = ? AND " + COL_LOCATION_INSTANCE_LONGITUDE + " = ?";
+            } else if(precision == LocationPrecision.ONE_THOUSAND_METERS) {
+                latArg = String.format("%s%%", String.valueOf(getRoundedValue(location.getLatitude(), 2)));
+                longArg = String.format("%s%%", String.valueOf(getRoundedValue(location.getLongitude(), 2)));
+                where += COL_LOCATION_INSTANCE_LATITUDE + " LIKE ? AND " + COL_LOCATION_INSTANCE_LONGITUDE + " LIKE ?";
+            } else if(precision == LocationPrecision.TEN_THOUSAND_METERS) {
+                latArg = String.format("%s%%", String.valueOf(getRoundedValue(location.getLatitude(), 1)));
+                longArg = String.format("%s%%", String.valueOf(getRoundedValue(location.getLongitude(), 1)));
+                where += COL_LOCATION_INSTANCE_LATITUDE + " LIKE ? AND " + COL_LOCATION_INSTANCE_LONGITUDE + " LIKE ?";
+            }
+
+            String[] args = new String[] { channelId, location.getName(), latArg, longArg };
             String[] cols = new String[] { COL_LOCATION_INSTANCE_MESSAGE_ID };
             cursor = mDatabase.query(TABLE_LOCATION_INSTANCES, cols, where, args, null, null, null, null);
-
             if(cursor.moveToNext()) {
                 do {
                     String messageId = cursor.getString(0);
@@ -296,7 +335,7 @@ public class ADNDatabase {
     public Geolocation getGeolocation(double latitude, double longitude) {
         Cursor cursor = null;
         try {
-            String[] args = new String[] { String.format("%.3f", latitude), String.format("%.3f", longitude)};
+            String[] args = new String[] { String.valueOf(getRoundedValue(latitude, 3)), String.valueOf(getRoundedValue(longitude, 3))};
             String where = COL_GEOLOCATION_LATITUDE + " = ? AND " + COL_GEOLOCATION_LONGITUDE + " = ?";
             cursor = mDatabase.query(TABLE_GEOLOCATIONS, new String[] { COL_GEOLOCATION_NAME }, where, args, null, null, null, null);
 
@@ -554,5 +593,10 @@ public class ADNDatabase {
         } finally {
             mDatabase.endTransaction();
         }
+    }
+
+    private double getRoundedValue(double value, int numDecimals) {
+        BigDecimal bigValue = new BigDecimal(value);
+        return bigValue.setScale(numDecimals, BigDecimal.ROUND_DOWN).doubleValue();
     }
 }
