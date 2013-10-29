@@ -47,12 +47,25 @@ public class MessageManager {
 
         public abstract void onSuccess(final List<MessagePlus> responseData, final boolean appended);
         public abstract void onError(Exception exception);
+
         void setIsMore(boolean isMore) {
             this.isMore = isMore;
         }
 
         public boolean isMore() {
             return this.isMore;
+        }
+    }
+
+    public static abstract class MessageManagerSyncResponseHandler extends MessageManagerResponseHandler {
+        private int numMessagesSynced;
+
+        void setNumMessagesSynced(int numMessagesSynced) {
+            this.numMessagesSynced = numMessagesSynced;
+        }
+
+        public int getNumMessagesSynced() {
+            return numMessagesSynced;
         }
     }
 
@@ -245,7 +258,7 @@ public class MessageManager {
 
                 @Override
                 public void onException(Exception exception) {
-                    Log.d(TAG, exception.getMessage(), exception);
+                    Log.e(TAG, exception.getMessage(), exception);
                     if(mConfiguration.locationLookupHandler != null) {
                         mConfiguration.locationLookupHandler.onException(messagePlus, exception);
                     }
@@ -383,7 +396,7 @@ public class MessageManager {
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager.MessageManagerConfiguration#setDatabaseInsertionEnabled(boolean)
      * @see MessageManager#loadPersistedMessages(String, int)
      */
-    public synchronized void retrieveAndPersistAllMessages(String channelId, MessageManagerResponseHandler responseHandler) {
+    public synchronized void retrieveAndPersistAllMessages(String channelId, MessageManagerSyncResponseHandler responseHandler) {
         if(!mConfiguration.isDatabaseInsertionEnabled) {
             throw new RuntimeException("Database insertion must be enabled to use this functionality.");
         }
@@ -393,7 +406,7 @@ public class MessageManager {
         retrieveAllMessages(messages, sinceId, beforeId, channelId, responseHandler);
     }
 
-    private synchronized void retrieveAllMessages(final ArrayList<MessagePlus> messages, String sinceId, String beforeId, final String channelId, final MessageManagerResponseHandler responseHandler) {
+    private synchronized void retrieveAllMessages(final ArrayList<MessagePlus> messages, String sinceId, String beforeId, final String channelId, final MessageManagerSyncResponseHandler responseHandler) {
         QueryParameters params = (QueryParameters) mParameters.get(channelId).clone();
         params.put("since_id", sinceId);
         params.put("before_id", beforeId);
@@ -405,12 +418,13 @@ public class MessageManager {
                 if(messages.size() == 0) {
                     messages.addAll(responseData);
                 }
+                responseHandler.setNumMessagesSynced(responseHandler.getNumMessagesSynced() + responseData.size());
+
                 if(isMore()) {
                     MinMaxPair minMaxPair = getMinMaxPair(channelId);
-                    Log.d(TAG, "size is " + messages.size() + "; " + minMaxPair.maxId + ", " + minMaxPair.minId);
                     retrieveAllMessages(messages, null, minMaxPair.minId, channelId, responseHandler);
                 } else {
-                    Log.d(TAG, "no more. size is " + messages.size());
+                    Log.d(TAG, "Num messages synced: " + responseHandler.getNumMessagesSynced());
                     responseHandler.onSuccess(messages, true);
                 }
             }
@@ -435,8 +449,8 @@ public class MessageManager {
             @Override
             public void onSuccess(final MessageList responseData) {
                 boolean appended = true;
-                String beforeId  = queryParameters.get("before_id");
-                String sinceId  = queryParameters.get("since_id");
+                String beforeId = queryParameters.get("before_id");
+                String sinceId = queryParameters.get("since_id");
 
                 MinMaxPair minMaxPair = getMinMaxPair(channelId);
                 if(beforeId != null && sinceId == null) {
