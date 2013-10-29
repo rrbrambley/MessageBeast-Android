@@ -276,10 +276,12 @@ public class ADNDatabase {
      * coordinates are returned.
      *
      * Display locations are unique by name + latitude + longitude, where latitude and longitude are
+     * always rounded to three decimal places. So, by providing a less precise LocationPrecision, you
+     * can lookup by locations that match, e.g. 2 or 1 decimal places.
      *
      * @param channelId The id of the channel
      * @param location the DisplayLocation
-     * @param precision The
+     * @param precision The precision to use when obtaining location instances.
      *
      * @return DisplayLocationInstances
      */
