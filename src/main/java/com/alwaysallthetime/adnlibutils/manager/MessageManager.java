@@ -129,6 +129,9 @@ public class MessageManager {
         if(mConfiguration.isLocationLookupEnabled) {
             lookupLocation(messages.values(), false);
         }
+        if(mConfiguration.isOEmbedLookupEnabled) {
+            lookupOEmbed(messages.values(), false);
+        }
 
         //this should always return only the newly loaded messages.
         return messages;
@@ -151,8 +154,25 @@ public class MessageManager {
         if(mConfiguration.isLocationLookupEnabled) {
             lookupLocation(messages.values(), false);
         }
+        if(mConfiguration.isOEmbedLookupEnabled) {
+            lookupOEmbed(messages.values(), false);
+        }
 
         return messages;
+    }
+
+    private void lookupOEmbed(Collection<MessagePlus> messages, boolean persistIfEnabled) {
+        for(MessagePlus messagePlus : messages) {
+            Message message = messagePlus.getMessage();
+
+            List<Annotation> oembeds = message.getAnnotationsOfType(Annotations.OEMBED);
+            if(oembeds != null) {
+                messagePlus.addOEmbedsFromAnnotations(oembeds);
+                if(persistIfEnabled && mConfiguration.isDatabaseInsertionEnabled) {
+                    mDatabase.insertOrReplaceOEmbedInstances(messagePlus);
+                }
+            }
+        }
     }
 
     private void lookupLocation(Collection<MessagePlus> messages, boolean persistIfEnabled) {
@@ -460,7 +480,10 @@ public class MessageManager {
                 mMessages.put(channelId, newFullChannelMessagesMap);
 
                 if(mConfiguration.isLocationLookupEnabled) {
-                    lookupLocation(newestMessages);
+                    lookupLocation(newestMessages, true);
+                }
+                if(mConfiguration.isOEmbedLookupEnabled) {
+                    lookupOEmbed(newestMessages, true);
                 }
 
                 if(handler != null) {
@@ -501,6 +524,7 @@ public class MessageManager {
         }
 
         boolean isDatabaseInsertionEnabled;
+        boolean isOEmbedLookupEnabled;
         boolean isLocationLookupEnabled;
         MessageDisplayDateAdapter dateAdapter;
         MessageLocationLookupHandler locationLookupHandler;
@@ -527,6 +551,21 @@ public class MessageManager {
         }
 
         /**
+         * Enable OEmbed lookup on Messages. If enabled, annotations will be examined in order to
+         * determine if OEmbed photo or video annotations are present. The associated MessagePlus
+         * will then have these OEmbed Objects obtainable via convenience methods.
+         *
+         * This is especially useful when database insertion is enabled – instances of photo and
+         * video OEmbeds will be stored in a table for look up at a later time (e.g. "gimme all
+         * messages for which there are photos attached").
+         *
+         * @param isEnabled
+         */
+        public void setOEmbedLookupEnabled(boolean isEnabled) {
+            this.isOEmbedLookupEnabled = isEnabled;
+        }
+
+        /**
          * Enable location lookup on Messages. If enabled, annotations will be examined in order
          * to construct a DisplayLocation. A DisplayLocation will be set on the associated MessagePlus
          * Object, based off one of these three annotations, if they exist:
@@ -540,7 +579,7 @@ public class MessageManager {
          * should set a MessageLocationLookupHandler on this configuration if you want to perform
          * a task such as update UI after a location is obtained.
          *
-         * If none of these annotations is found, then a null DisplayLocation is set on the
+         * If none of these annotations are found, then a null DisplayLocation is set on the
          * associated MessagePlus.
          *
          * @param isEnabled true if location lookup should be performed on all Messages
