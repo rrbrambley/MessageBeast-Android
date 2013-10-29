@@ -127,7 +127,7 @@ public class MessageManager {
         mMinMaxPairs.put(channelId, minMaxPair);
 
         if(mConfiguration.isLocationLookupEnabled) {
-            lookupLocation(messages.values());
+            lookupLocation(messages.values(), false);
         }
 
         //this should always return only the newly loaded messages.
@@ -149,20 +149,20 @@ public class MessageManager {
         LinkedHashMap<String, MessagePlus> messages = orderedMessageBatch.getMessages();
 
         if(mConfiguration.isLocationLookupEnabled) {
-            lookupLocation(messages.values());
+            lookupLocation(messages.values(), false);
         }
 
         return messages;
     }
 
-    private void lookupLocation(Collection<MessagePlus> messages) {
+    private void lookupLocation(Collection<MessagePlus> messages, boolean persistIfEnabled) {
         for(MessagePlus messagePlus : messages) {
             Message message = messagePlus.getMessage();
 
             Annotation checkin = message.getFirstAnnotationOfType(Annotations.CHECKIN);
             if(checkin != null) {
                 messagePlus.setDisplayLocation(DisplayLocation.fromCheckinAnnotation(checkin));
-                if(mConfiguration.isDatabaseInsertionEnabled) {
+                if(persistIfEnabled && mConfiguration.isDatabaseInsertionEnabled) {
                     mDatabase.insertOrReplaceLocationInstance(messagePlus);
                 }
                 continue;
@@ -171,7 +171,7 @@ public class MessageManager {
             Annotation ohaiLocation = message.getFirstAnnotationOfType(Annotations.OHAI_LOCATION);
             if(ohaiLocation != null) {
                 messagePlus.setDisplayLocation(DisplayLocation.fromOhaiLocation(ohaiLocation));
-                if(mConfiguration.isDatabaseInsertionEnabled) {
+                if(persistIfEnabled && mConfiguration.isDatabaseInsertionEnabled) {
                     mDatabase.insertOrReplaceLocationInstance(messagePlus);
                 }
                 continue;
@@ -185,7 +185,6 @@ public class MessageManager {
                 Geolocation geolocationObj = mDatabase.getGeolocation(latitude, longitude);
                 if(geolocationObj != null) {
                     messagePlus.setDisplayLocation(DisplayLocation.fromGeolocation(geolocationObj));
-                    if(mConfiguration.isDatabaseInsertionEnabled) {
 
                     //this might seem odd based on the fact that we just pulled the geolocation
                     //from the database, but the point is to save the instance of this geolocation's
@@ -193,17 +192,18 @@ public class MessageManager {
                     //doesn't mean that this message + geolocation combo has been saved.
                     //(this database lookup is merely an optimization to avoid having to fire off
                     // the async task in reverseGeocode().)
+                    if(persistIfEnabled && mConfiguration.isDatabaseInsertionEnabled) {
                         mDatabase.insertOrReplaceLocationInstance(messagePlus);
                     }
                     continue;
                 } else {
-                    reverseGeocode(messagePlus, latitude, longitude);
+                    reverseGeocode(messagePlus, latitude, longitude, persistIfEnabled);
                 }
             }
         }
     }
 
-    private void reverseGeocode(final MessagePlus messagePlus, final double latitude, final double longitude) {
+    private void reverseGeocode(final MessagePlus messagePlus, final double latitude, final double longitude, final boolean persistIfEnabled) {
         if(Geocoder.isPresent()) {
             AsyncGeocoder.getInstance(mContext).getFromLocation(latitude, longitude, 5, new AsyncGeocoderResponseHandler() {
                 @Override
@@ -213,7 +213,7 @@ public class MessageManager {
                         Geolocation geolocation = new Geolocation(loc, latitude, longitude);
                         messagePlus.setDisplayLocation(DisplayLocation.fromGeolocation(geolocation));
 
-                        if(mConfiguration.isDatabaseInsertionEnabled) {
+                        if(persistIfEnabled && mConfiguration.isDatabaseInsertionEnabled) {
                             mDatabase.insertOrReplaceGeolocation(geolocation);
                             mDatabase.insertOrReplaceLocationInstance(messagePlus);
                         }
