@@ -1,13 +1,13 @@
 package com.alwaysallthetime.adnlibutils.db;
 
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 public abstract class AbstractMessageAttachmentInstance {
-    protected HashSet<String> mMessageIds;
+    protected LinkedHashSet<String> mMessageIds;
 
     public AbstractMessageAttachmentInstance() {
-        mMessageIds = new HashSet<String>();
+        mMessageIds = new LinkedHashSet<String>();
     }
 
     public void addInstance(String messageId) {
@@ -22,7 +22,7 @@ public abstract class AbstractMessageAttachmentInstance {
         return mMessageIds.size();
     }
 
-    public Set<String> getMessageIds() {
+    public LinkedHashSet<String> getMessageIds() {
         return mMessageIds;
     }
 }
