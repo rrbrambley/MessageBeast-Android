@@ -452,41 +452,62 @@ public class ADNDatabase {
         return null;
     }
 
+
+    /**
+     * Get all Hashtags for a channel sorted in descending order – from most recently used to
+     * least recently used.
+     *
+     * @return a Map whose keys are hashtag names, mapped to HashtagInstances
+     */
+    public LinkedHashMap<String, HashtagInstances> getHashtagInstances(String channelId) {
+        return getHashtagInstances(channelId, null, null);
+    }
+
     /**
      * Get all Hashtags for a channel whose associated messages were created since a specified date.
+     * Results are sorted in descending order – from most recently used to least recently used.
      *
      * @param channelId The id of the channel
      * @param sinceDate The earliest date for which hashtags should be returned.
      * @return a Map whose keys are hashtag names, mapped to HashtagInstances
      */
-    public Map<String, HashtagInstances> getHashtagInstances(String channelId, Date sinceDate) {
+    public LinkedHashMap<String, HashtagInstances> getHashtagInstances(String channelId, Date sinceDate) {
         return getHashtagInstances(channelId, null, sinceDate);
     }
 
     /**
      * Get all Hashtags for a channel whose associated messages were created within the provided
-     * date window, i.e. (beforeDate, sinceDate]
+     * date window, i.e. (beforeDate, sinceDate]. If no dates are provided, then all Hashtags are
+     * returned. Results are sorted in descending order – from most recently used to least recently
+     * used.
      *
      * @param channelId The id of the channel
      * @param beforeDate The date before which all hashtags' associated messages were created. Can be null.
-     * @param sinceDate The earliest date for which hashtags should be returned. May not be null.
+     * @param sinceDate The earliest date for which hashtags should be returned. Can be null.
+     *
      * @return a Map whose keys are hashtag names, mapped to HashtagInstances
      *
      * @see com.alwaysallthetime.adnlibutils.db.ADNDatabase#getHashtagInstances(String, java.util.Date)
      */
-    public Map<String, HashtagInstances> getHashtagInstances(String channelId, Date beforeDate, Date sinceDate) {
-        HashMap<String, HashtagInstances> instances = new HashMap<String, HashtagInstances>();
+    public LinkedHashMap<String, HashtagInstances> getHashtagInstances(String channelId, Date beforeDate, Date sinceDate) {
+        LinkedHashMap<String, HashtagInstances> instances = new LinkedHashMap<String, HashtagInstances>();
         Cursor cursor = null;
         try {
-            String[] args = null;
-            String where = COL_HASHTAG_INSTANCE_CHANNEL_ID + " =? AND " + COL_HASHTAG_INSTANCE_DATE + " >= ?";
+            String where = COL_HASHTAG_INSTANCE_CHANNEL_ID + " =?";
+            ArrayList<String> args = new ArrayList<String>(3);
+            args.add(channelId);
+
+            if(sinceDate != null) {
+                where += " AND " + COL_HASHTAG_INSTANCE_DATE + " >= ?";
+                args.add(String.valueOf(sinceDate.getTime()));
+            }
             if(beforeDate != null) {
                 where += " AND " + COL_HASHTAG_INSTANCE_DATE + " < ?";
-                args = new String[] { channelId,  String.valueOf(sinceDate.getTime()), String.valueOf(beforeDate.getTime()) };
-            } else {
-                args = new String[] { channelId,  String.valueOf(sinceDate.getTime()) };
+                args.add(String.valueOf(beforeDate.getTime()));
             }
-            cursor = mDatabase.query(TABLE_HASHTAG_INSTANCES, null, where, args, null, null, null, null);
+
+            String orderBy = COL_HASHTAG_INSTANCE_DATE + " DESC";
+            cursor = mDatabase.query(TABLE_HASHTAG_INSTANCES, null, where, args.toArray(new String[0]), null, null, orderBy, null);
 
             if(cursor.moveToNext()) {
                 do {
