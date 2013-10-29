@@ -27,16 +27,23 @@ public class AnnotationUtility {
         Annotation displayDate = message.getFirstAnnotationOfType(Annotations.OHAI_DISPLAY_DATE);
         if(displayDate != null) {
             String date = (String) displayDate.getValue().get("date");
-            if(mIso8601Format == null) {
-                mIso8601Format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
-            }
-            try {
-                return mIso8601Format.parse(date);
-            } catch(ParseException e) {
-                Log.d(TAG, e.getMessage(), e);
+            if(date != null) {
+                return getDateFromIso8601String(date);
             }
         }
         return message.getCreatedAt();
+    }
+
+    public static Date getDateFromIso8601String(String date) {
+        if(mIso8601Format == null) {
+            mIso8601Format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+        }
+        try {
+            return mIso8601Format.parse(date);
+        } catch(ParseException e) {
+            Log.d(TAG, e.getMessage(), e);
+        }
+        return null;
     }
 
     public static Annotation getFirstOEmbedPhotoAnnotation(Message message) {
