@@ -22,6 +22,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 public class ADNDatabase {
@@ -55,6 +56,13 @@ public class ADNDatabase {
     public static final String COL_LOCATION_INSTANCE_LATITUDE = "location_latitude";
     public static final String COL_LOCATION_INSTANCE_LONGITUDE = "location_longitude";
     public static final String COL_LOCATION_INSTANCE_DATE = "location_date";
+
+    public static final String TABLE_OEMBED_INSTANCES = "oembeds";
+    public static final String COL_OEMBED_INSTANCE_TYPE = "oembed_type";
+    public static final String COL_OEMBED_INSTANCE_MESSAGE_ID = "oembed_instance_message_id";
+    public static final String COL_OEMBED_INSTANCE_CHANNEL_ID = "oembed_instance_channel_id";
+    public static final String COL_OEMBED_INSTANCE_COUNT = "oembed_instance_count";
+    public static final String COL_OEMBED_INSTANCE_DATE = "oembed_instance_date";
 
     /**
      * Precision values to be used when retrieving location instances.
@@ -105,6 +113,15 @@ public class ADNDatabase {
             ") " +
             "VALUES(?, ?, ?, ?, ?, ?, ?)";
 
+    private static final String INSERT_OR_REPLACE_OEMBED_INSTANCE = "INSERT OR REPLACE INTO " + TABLE_OEMBED_INSTANCES +
+            " (" +
+            COL_OEMBED_INSTANCE_TYPE + ", " +
+            COL_OEMBED_INSTANCE_MESSAGE_ID + ", " +
+            COL_OEMBED_INSTANCE_CHANNEL_ID + ", " +
+            COL_OEMBED_INSTANCE_COUNT + ", " +
+            COL_OEMBED_INSTANCE_DATE +
+            ") " +
+            "VALUES(?, ?, ?, ?, ?)";
 
     private static ADNDatabase sInstance;
 
@@ -113,6 +130,7 @@ public class ADNDatabase {
     private SQLiteStatement mInsertOrReplaceHashtag;
     private SQLiteStatement mInsertOrReplaceGeolocation;
     private SQLiteStatement mInsertOrReplaceLocationInstance;
+    private SQLiteStatement mInsertOrReplaceOEmbedInstance;
     private Gson mGson;
 
     public static synchronized ADNDatabase getInstance(Context context) {
@@ -246,6 +264,85 @@ public class ADNDatabase {
                 mInsertOrReplaceLocationInstance.clearBindings();
             }
         }
+    }
+
+    public void insertOrReplaceOEmbedInstances(MessagePlus messagePlus) {
+        if(mInsertOrReplaceOEmbedInstance == null) {
+            mInsertOrReplaceOEmbedInstance = mDatabase.compileStatement(INSERT_OR_REPLACE_OEMBED_INSTANCE);
+        }
+        if(messagePlus.hasSetOEmbedValues()) {
+            mDatabase.beginTransaction();
+            try {
+                if(messagePlus.hasPhotoOEmbed()) {
+                    insertOrReplaceOEmbedInstances(messagePlus, messagePlus.getPhotoOEmbeds());
+                }
+                if(messagePlus.hasHtml5VideoOEmbed()) {
+                    insertOrReplaceOEmbedInstances(messagePlus, messagePlus.getHtml5VideoOEmbeds());
+                }
+                mDatabase.setTransactionSuccessful();
+            } catch(Exception e) {
+                Log.e(TAG, e.getMessage(), e);
+            } finally {
+                mDatabase.endTransaction();
+            }
+        }
+    }
+
+    //this assumes all oembeds are of the same type.
+    private void insertOrReplaceOEmbedInstances(MessagePlus messagePlus, List<? extends MessagePlus.OEmbed> oEmbeds) {
+        if(oEmbeds != null && oEmbeds.size() > 0) {
+            mDatabase.beginTransaction();
+
+            try {
+                Message m = messagePlus.getMessage();
+                mInsertOrReplaceOEmbedInstance.bindString(1, oEmbeds.get(0).getType());
+                mInsertOrReplaceOEmbedInstance.bindString(2, m.getId());
+                mInsertOrReplaceOEmbedInstance.bindString(3, m.getChannelId());
+                mInsertOrReplaceOEmbedInstance.bindLong(4, oEmbeds.size());
+                mInsertOrReplaceOEmbedInstance.bindLong(5, messagePlus.getDisplayDate().getTime());
+                mInsertOrReplaceOEmbedInstance.execute();
+                mDatabase.setTransactionSuccessful();
+            } catch(Exception e) {
+                Log.e(TAG, e.getMessage(), e);
+            } finally {
+                mDatabase.endTransaction();
+                mInsertOrReplaceOEmbedInstance.clearBindings();
+            }
+        }
+    }
+
+    /**
+     * Get an OEmbedInstances object representing the complete set of messages with an OEmbed
+     * Annotation of the specified type. The type String comes from the "type" value of the actual
+     * OEmbed Annotation, e.g. photo, html5video
+     *
+     * @param channelId the Channel id
+     * @param type The OEmbed type
+     *
+     * @return OEmbedInstances
+     */
+    public OEmbedInstances getOEmbedInstances(String channelId, String type) {
+        Cursor cursor = null;
+        OEmbedInstances instances = new OEmbedInstances(type);
+        try {
+            String where = COL_OEMBED_INSTANCE_CHANNEL_ID + " = ? AND " + COL_OEMBED_INSTANCE_TYPE + " = ?";
+            String[] args = new String[] { channelId, type };
+            cursor = mDatabase.query(TABLE_OEMBED_INSTANCES, new String[] { COL_OEMBED_INSTANCE_MESSAGE_ID }, where, args, null, null, null, null);
+
+            if(cursor.moveToNext()) {
+                do {
+                    String messageId = cursor.getString(0);
+                    instances.addInstance(messageId);
+                } while(cursor.moveToNext());
+            }
+        } catch(Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+        } finally {
+            if(cursor != null) {
+                cursor.close();
+            }
+        }
+        return instances;
     }
 
     /**
