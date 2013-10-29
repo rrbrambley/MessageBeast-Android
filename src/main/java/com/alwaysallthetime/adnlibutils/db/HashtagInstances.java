@@ -12,4 +12,8 @@ public class HashtagInstances extends AbstractMessageAttachmentInstance {
         this(name);
         addInstance(messageId);
     }
+
+    public String getName() {
+        return mName;
+    }
 }
