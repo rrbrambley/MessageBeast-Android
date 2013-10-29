@@ -186,6 +186,13 @@ public class MessageManager {
                 if(geolocationObj != null) {
                     messagePlus.setDisplayLocation(DisplayLocation.fromGeolocation(geolocationObj));
                     if(mConfiguration.isDatabaseInsertionEnabled) {
+
+                    //this might seem odd based on the fact that we just pulled the geolocation
+                    //from the database, but the point is to save the instance of this geolocation's
+                    //use - we might obtain a geolocation with this message's lat/long, but that
+                    //doesn't mean that this message + geolocation combo has been saved.
+                    //(this database lookup is merely an optimization to avoid having to fire off
+                    // the async task in reverseGeocode().)
                         mDatabase.insertOrReplaceLocationInstance(messagePlus);
                     }
                     continue;
