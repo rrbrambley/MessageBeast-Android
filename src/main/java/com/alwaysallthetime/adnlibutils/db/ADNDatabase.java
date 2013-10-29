@@ -415,7 +415,7 @@ public class ADNDatabase {
     }
 
     /**
-     * Get a HashtagInstances object representing all Messages in whichh the specified
+     * Get a HashtagInstances object representing all Messages in which the specified
      * hashtag was used.
      *
      * @param channelId The id of the channel
