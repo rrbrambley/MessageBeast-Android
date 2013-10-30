@@ -11,7 +11,8 @@ public class DisplayLocation implements Parcelable {
     public enum LocationType {
         CHECKIN,
         OHAI,
-        GEOLOCATION;
+        GEOLOCATION,
+        UNKNOWN;
 
         public static LocationType fromInt(int ordinal) {
             switch(ordinal) {
@@ -20,8 +21,9 @@ public class DisplayLocation implements Parcelable {
                 case 1:
                     return OHAI;
                 case 2:
-                default:
                     return GEOLOCATION;
+                default:
+                    return UNKNOWN;
             }
         }
     }
@@ -66,6 +68,7 @@ public class DisplayLocation implements Parcelable {
         mLatitude = latitude;
         mLongitude = longitude;
         mName = name;
+        mType = LocationType.UNKNOWN;
     }
 
     protected void setType(LocationType type) {
