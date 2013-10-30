@@ -11,4 +11,9 @@ public class OEmbedInstances extends AbstractMessageAttachmentInstance {
     public String getType() {
         return mType;
     }
+
+    @Override
+    public String getName() {
+        return mType;
+    }
 }

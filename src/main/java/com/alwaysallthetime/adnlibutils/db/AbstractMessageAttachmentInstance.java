@@ -25,4 +25,6 @@ public abstract class AbstractMessageAttachmentInstance {
     public LinkedHashSet<String> getMessageIds() {
         return mMessageIds;
     }
+
+    public abstract String getName();
 }

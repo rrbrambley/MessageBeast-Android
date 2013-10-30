@@ -13,6 +13,7 @@ public class HashtagInstances extends AbstractMessageAttachmentInstance {
         addInstance(messageId);
     }
 
+    @Override
     public String getName() {
         return mName;
     }

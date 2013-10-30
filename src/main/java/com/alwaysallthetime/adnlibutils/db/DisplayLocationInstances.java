@@ -15,4 +15,13 @@ public class DisplayLocationInstances extends AbstractMessageAttachmentInstance 
         this(location);
         addInstance(messageId);
     }
+
+    public DisplayLocation getDisplayLocation() {
+        return mLocation;
+    }
+
+    @Override
+    public String getName() {
+        return mLocation.getName();
+    }
 }
