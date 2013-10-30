@@ -239,16 +239,13 @@ public class ADNDatabase {
             String channelId = messagePlus.getMessage().getChannelId();
             String factualId = location.getFactualId();
 
-            double latValue = getRoundedValue(location.getLatitude(), 3);
-            double longValue = getRoundedValue(location.getLongitude(), 3);
-
             mDatabase.beginTransaction();
             try {
                 mInsertOrReplaceLocationInstance.bindString(1, name);
                 mInsertOrReplaceLocationInstance.bindString(2, messageId);
                 mInsertOrReplaceLocationInstance.bindString(3, channelId);
-                mInsertOrReplaceLocationInstance.bindDouble(4, latValue);
-                mInsertOrReplaceLocationInstance.bindDouble(5, longValue);
+                mInsertOrReplaceLocationInstance.bindDouble(4, location.getLatitude());
+                mInsertOrReplaceLocationInstance.bindDouble(5, location.getLongitude());
                 if(factualId != null) {
                     mInsertOrReplaceLocationInstance.bindString(6, factualId);
                 } else {
@@ -386,27 +383,25 @@ public class ADNDatabase {
         Cursor cursor = null;
         DisplayLocationInstances instances = new DisplayLocationInstances(location);
         try {
-            String where = COL_LOCATION_INSTANCE_CHANNEL_ID + " = ? AND " + COL_LOCATION_INSTANCE_NAME + " = ? AND ";
+            String where = COL_LOCATION_INSTANCE_CHANNEL_ID + " = ? AND " + COL_LOCATION_INSTANCE_NAME + " = ? AND " +
+                           COL_LOCATION_INSTANCE_LATITUDE + " LIKE ? AND " + COL_LOCATION_INSTANCE_LONGITUDE + " LIKE ?";
 
             String latArg = null;
             String longArg = null;
-            if(precision == LocationPrecision.ONE_HUNDRED_METERS) {
-                latArg = String.format("%s", String.valueOf(getRoundedValue(location.getLatitude(), 3)));
-                longArg = String.format("%s", String.valueOf(getRoundedValue(location.getLongitude(), 3)));
-                where += COL_LOCATION_INSTANCE_LATITUDE + " = ? AND " + COL_LOCATION_INSTANCE_LONGITUDE + " = ?";
-            } else if(precision == LocationPrecision.ONE_THOUSAND_METERS) {
-                latArg = String.format("%s%%", String.valueOf(getRoundedValue(location.getLatitude(), 2)));
-                longArg = String.format("%s%%", String.valueOf(getRoundedValue(location.getLongitude(), 2)));
-                where += COL_LOCATION_INSTANCE_LATITUDE + " LIKE ? AND " + COL_LOCATION_INSTANCE_LONGITUDE + " LIKE ?";
+            int precisionDigits = 3;
+            if(precision == LocationPrecision.ONE_THOUSAND_METERS) {
+                precisionDigits = 2;
             } else if(precision == LocationPrecision.TEN_THOUSAND_METERS) {
-                latArg = String.format("%s%%", String.valueOf(getRoundedValue(location.getLatitude(), 1)));
-                longArg = String.format("%s%%", String.valueOf(getRoundedValue(location.getLongitude(), 1)));
-                where += COL_LOCATION_INSTANCE_LATITUDE + " LIKE ? AND " + COL_LOCATION_INSTANCE_LONGITUDE + " LIKE ?";
+                precisionDigits = 1;
             }
 
+            latArg = String.format("%s%%", String.valueOf(getRoundedValue(location.getLatitude(), precisionDigits)));
+            longArg = String.format("%s%%", String.valueOf(getRoundedValue(location.getLongitude(), precisionDigits)));
+
+            String orderBy = COL_LOCATION_INSTANCE_DATE + " DESC";
             String[] args = new String[] { channelId, location.getName(), latArg, longArg };
             String[] cols = new String[] { COL_LOCATION_INSTANCE_MESSAGE_ID };
-            cursor = mDatabase.query(TABLE_LOCATION_INSTANCES, cols, where, args, null, null, null, null);
+            cursor = mDatabase.query(TABLE_LOCATION_INSTANCES, cols, where, args, null, null, orderBy, null);
             if(cursor.moveToNext()) {
                 do {
                     String messageId = cursor.getString(0);
