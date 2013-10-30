@@ -17,6 +17,7 @@ import com.google.gson.Gson;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
@@ -340,6 +341,54 @@ public class ADNDatabase {
             }
         }
         return instances;
+    }
+
+    /**
+     * Get all DisplayLocationInstances in the specified channel.
+     *
+     * @param channelId the Channel id
+     * @return a List of DisplaylocationInstances in descending order, from most to least recent
+     */
+    public List<DisplayLocationInstances> getDisplayLocationInstances(String channelId) {
+        LinkedHashMap<String, DisplayLocationInstances> allInstances = new LinkedHashMap<String, DisplayLocationInstances>();
+
+        Cursor cursor = null;
+        try {
+            String where = COL_LOCATION_INSTANCE_CHANNEL_ID + " = ?";
+            String args[] = new String[] { channelId };
+            String orderBy = COL_LOCATION_INSTANCE_DATE + " DESC";
+
+            String[] cols = new String[] { COL_LOCATION_INSTANCE_NAME, COL_LOCATION_INSTANCE_MESSAGE_ID, COL_LOCATION_INSTANCE_LATITUDE, COL_LOCATION_INSTANCE_LONGITUDE };
+            cursor = mDatabase.query(TABLE_LOCATION_INSTANCES, cols, where, args, null, null, orderBy, null);
+            if(cursor.moveToNext()) {
+                do {
+                    String name = cursor.getString(0);
+                    String messageId = cursor.getString(1);
+                    Double latitude = cursor.getDouble(2);
+                    Double longitude = cursor.getDouble(3);
+
+                    double roundedLat = getRoundedValue(latitude, 1);
+                    double roundedLong = getRoundedValue(longitude, 1);
+
+                    DisplayLocation loc = new DisplayLocation(name, latitude, longitude);
+
+                    String key = String.format("%s %s %s", name, String.valueOf(roundedLat), String.valueOf(roundedLong));
+                    DisplayLocationInstances displayLocationInstances = allInstances.get(key);
+                    if(displayLocationInstances == null) {
+                        displayLocationInstances = new DisplayLocationInstances(loc);
+                        allInstances.put(key, displayLocationInstances);
+                    }
+                    displayLocationInstances.addInstance(messageId);
+                } while(cursor.moveToNext());
+            }
+        } catch(Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+        } finally {
+            if(cursor != null) {
+                cursor.close();
+            }
+        }
+        return Arrays.asList(allInstances.values().toArray(new DisplayLocationInstances[0]));
     }
 
     /**
