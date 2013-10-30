@@ -1,9 +1,10 @@
-package com.alwaysallthetime.adnlibutils;
+package com.alwaysallthetime.adnlibutils.model;
 
 import android.util.Log;
 
 import com.alwaysallthetime.adnlib.data.Annotation;
 import com.alwaysallthetime.adnlib.data.Message;
+import com.alwaysallthetime.adnlibutils.AnnotationUtility;
 import com.alwaysallthetime.adnlibutils.model.DisplayLocation;
 
 import java.util.ArrayList;

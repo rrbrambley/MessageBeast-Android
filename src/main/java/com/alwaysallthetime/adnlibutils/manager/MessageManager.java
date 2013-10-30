@@ -13,7 +13,7 @@ import com.alwaysallthetime.adnlib.data.Message;
 import com.alwaysallthetime.adnlib.data.MessageList;
 import com.alwaysallthetime.adnlib.response.MessageListResponseHandler;
 import com.alwaysallthetime.adnlib.response.MessageResponseHandler;
-import com.alwaysallthetime.adnlibutils.MessagePlus;
+import com.alwaysallthetime.adnlibutils.model.MessagePlus;
 import com.alwaysallthetime.adnlibutils.db.ADNDatabase;
 import com.alwaysallthetime.adnlibutils.db.DisplayLocationInstances;
 import com.alwaysallthetime.adnlibutils.db.HashtagInstances;
@@ -598,9 +598,9 @@ public class MessageManager {
          *
          * @param isEnabled true if location lookup should be performed on all Messages
          *
-         * @see com.alwaysallthetime.adnlibutils.MessagePlus#getDisplayLocation()
-         * @see com.alwaysallthetime.adnlibutils.MessagePlus#hasSetDisplayLocation()
-         * @see com.alwaysallthetime.adnlibutils.MessagePlus#hasDisplayLocation()
+         * @see com.alwaysallthetime.adnlibutils.model.MessagePlus#getDisplayLocation()
+         * @see com.alwaysallthetime.adnlibutils.model.MessagePlus#hasSetDisplayLocation()
+         * @see com.alwaysallthetime.adnlibutils.model.MessagePlus#hasDisplayLocation()
          */
         public void setLocationLookupEnabled(boolean isEnabled) {
             this.isLocationLookupEnabled = isEnabled;

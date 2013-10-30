@@ -9,7 +9,7 @@ import android.util.Log;
 import com.alwaysallthetime.adnlib.data.Entities;
 import com.alwaysallthetime.adnlib.data.Message;
 import com.alwaysallthetime.adnlib.gson.AppDotNetGson;
-import com.alwaysallthetime.adnlibutils.MessagePlus;
+import com.alwaysallthetime.adnlibutils.model.MessagePlus;
 import com.alwaysallthetime.adnlibutils.manager.MinMaxPair;
 import com.alwaysallthetime.adnlibutils.model.DisplayLocation;
 import com.alwaysallthetime.adnlibutils.model.Geolocation;

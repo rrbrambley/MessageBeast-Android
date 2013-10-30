@@ -1,6 +1,6 @@
 package com.alwaysallthetime.adnlibutils.db;
 
-import com.alwaysallthetime.adnlibutils.MessagePlus;
+import com.alwaysallthetime.adnlibutils.model.MessagePlus;
 import com.alwaysallthetime.adnlibutils.manager.MinMaxPair;
 
 import java.util.LinkedHashMap;
