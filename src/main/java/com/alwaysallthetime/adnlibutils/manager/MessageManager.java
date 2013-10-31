@@ -332,13 +332,13 @@ public class MessageManager {
         });
     }
 
-    public synchronized void deleteMessage(final Message message, final MessageDeletionResponseHandler handler) {
-        mClient.deleteMessage(message, new MessageResponseHandler() {
+    public synchronized void deleteMessage(final MessagePlus messagePlus, final MessageDeletionResponseHandler handler) {
+        mClient.deleteMessage(messagePlus.getMessage(), new MessageResponseHandler() {
             @Override
             public void onSuccess(Message responseData) {
                 LinkedHashMap<String, MessagePlus> channelMessages = mMessages.get(responseData.getChannelId());
                 channelMessages.remove(responseData.getId());
-                mDatabase.deleteMessage(message); //this one because the deleted one doesn't have the entities.
+                mDatabase.deleteMessage(messagePlus); //this one because the deleted one doesn't have the entities.
 
                 handler.onSuccess();
             }

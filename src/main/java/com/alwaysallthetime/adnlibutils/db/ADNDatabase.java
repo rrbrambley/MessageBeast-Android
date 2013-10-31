@@ -2,6 +2,7 @@ package com.alwaysallthetime.adnlibutils.db;
 
 import android.content.Context;
 import android.database.Cursor;
+import android.database.DatabaseUtils;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteStatement;
 import android.util.Log;
@@ -9,10 +10,10 @@ import android.util.Log;
 import com.alwaysallthetime.adnlib.data.Entities;
 import com.alwaysallthetime.adnlib.data.Message;
 import com.alwaysallthetime.adnlib.gson.AppDotNetGson;
-import com.alwaysallthetime.adnlibutils.model.MessagePlus;
 import com.alwaysallthetime.adnlibutils.manager.MinMaxPair;
 import com.alwaysallthetime.adnlibutils.model.DisplayLocation;
 import com.alwaysallthetime.adnlibutils.model.Geolocation;
+import com.alwaysallthetime.adnlibutils.model.MessagePlus;
 import com.google.gson.Gson;
 
 import java.math.BigDecimal;
@@ -726,16 +727,25 @@ public class ADNDatabase {
         return new OrderedMessageBatch(messages, new MinMaxPair(minId, maxId));
     }
 
-    public void deleteMessage(Message message) {
+    public void deleteMessage(MessagePlus messagePlus) {
         mDatabase.beginTransaction();
 
         try {
+            Message message = messagePlus.getMessage();
             mDatabase.delete(TABLE_MESSAGES, COL_MESSAGE_ID + " = '" + message.getId() + "'", null);
 
             ArrayList<Entities.Hashtag> hashtags = message.getEntities().getHashtags();
             for(Entities.Hashtag h : hashtags) {
                 String where = COL_HASHTAG_INSTANCE_NAME + " = '" + h.getName() + "' AND " + COL_HASHTAG_INSTANCE_MESSAGE_ID + " = '" + message.getId() + "'";
                 mDatabase.delete(TABLE_HASHTAG_INSTANCES, where, null);
+            }
+
+            DisplayLocation l = messagePlus.getDisplayLocation();
+            if(l != null) {
+                String where = COL_LOCATION_INSTANCE_NAME + " = " + DatabaseUtils.sqlEscapeString(l.getName()) + " AND " + COL_LOCATION_INSTANCE_MESSAGE_ID + " = " + message.getId() +
+                                                                                   " AND " + COL_LOCATION_INSTANCE_LATITUDE + " = " + l.getLatitude() +
+                                                                                    " AND " + COL_LOCATION_INSTANCE_LONGITUDE + " = " + l.getLongitude();
+                mDatabase.delete(TABLE_LOCATION_INSTANCES, where, null);
             }
             mDatabase.setTransactionSuccessful();
         } catch(Exception e) {
