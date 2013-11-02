@@ -230,7 +230,7 @@ public class ADNDatabase {
         }
     }
 
-    public void insertOrReplaceLocationInstance(MessagePlus messagePlus) {
+    public void insertOrReplaceDisplayLocationInstance(MessagePlus messagePlus) {
         if(mInsertOrReplaceLocationInstance == null) {
             mInsertOrReplaceLocationInstance = mDatabase.compileStatement(INSERT_OR_REPLACE_LOCATION_INSTANCE);
         }
@@ -747,6 +747,7 @@ public class ADNDatabase {
                                                                                     " AND " + COL_LOCATION_INSTANCE_LONGITUDE + " = " + l.getLongitude();
                 mDatabase.delete(TABLE_LOCATION_INSTANCES, where, null);
             }
+
             mDatabase.setTransactionSuccessful();
         } catch(Exception e) {
             Log.e(TAG, e.getMessage(), e);
