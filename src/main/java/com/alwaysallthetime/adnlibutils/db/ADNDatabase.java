@@ -601,11 +601,11 @@ public class ADNDatabase {
         try {
             String where = COL_HASHTAG_INSTANCE_CHANNEL_ID + " =? AND " + COL_HASHTAG_INSTANCE_NAME + " = ?";
             String[] args = new String[] { channelId, hashtagName };
-            cursor = mDatabase.query(TABLE_HASHTAG_INSTANCES, null, where, args, null, null, null, null);
+            cursor = mDatabase.query(TABLE_HASHTAG_INSTANCES, new String[] { COL_HASHTAG_INSTANCE_MESSAGE_ID }, where, args, null, null, null, null);
 
             if(cursor.moveToNext()) {
                 do {
-                    String messageId = cursor.getString(1);
+                    String messageId = cursor.getString(0);
                     instances.addInstance(messageId);
                 } while(cursor.moveToNext());
             }
