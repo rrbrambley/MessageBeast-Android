@@ -13,16 +13,15 @@ import com.alwaysallthetime.adnlib.data.Message;
 import com.alwaysallthetime.adnlib.data.MessageList;
 import com.alwaysallthetime.adnlib.response.MessageListResponseHandler;
 import com.alwaysallthetime.adnlib.response.MessageResponseHandler;
-import com.alwaysallthetime.adnlibutils.model.MessagePlus;
 import com.alwaysallthetime.adnlibutils.db.ADNDatabase;
 import com.alwaysallthetime.adnlibutils.db.DisplayLocationInstances;
 import com.alwaysallthetime.adnlibutils.db.HashtagInstances;
 import com.alwaysallthetime.adnlibutils.db.OrderedMessageBatch;
 import com.alwaysallthetime.adnlibutils.model.DisplayLocation;
 import com.alwaysallthetime.adnlibutils.model.Geolocation;
+import com.alwaysallthetime.adnlibutils.model.MessagePlus;
 import com.alwaysallthetime.asyncgeocoder.AsyncGeocoder;
 import com.alwaysallthetime.asyncgeocoder.response.AsyncGeocoderResponseHandler;
-import com.alwaysallthetime.asyncgeocoder.util.AddressUtility;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -241,9 +240,8 @@ public class MessageManager {
             AsyncGeocoder.getInstance(mContext).getFromLocation(latitude, longitude, 5, new AsyncGeocoderResponseHandler() {
                 @Override
                 public void onSuccess(final List<Address> addresses) {
-                    final String loc = AddressUtility.getAddressString(addresses);
-                    if(loc != null) {
-                        Geolocation geolocation = new Geolocation(loc, latitude, longitude);
+                    Geolocation geolocation = getGeoLocation(addresses, latitude, longitude);
+                    if(geolocation != null) {
                         messagePlus.setDisplayLocation(DisplayLocation.fromGeolocation(geolocation));
 
                         if(persistIfEnabled && mConfiguration.isDatabaseInsertionEnabled) {
@@ -528,6 +526,30 @@ public class MessageManager {
 
     private Date getAdjustedDate(Message message) {
         return mConfiguration.dateAdapter == null ? message.getCreatedAt() : mConfiguration.dateAdapter.getDisplayDate(message);
+    }
+
+    private Geolocation getGeoLocation(List<Address> addresses, double latitude, double longitude) {
+        String locality = null;
+        String subLocality = null;
+
+        for(Address address : addresses) {
+            if(subLocality == null) {
+                subLocality = address.getSubLocality();
+            }
+            if(subLocality != null || locality == null) {
+                locality = address.getLocality();
+            }
+
+            if(subLocality != null && locality != null) {
+                break;
+            }
+        }
+
+        if(subLocality != null && locality != null) {
+            return new Geolocation(locality, subLocality, latitude, longitude);
+        }
+
+        return null;
     }
 
     public static class MessageManagerConfiguration {

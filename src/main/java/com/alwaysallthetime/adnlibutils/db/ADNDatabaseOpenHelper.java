@@ -24,7 +24,8 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
             "PRIMARY KEY (" + ADNDatabase.COL_HASHTAG_INSTANCE_NAME + ", " + ADNDatabase.COL_HASHTAG_INSTANCE_MESSAGE_ID + " ))";
 
     private static final String CREATE_GEOLOCATIONS_TABLE = "CREATE TABLE IF NOT EXISTS " + ADNDatabase.TABLE_GEOLOCATIONS + "(" +
-            ADNDatabase.COL_GEOLOCATION_NAME + " STRING NOT NULL, " +
+            ADNDatabase.COL_GEOLOCATION_LOCALITY + " STRING NOT NULL, " +
+            ADNDatabase.COL_GEOLOCATION_SUBLOCALITY + " STRING, " +
             ADNDatabase.COL_GEOLOCATION_LATITUDE + " REAL NOT NULL, " +
             ADNDatabase.COL_GEOLOCATION_LONGITUDE + " REAL NOT NULL, " +
             "PRIMARY KEY (" + ADNDatabase.COL_GEOLOCATION_LATITUDE + ", " + ADNDatabase.COL_GEOLOCATION_LONGITUDE + " ))";

@@ -46,7 +46,8 @@ public class ADNDatabase {
     public static final String COL_HASHTAG_INSTANCE_DATE = "hashtag_date";
 
     public static final String TABLE_GEOLOCATIONS = "geolocations";
-    public static final String COL_GEOLOCATION_NAME = "geolocation_name";
+    public static final String COL_GEOLOCATION_LOCALITY = "geolocation_locality";
+    public static final String COL_GEOLOCATION_SUBLOCALITY = "geolocation_sublocality";
     public static final String COL_GEOLOCATION_LATITUDE = "geolocation_latitude";
     public static final String COL_GEOLOCATION_LONGITUDE = "geolocation_longitude";
 
@@ -97,11 +98,12 @@ public class ADNDatabase {
 
     private static final String INSERT_OR_REPLACE_GEOLOCATION = "INSERT OR REPLACE INTO " + TABLE_GEOLOCATIONS +
             " (" +
-            COL_GEOLOCATION_NAME + ", " +
+            COL_GEOLOCATION_LOCALITY + ", " +
+            COL_GEOLOCATION_SUBLOCALITY + ", " +
             COL_GEOLOCATION_LATITUDE + ", " +
             COL_GEOLOCATION_LONGITUDE +
             ") " +
-            "VALUES(?, ?, ?)";
+            "VALUES(?, ?, ?, ?)";
 
     private static final String INSERT_OR_REPLACE_LOCATION_INSTANCE = "INSERT OR REPLACE INTO " + TABLE_LOCATION_INSTANCES +
             " (" +
@@ -217,9 +219,16 @@ public class ADNDatabase {
             double latitude = getRoundedValue(geolocation.getLatitude(), 3);
             double longitude = getRoundedValue(geolocation.getLongitude(), 3);
 
-            mInsertOrReplaceGeolocation.bindString(1, geolocation.getName());
-            mInsertOrReplaceGeolocation.bindDouble(2, latitude);
-            mInsertOrReplaceGeolocation.bindDouble(3, longitude);
+            mInsertOrReplaceGeolocation.bindString(1, geolocation.getLocality());
+
+            String subLocality = geolocation.getSubLocality();
+            if(subLocality != null) {
+                mInsertOrReplaceGeolocation.bindString(2, subLocality);
+            } else {
+                mInsertOrReplaceGeolocation.bindNull(2);
+            }
+            mInsertOrReplaceGeolocation.bindDouble(3, latitude);
+            mInsertOrReplaceGeolocation.bindDouble(4, longitude);
             mInsertOrReplaceGeolocation.execute();
             mDatabase.setTransactionSuccessful();
         } catch(Exception e) {
@@ -480,11 +489,12 @@ public class ADNDatabase {
         try {
             String[] args = new String[] { String.valueOf(getRoundedValue(latitude, 3)), String.valueOf(getRoundedValue(longitude, 3))};
             String where = COL_GEOLOCATION_LATITUDE + " = ? AND " + COL_GEOLOCATION_LONGITUDE + " = ?";
-            cursor = mDatabase.query(TABLE_GEOLOCATIONS, new String[] { COL_GEOLOCATION_NAME }, where, args, null, null, null, null);
+            cursor = mDatabase.query(TABLE_GEOLOCATIONS, new String[] { COL_GEOLOCATION_LOCALITY, COL_GEOLOCATION_SUBLOCALITY }, where, args, null, null, null, null);
 
             if(cursor.moveToNext()) {
-                String name = cursor.getString(0);
-                return new Geolocation(name, latitude, longitude);
+                String locality = cursor.getString(0);
+                String subLocality = cursor.getString(1);
+                return new Geolocation(locality, subLocality, latitude, longitude);
             }
         } catch(Exception e) {
             Log.e(TAG, e.getMessage(), e);

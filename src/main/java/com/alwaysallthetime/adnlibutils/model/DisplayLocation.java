@@ -30,6 +30,7 @@ public class DisplayLocation implements Parcelable {
 
     private LocationType mType;
     private String mName;
+    private String mShortName;
     private String mFactualId;
     private double mLatitude;
     private double mLongitude;
@@ -61,6 +62,7 @@ public class DisplayLocation implements Parcelable {
     public static DisplayLocation fromGeolocation(Geolocation geolocation) {
         DisplayLocation loc = new DisplayLocation(geolocation.getName(), geolocation.getLatitude(), geolocation.getLongitude());
         loc.setType(LocationType.GEOLOCATION);
+        loc.setShortName(geolocation.getSubLocality());
         return loc;
     }
 
@@ -84,6 +86,10 @@ public class DisplayLocation implements Parcelable {
         return mName;
     }
 
+    public String getShortName() {
+        return mShortName;
+    }
+
     public double getLatitude() {
         return mLatitude;
     }
@@ -94,6 +100,10 @@ public class DisplayLocation implements Parcelable {
 
     public String getFactualId() {
         return mFactualId;
+    }
+
+    public void setShortName(String shortName) {
+        mShortName = shortName;
     }
 
     private static String getLatLongString(double latitude, double longitude) {
