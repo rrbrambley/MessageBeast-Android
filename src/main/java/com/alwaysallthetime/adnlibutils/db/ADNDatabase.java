@@ -371,11 +371,10 @@ public class ADNDatabase {
                     double roundedLat = getRoundedValue(latitude, 1);
                     double roundedLong = getRoundedValue(longitude, 1);
 
-                    DisplayLocation loc = new DisplayLocation(name, latitude, longitude);
-
                     String key = String.format("%s %s %s", name, String.valueOf(roundedLat), String.valueOf(roundedLong));
                     DisplayLocationInstances displayLocationInstances = allInstances.get(key);
                     if(displayLocationInstances == null) {
+                        DisplayLocation loc = new DisplayLocation(name, latitude, longitude);
                         displayLocationInstances = new DisplayLocationInstances(loc);
                         allInstances.put(key, displayLocationInstances);
                     }
