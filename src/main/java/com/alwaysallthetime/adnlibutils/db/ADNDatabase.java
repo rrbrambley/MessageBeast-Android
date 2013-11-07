@@ -757,12 +757,24 @@ public class ADNDatabase {
                 mDatabase.delete(TABLE_LOCATION_INSTANCES, where, null);
             }
 
+            if(messagePlus.hasPhotoOEmbed()) {
+                deleteOEmbedInstances(messagePlus.getPhotoOEmbeds().get(0).getType(), message.getId());
+            }
+            if(messagePlus.hasHtml5VideoOEmbed()) {
+                deleteOEmbedInstances(messagePlus.getHtml5VideoOEmbeds().get(0).getType(), message.getId());
+            }
+
             mDatabase.setTransactionSuccessful();
         } catch(Exception e) {
             Log.e(TAG, e.getMessage(), e);
         } finally {
             mDatabase.endTransaction();
         }
+    }
+
+    private void deleteOEmbedInstances(String type, String messageId) {
+        String where = COL_OEMBED_INSTANCE_TYPE + " = " + "'" + type + "' AND " + COL_OEMBED_INSTANCE_MESSAGE_ID + " = " + "'" + messageId + "'";
+        mDatabase.delete(TABLE_OEMBED_INSTANCES, where, null);
     }
 
     public void deleteMessages(String channelId) {
