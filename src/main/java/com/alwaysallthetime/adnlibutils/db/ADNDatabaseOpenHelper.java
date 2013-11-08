@@ -32,6 +32,7 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
 
     private static final String CREATE_LOCATION_INSTANCES_TABLE = "CREATE TABLE IF NOT EXISTS " + ADNDatabase.TABLE_LOCATION_INSTANCES + "(" +
             ADNDatabase.COL_LOCATION_INSTANCE_NAME + " STRING NOT NULL, " +
+            ADNDatabase.COL_LOCATION_INSTANCE_SHORT_NAME + " STRING, " +
             ADNDatabase.COL_LOCATION_INSTANCE_MESSAGE_ID + " STRING NOT NULL, " +
             ADNDatabase.COL_LOCATION_INSTANCE_CHANNEL_ID + " STRING NOT NULL, " +
             ADNDatabase.COL_LOCATION_INSTANCE_LATITUDE + " REAL NOT NULL, " +

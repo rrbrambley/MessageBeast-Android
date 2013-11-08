@@ -53,6 +53,7 @@ public class ADNDatabase {
 
     public static final String TABLE_LOCATION_INSTANCES = "locations";
     public static final String COL_LOCATION_INSTANCE_NAME = "location_name";
+    public static final String COL_LOCATION_INSTANCE_SHORT_NAME = "location_short_name";
     public static final String COL_LOCATION_INSTANCE_MESSAGE_ID = "location_message_id";
     public static final String COL_LOCATION_INSTANCE_CHANNEL_ID = "location_channel_id";
     public static final String COL_LOCATION_INSTANCE_FACTUAL_ID = "location_factual_id";
@@ -108,6 +109,7 @@ public class ADNDatabase {
     private static final String INSERT_OR_REPLACE_LOCATION_INSTANCE = "INSERT OR REPLACE INTO " + TABLE_LOCATION_INSTANCES +
             " (" +
             COL_LOCATION_INSTANCE_NAME + ", " +
+            COL_LOCATION_INSTANCE_SHORT_NAME + ", " +
             COL_LOCATION_INSTANCE_MESSAGE_ID + ", " +
             COL_LOCATION_INSTANCE_CHANNEL_ID + ", " +
             COL_LOCATION_INSTANCE_LATITUDE + ", " +
@@ -115,7 +117,7 @@ public class ADNDatabase {
             COL_LOCATION_INSTANCE_FACTUAL_ID + ", " +
             COL_LOCATION_INSTANCE_DATE +
             ") " +
-            "VALUES(?, ?, ?, ?, ?, ?, ?)";
+            "VALUES(?, ?, ?, ?, ?, ?, ?, ?)";
 
     private static final String INSERT_OR_REPLACE_OEMBED_INSTANCE = "INSERT OR REPLACE INTO " + TABLE_OEMBED_INSTANCES +
             " (" +
@@ -246,6 +248,7 @@ public class ADNDatabase {
         DisplayLocation location = messagePlus.getDisplayLocation();
         if(location != null) {
             String name = location.getName();
+            String shortName = location.getShortName();
             String messageId = messagePlus.getMessage().getId();
             String channelId = messagePlus.getMessage().getChannelId();
             String factualId = location.getFactualId();
@@ -253,16 +256,21 @@ public class ADNDatabase {
             mDatabase.beginTransaction();
             try {
                 mInsertOrReplaceLocationInstance.bindString(1, name);
-                mInsertOrReplaceLocationInstance.bindString(2, messageId);
-                mInsertOrReplaceLocationInstance.bindString(3, channelId);
-                mInsertOrReplaceLocationInstance.bindDouble(4, location.getLatitude());
-                mInsertOrReplaceLocationInstance.bindDouble(5, location.getLongitude());
-                if(factualId != null) {
-                    mInsertOrReplaceLocationInstance.bindString(6, factualId);
+                if(shortName != null) {
+                    mInsertOrReplaceLocationInstance.bindString(2, shortName);
                 } else {
-                    mInsertOrReplaceLocationInstance.bindNull(6);
+                    mInsertOrReplaceLocationInstance.bindNull(2);
                 }
-                mInsertOrReplaceLocationInstance.bindLong(7, messagePlus.getDisplayDate().getTime());
+                mInsertOrReplaceLocationInstance.bindString(3, messageId);
+                mInsertOrReplaceLocationInstance.bindString(4, channelId);
+                mInsertOrReplaceLocationInstance.bindDouble(5, location.getLatitude());
+                mInsertOrReplaceLocationInstance.bindDouble(6, location.getLongitude());
+                if(factualId != null) {
+                    mInsertOrReplaceLocationInstance.bindString(7, factualId);
+                } else {
+                    mInsertOrReplaceLocationInstance.bindNull(7);
+                }
+                mInsertOrReplaceLocationInstance.bindLong(8, messagePlus.getDisplayDate().getTime());
                 mInsertOrReplaceLocationInstance.execute();
                 mDatabase.setTransactionSuccessful();
             } catch(Exception e) {
@@ -368,14 +376,15 @@ public class ADNDatabase {
             String args[] = new String[] { channelId };
             String orderBy = COL_LOCATION_INSTANCE_DATE + " DESC";
 
-            String[] cols = new String[] { COL_LOCATION_INSTANCE_NAME, COL_LOCATION_INSTANCE_MESSAGE_ID, COL_LOCATION_INSTANCE_LATITUDE, COL_LOCATION_INSTANCE_LONGITUDE };
+            String[] cols = new String[] { COL_LOCATION_INSTANCE_NAME, COL_LOCATION_INSTANCE_SHORT_NAME, COL_LOCATION_INSTANCE_MESSAGE_ID, COL_LOCATION_INSTANCE_LATITUDE, COL_LOCATION_INSTANCE_LONGITUDE };
             cursor = mDatabase.query(TABLE_LOCATION_INSTANCES, cols, where, args, null, null, orderBy, null);
             if(cursor.moveToNext()) {
                 do {
                     String name = cursor.getString(0);
-                    String messageId = cursor.getString(1);
-                    Double latitude = cursor.getDouble(2);
-                    Double longitude = cursor.getDouble(3);
+                    String shortName = cursor.getString(1);
+                    String messageId = cursor.getString(2);
+                    Double latitude = cursor.getDouble(3);
+                    Double longitude = cursor.getDouble(4);
 
                     double roundedLat = getRoundedValue(latitude, 1);
                     double roundedLong = getRoundedValue(longitude, 1);
@@ -384,6 +393,7 @@ public class ADNDatabase {
                     DisplayLocationInstances displayLocationInstances = allInstances.get(key);
                     if(displayLocationInstances == null) {
                         DisplayLocation loc = new DisplayLocation(name, latitude, longitude);
+                        loc.setShortName(shortName);
                         displayLocationInstances = new DisplayLocationInstances(loc);
                         allInstances.put(key, displayLocationInstances);
                     }
