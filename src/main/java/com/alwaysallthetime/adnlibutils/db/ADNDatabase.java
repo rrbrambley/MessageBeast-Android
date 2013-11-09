@@ -753,10 +753,14 @@ public class ADNDatabase {
             Message message = messagePlus.getMessage();
             mDatabase.delete(TABLE_MESSAGES, COL_MESSAGE_ID + " = '" + message.getId() + "'", null);
 
-            ArrayList<Entities.Hashtag> hashtags = message.getEntities().getHashtags();
-            for(Entities.Hashtag h : hashtags) {
-                String where = COL_HASHTAG_INSTANCE_NAME + " = '" + h.getName() + "' AND " + COL_HASHTAG_INSTANCE_MESSAGE_ID + " = '" + message.getId() + "'";
-                mDatabase.delete(TABLE_HASHTAG_INSTANCES, where, null);
+            //this might be null in the case of unsent messages.
+            Entities entities = message.getEntities();
+            if(entities != null) {
+                ArrayList<Entities.Hashtag> hashtags = entities.getHashtags();
+                for(Entities.Hashtag h : hashtags) {
+                    String where = COL_HASHTAG_INSTANCE_NAME + " = '" + h.getName() + "' AND " + COL_HASHTAG_INSTANCE_MESSAGE_ID + " = '" + message.getId() + "'";
+                    mDatabase.delete(TABLE_HASHTAG_INSTANCES, where, null);
+                }
             }
 
             DisplayLocation l = messagePlus.getDisplayLocation();
