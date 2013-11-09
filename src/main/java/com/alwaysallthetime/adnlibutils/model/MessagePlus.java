@@ -2,11 +2,13 @@ package com.alwaysallthetime.adnlibutils.model;
 
 import android.util.Log;
 
+import com.alwaysallthetime.adnlib.data.Annotatable;
 import com.alwaysallthetime.adnlib.data.Annotation;
 import com.alwaysallthetime.adnlib.data.Message;
 import com.alwaysallthetime.adnlibutils.AnnotationUtility;
-import com.alwaysallthetime.adnlibutils.model.DisplayLocation;
+import com.alwaysallthetime.adnlibutils.EntityGenerator;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -25,6 +27,21 @@ public class MessagePlus {
     private List<PhotoOEmbed> mPhotoOEmbeds;
     private List<Html5VideoOEmbed> mHtml5VideoOEmbeds;
     private boolean mIsUnsent;
+
+    public static MessagePlus newUnsentMessagePlus(String channelId, String messageId, Message message) {
+        Date date = new Date();
+        setMessageIdWithReflection(messageId, message);
+        setChannelIdWithReflection(channelId, message);
+
+        message.setEntities(EntityGenerator.getEntities(message.getText()));
+        message.addAnnotation(AnnotationUtility.newDisplayDateAnnotation(date));
+
+        MessagePlus messagePlus = new MessagePlus(message);
+        messagePlus.setIsUnsent(true);
+        messagePlus.setDisplayDate(date);
+
+        return messagePlus;
+    }
 
     public MessagePlus(Message message) {
         mMessage = message;
@@ -106,6 +123,28 @@ public class MessagePlus {
             } else {
                 Log.d(TAG, "Annotation type " + type + " is unsupported by MessagePlus");
             }
+        }
+    }
+
+    private static void setChannelIdWithReflection(String channelId, Message message) {
+        Class<?> messageClass = Message.class;
+        try {
+            Field channelIdField = messageClass.getDeclaredField("channelId");
+            channelIdField.setAccessible(true);
+            channelIdField.set(message, channelId);
+        } catch(Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+        }
+    }
+
+    private static void setMessageIdWithReflection(String messageId, Message message) {
+        Class<?> annotatableClass = Annotatable.class;
+        try {
+            Field messageIdField = annotatableClass.getDeclaredField("id");
+            messageIdField.setAccessible(true);
+            messageIdField.set(message, messageId);
+        } catch(Exception e) {
+            Log.e(TAG, e.getMessage(), e);
         }
     }
 
