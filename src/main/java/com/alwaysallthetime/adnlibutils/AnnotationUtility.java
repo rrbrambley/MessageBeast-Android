@@ -9,6 +9,7 @@ import com.alwaysallthetime.adnlib.data.Message;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -35,15 +36,26 @@ public class AnnotationUtility {
     }
 
     public static Date getDateFromIso8601String(String date) {
-        if(mIso8601Format == null) {
-            mIso8601Format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
-        }
+        initFormatter();
         try {
             return mIso8601Format.parse(date);
         } catch(ParseException e) {
             Log.d(TAG, e.getMessage(), e);
         }
         return null;
+    }
+
+    public static String getIso8601StringfromDate(Date date) {
+        initFormatter();
+        return mIso8601Format.format(date);
+    }
+
+    public static Annotation newDisplayDateAnnotation(Date date) {
+        Annotation displayDateAnnotation = new Annotation(Annotations.OHAI_DISPLAY_DATE);
+        HashMap<String, Object> value = new HashMap<String, Object>(1);
+        value.put("date", getIso8601StringfromDate(date));
+        displayDateAnnotation.setValue(value);
+        return displayDateAnnotation;
     }
 
     public static Annotation getFirstOEmbedPhotoAnnotation(Message message) {
@@ -75,5 +87,11 @@ public class AnnotationUtility {
             }
         }
         return null;
+    }
+
+    private static void initFormatter() {
+        if(mIso8601Format == null) {
+            mIso8601Format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+        }
     }
 }
