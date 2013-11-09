@@ -24,6 +24,7 @@ public class MessagePlus {
     private boolean mHasSetOEmbedValues;
     private List<PhotoOEmbed> mPhotoOEmbeds;
     private List<Html5VideoOEmbed> mHtml5VideoOEmbeds;
+    private boolean mIsUnsent;
 
     public MessagePlus(Message message) {
         mMessage = message;
@@ -76,6 +77,14 @@ public class MessagePlus {
 
     public Message getMessage() {
         return mMessage;
+    }
+
+    public void setIsUnsent(boolean isUnsent) {
+        mIsUnsent = isUnsent;
+    }
+
+    public boolean isUnsent() {
+        return mIsUnsent;
     }
 
     public void addOEmbedsFromAnnotations(List<Annotation> annotations) {
