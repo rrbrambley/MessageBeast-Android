@@ -38,6 +38,7 @@ public class ADNDatabase {
     public static final String COL_MESSAGE_CHANNEL_ID = "message_channel_id";
     public static final String COL_MESSAGE_DATE = "message_date";
     public static final String COL_MESSAGE_JSON = "message_json";
+    public static final String COL_MESSAGE_UNSENT = "message_unsent";
 
     public static final String TABLE_HASHTAG_INSTANCES = "hashtags";
     public static final String COL_HASHTAG_INSTANCE_NAME = "hashtag_name";
@@ -84,9 +85,10 @@ public class ADNDatabase {
             COL_MESSAGE_ID + ", " +
             COL_MESSAGE_CHANNEL_ID + ", " +
             COL_MESSAGE_DATE + ", " +
-            COL_MESSAGE_JSON +
+            COL_MESSAGE_JSON + ", " +
+            COL_MESSAGE_UNSENT +
             ") " +
-            "VALUES(?, ?, ?, ?)";
+            "VALUES(?, ?, ?, ?, ?)";
 
     private static final String INSERT_OR_REPLACE_HASHTAG = "INSERT OR REPLACE INTO " + TABLE_HASHTAG_INSTANCES +
             " (" +
@@ -165,6 +167,7 @@ public class ADNDatabase {
             mInsertOrReplaceMessage.bindString(2, message.getChannelId());
             mInsertOrReplaceMessage.bindLong(3, displayDate.getTime());
             mInsertOrReplaceMessage.bindString(4, mGson.toJson(message));
+            mInsertOrReplaceMessage.bindLong(5, messagePlus.isUnsent() ? 1 : 0);
             mInsertOrReplaceMessage.execute();
 
             mDatabase.setTransactionSuccessful();
@@ -667,10 +670,12 @@ public class ADNDatabase {
                     String messageId = cursor.getString(0);
                     long date = cursor.getLong(2);
                     String messageJson = cursor.getString(3);
+                    boolean isUnsent = cursor.getInt(4) == 1;
                     message = mGson.fromJson(messageJson, Message.class);
 
                     MessagePlus messagePlus = new MessagePlus(message);
                     messagePlus.setDisplayDate(new Date(date));
+                    messagePlus.setIsUnsent(isUnsent);
                     messages.put(messageId, messagePlus);
 
                     if(maxId == null) {
@@ -721,10 +726,12 @@ public class ADNDatabase {
                     String messageId = cursor.getString(0);
                     long date = cursor.getLong(2);
                     String messageJson = cursor.getString(3);
+                    boolean isUnsent = cursor.getInt(4) == 1;
                     message = mGson.fromJson(messageJson, Message.class);
 
                     MessagePlus messagePlus = new MessagePlus(message);
                     messagePlus.setDisplayDate(new Date(date));
+                    messagePlus.setIsUnsent(isUnsent);
                     messages.put(messageId, messagePlus);
 
                     if(maxId == null) {
@@ -744,6 +751,37 @@ public class ADNDatabase {
             }
         }
         return new OrderedMessageBatch(messages, new MinMaxPair(minId, maxId));
+    }
+
+    public LinkedHashMap<String, MessagePlus> getUnsentMessages(String channelId) {
+        LinkedHashMap<String, MessagePlus> unsentMessages = new LinkedHashMap<String, MessagePlus>();
+
+        Cursor cursor = null;
+        try {
+            String where = COL_MESSAGE_CHANNEL_ID + " = ? AND " + COL_MESSAGE_UNSENT + " = ?";
+            String[] args = new String[] { channelId, String.valueOf(1) };
+            String[] cols = new String[] { COL_MESSAGE_ID, COL_MESSAGE_DATE, COL_MESSAGE_JSON };
+
+            cursor = mDatabase.query(TABLE_MESSAGES, cols, where, args, null, null, null, null);
+            while(cursor.moveToNext()) {
+                String messageId = cursor.getString(0);
+                long date = cursor.getLong(1);
+                String messageJson = cursor.getString(2);
+
+                Message message = mGson.fromJson(messageJson, Message.class);
+                MessagePlus messagePlus = new MessagePlus(message);
+                messagePlus.setDisplayDate(new Date(date));
+                messagePlus.setIsUnsent(true);
+                unsentMessages.put(messageId, messagePlus);
+            }
+        } catch(Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+        } finally {
+            if(cursor != null) {
+                cursor.close();
+            }
+        }
+        return unsentMessages;
     }
 
     public void deleteMessage(MessagePlus messagePlus) {

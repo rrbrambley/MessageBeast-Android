@@ -13,7 +13,8 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
             ADNDatabase.COL_MESSAGE_ID + " TEXT PRIMARY KEY, " +
             ADNDatabase.COL_MESSAGE_CHANNEL_ID + " TEXT NOT NULL, " +
             ADNDatabase.COL_MESSAGE_DATE + " INTEGER NOT NULL, " +
-            ADNDatabase.COL_MESSAGE_JSON + " TEXT NOT NULL " +
+            ADNDatabase.COL_MESSAGE_JSON + " TEXT NOT NULL, " +
+            ADNDatabase.COL_MESSAGE_UNSENT + " BOOLEAN " +
             ")";
 
     private static final String CREATE_HASHTAG_INSTANCES_TABLE = "CREATE TABLE IF NOT EXISTS " + ADNDatabase.TABLE_HASHTAG_INSTANCES + "(" +
