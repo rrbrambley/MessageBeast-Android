@@ -761,8 +761,9 @@ public class ADNDatabase {
             String where = COL_MESSAGE_CHANNEL_ID + " = ? AND " + COL_MESSAGE_UNSENT + " = ?";
             String[] args = new String[] { channelId, String.valueOf(1) };
             String[] cols = new String[] { COL_MESSAGE_ID, COL_MESSAGE_DATE, COL_MESSAGE_JSON };
+            String orderBy = COL_MESSAGE_DATE + " DESC";
 
-            cursor = mDatabase.query(TABLE_MESSAGES, cols, where, args, null, null, null, null);
+            cursor = mDatabase.query(TABLE_MESSAGES, cols, where, args, null, null, orderBy, null);
             while(cursor.moveToNext()) {
                 String messageId = cursor.getString(0);
                 long date = cursor.getLong(1);
