@@ -37,4 +37,18 @@ public class MinMaxPair {
 
         return new MinMaxPair(newMin, newMax);
     }
+
+    public Integer getMaxAsInteger() {
+        if(maxId != null) {
+            return Integer.parseInt(maxId);
+        }
+        return null;
+    }
+
+    public Integer getMinAsInteger() {
+        if(minId != null) {
+            return Integer.parseInt(minId);
+        }
+        return null;
+    }
 }
