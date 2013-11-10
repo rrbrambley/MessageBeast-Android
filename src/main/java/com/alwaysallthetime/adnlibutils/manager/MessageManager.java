@@ -317,6 +317,15 @@ public class MessageManager {
         return channelMessages;
     }
 
+    private synchronized LinkedHashMap<String, MessagePlus> getUnsentMessages(String channelId) {
+        LinkedHashMap<String, MessagePlus> unsentMessages = mUnsentMessages.get(channelId);
+        if(unsentMessages == null) {
+            unsentMessages = mDatabase.getUnsentMessages(channelId);
+            mUnsentMessages.put(channelId, unsentMessages);
+        }
+        return unsentMessages;
+    }
+
     public synchronized void clearMessages(String channelId) {
         mMinMaxPairs.put(channelId, null);
         LinkedHashMap<String, MessagePlus> channelMessages = mMessages.get(channelId);
@@ -455,6 +464,9 @@ public class MessageManager {
         String newMessageIdString = String.valueOf(newMessageId);
         final MessagePlus messagePlus = MessagePlus.newUnsentMessagePlus(channelId, newMessageIdString, message);
         mDatabase.insertOrReplaceMessage(messagePlus);
+
+        LinkedHashMap<String, MessagePlus> channelUnsentMessages = getUnsentMessages(channelId);
+        channelUnsentMessages.put(newMessageIdString, messagePlus);
 
         LinkedHashMap<String, MessagePlus> newChannelMessages = new LinkedHashMap<String, MessagePlus>(channelMessages.size() + 1);
         newChannelMessages.put(messagePlus.getMessage().getId(), messagePlus);
@@ -656,11 +668,7 @@ public class MessageManager {
     }
 
     public synchronized void sendUnsentMessages(final String channelId, MessageManagerSendUnsentMessagesHandler handler) {
-        LinkedHashMap<String, MessagePlus> unsentMessages = mUnsentMessages.get(channelId);
-        if(unsentMessages == null) {
-            unsentMessages = mDatabase.getUnsentMessages(channelId);
-            mUnsentMessages.put(channelId, unsentMessages);
-        }
+        LinkedHashMap<String, MessagePlus> unsentMessages = getUnsentMessages(channelId);
         if(unsentMessages.size() > 0) {
             LinkedHashMap<String, MessagePlus> channelMessages = getChannelMessages(channelId);
             if(channelMessages.size() == 0) {
