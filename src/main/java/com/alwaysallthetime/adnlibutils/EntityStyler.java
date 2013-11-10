@@ -14,15 +14,16 @@ public class EntityStyler {
         SpannableStringBuilder string = new SpannableStringBuilder(post.getText());
 
         Entities entities = post.getEntities();
-
-        if(mentionStyles != null) {
-            applyStylesToEntities(string, entities.getMentions(), mentionStyles);
-        }
-        if(hashtagStyles != null) {
-            applyStylesToEntities(string, entities.getHashtags(), hashtagStyles);
-        }
-        if(linkStyles != null) {
-            applyStylesToEntities(string, entities.getLinks(), linkStyles);
+        if(entities != null) {
+            if(mentionStyles != null) {
+                applyStylesToEntities(string, entities.getMentions(), mentionStyles);
+            }
+            if(hashtagStyles != null) {
+                applyStylesToEntities(string, entities.getHashtags(), hashtagStyles);
+            }
+            if(linkStyles != null) {
+                applyStylesToEntities(string, entities.getLinks(), linkStyles);
+            }
         }
 
         return string;
