@@ -28,6 +28,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -628,7 +629,17 @@ public class MessageManager {
                     sendUnsentMessages(unsentMessages, sentMessageIds, handler);
                 } else {
                     if(channelMessages.size() > 0) {
-                        minMaxPair.maxId = channelMessages.keySet().iterator().next();
+                        //step back in time until we find the first message that was NOT one
+                        //of the unsent messages. this will be the max id.
+                        String nextMaxId = null;
+                        Iterator<String> channelMessagesIterator = channelMessages.keySet().iterator();
+                        while(channelMessagesIterator.hasNext()) {
+                            String next = channelMessagesIterator.next();
+                            if(!sentMessageIds.contains(next)) {
+                                minMaxPair.maxId = next;
+                                break;
+                            }
+                        }
                     } else {
                         minMaxPair.maxId = null;
                     }
@@ -654,7 +665,7 @@ public class MessageManager {
             LinkedHashMap<String, MessagePlus> channelMessages = getChannelMessages(channelId);
             if(channelMessages.size() == 0) {
                 //we do this so that the max id is known.
-                loadPersistedMessages(channelId, 1);
+                loadPersistedMessages(channelId, unsentMessages.size() + 1);
             }
             List<String> sentMessageIds = new ArrayList<String>(unsentMessages.size());
             sendUnsentMessages(unsentMessages, sentMessageIds, handler);
