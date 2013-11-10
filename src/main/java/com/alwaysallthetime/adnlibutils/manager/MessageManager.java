@@ -581,6 +581,7 @@ public class MessageManager {
                     retrieveAllMessages(messages, null, minMaxPair.minId, channelId, responseHandler);
                 } else {
                     Log.d(TAG, "Num messages synced: " + responseHandler.getNumMessagesSynced());
+                    responseHandler.setSentMessageIds(new ArrayList<String>(0));
                     responseHandler.onSuccess(messages, true);
                 }
             }
