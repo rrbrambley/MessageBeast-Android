@@ -43,6 +43,7 @@ public class MessageManager {
      */
     public static abstract class MessageManagerResponseHandler {
         private boolean isMore;
+        private List<String> sentMessageIds;
 
         public abstract void onSuccess(final List<MessagePlus> responseData, final boolean appended);
         public abstract void onError(Exception exception);
@@ -53,6 +54,14 @@ public class MessageManager {
 
         public boolean isMore() {
             return this.isMore;
+        }
+
+        void setSentMessageIds(List<String> sentMessageIds) {
+            this.sentMessageIds = sentMessageIds;
+        }
+
+        public List<String> getSentMessageIds() {
+            return this.sentMessageIds;
         }
     }
 
@@ -66,6 +75,11 @@ public class MessageManager {
         public int getNumMessagesSynced() {
             return numMessagesSynced;
         }
+    }
+
+    public interface MessageManagerSendUnsentMessagesHandler {
+        public void onSuccess(List<String> sentMessageIds);
+        public void onError(Exception exception, List<String> sentMessageIds);
     }
 
     public interface MessageRefreshResponseHandler {
@@ -93,6 +107,7 @@ public class MessageManager {
     private MessageManagerConfiguration mConfiguration;
 
     private HashMap<String, LinkedHashMap<String, MessagePlus>> mMessages;
+    private HashMap<String, LinkedHashMap<String, MessagePlus>> mUnsentMessages;
     private HashMap<String, QueryParameters> mParameters;
     private HashMap<String, MinMaxPair> mMinMaxPairs;
 
@@ -103,6 +118,7 @@ public class MessageManager {
         mDatabase = ADNDatabase.getInstance(mContext);
 
         mMessages = new HashMap<String, LinkedHashMap<String, MessagePlus>>();
+        mUnsentMessages = new HashMap<String, LinkedHashMap<String, MessagePlus>>();
         mMinMaxPairs = new HashMap<String, MinMaxPair>();
         mParameters = new HashMap<String, QueryParameters>();
     }
@@ -291,6 +307,15 @@ public class MessageManager {
         return minMaxPair;
     }
 
+    private synchronized LinkedHashMap<String, MessagePlus> getChannelMessages(String channelId) {
+        LinkedHashMap<String, MessagePlus> channelMessages = mMessages.get(channelId);
+        if(channelMessages == null) {
+            channelMessages = new LinkedHashMap<String, MessagePlus>(10);
+            mMessages.put(channelId, channelMessages);
+        }
+        return channelMessages;
+    }
+
     public synchronized void clearMessages(String channelId) {
         mMinMaxPairs.put(channelId, null);
         LinkedHashMap<String, MessagePlus> channelMessages = mMessages.get(channelId);
@@ -300,17 +325,51 @@ public class MessageManager {
         }
     }
 
-    public synchronized void retrieveMessages(String channelId, MessageManagerResponseHandler listener) {
-        MinMaxPair minMaxPair = getMinMaxPair(channelId);
-        retrieveMessages(channelId, minMaxPair.maxId, minMaxPair.minId, listener);
+    public synchronized void retrieveMessages(final String channelId, final MessageManagerResponseHandler handler) {
+        sendUnsentMessages(channelId, new MessageManagerSendUnsentMessagesHandler() {
+            @Override
+            public void onSuccess(final List<String> sentMessageIds) {
+                MinMaxPair minMaxPair = getMinMaxPair(channelId);
+                retrieveMessages(channelId, minMaxPair.maxId, minMaxPair.minId, sentMessageIds, handler);
+            }
+
+            @Override
+            public void onError(Exception exception, List<String> sentMessageIds) {
+                //TODO: handle the sent messages in this case?
+                Log.e(TAG, exception.getMessage(), exception);
+                handler.onError(exception);
+            }
+        });
     }
 
-    public synchronized void retrieveNewestMessages(String channelId, MessageManagerResponseHandler listener) {
-        retrieveMessages(channelId, getMinMaxPair(channelId).maxId, null, listener);
+    public synchronized void retrieveNewestMessages(final String channelId, final MessageManagerResponseHandler handler) {
+        sendUnsentMessages(channelId, new MessageManagerSendUnsentMessagesHandler() {
+            @Override
+            public void onSuccess(final List<String> sentMessageIds) {
+                retrieveMessages(channelId, getMinMaxPair(channelId).maxId, null, sentMessageIds, handler);
+            }
+            @Override
+            public void onError(Exception exception, List<String> sentMessageIds) {
+                //TODO: handle the sent messages in this case?
+                Log.e(TAG, exception.getMessage(), exception);
+                handler.onError(exception);
+            }
+        });
     }
 
-    public synchronized void retrieveMoreMessages(String channelId, MessageManagerResponseHandler listener) {
-        retrieveMessages(channelId, null, getMinMaxPair(channelId).minId, listener);
+    public synchronized void retrieveMoreMessages(final String channelId, final MessageManagerResponseHandler handler) {
+        sendUnsentMessages(channelId, new MessageManagerSendUnsentMessagesHandler() {
+            @Override
+            public void onSuccess(final List<String> sentMessageIds) {
+                retrieveMessages(channelId, null, getMinMaxPair(channelId).minId, sentMessageIds, handler);
+            }
+            @Override
+            public void onError(Exception exception, List<String> sentMessageIds) {
+                //TODO: handle the sent messages in this case?
+                Log.e(TAG, exception.getMessage(), exception);
+                handler.onError(exception);
+            }
+        });
     }
 
     public synchronized void createMessage(final String channelId, final Message message, final MessageManagerResponseHandler handler) {
@@ -330,15 +389,33 @@ public class MessageManager {
         });
     }
 
-    public synchronized void deleteMessage(final MessagePlus messagePlus, final MessageDeletionResponseHandler handler) {
-        mClient.deleteMessage(messagePlus.getMessage(), new MessageResponseHandler() {
+    private synchronized void createMessageWithUnsentMessagePlus(final String channelId, final MessagePlus unsentMessagePlus, final MessageManagerResponseHandler handler) {
+        if(!unsentMessagePlus.isUnsent()) {
+            throw new RuntimeException("The provided MessagePlus is not marked as unsent");
+        }
+        mClient.createMessage(channelId, unsentMessagePlus.getMessage(), new MessageResponseHandler() {
             @Override
             public void onSuccess(Message responseData) {
-                LinkedHashMap<String, MessagePlus> channelMessages = mMessages.get(responseData.getChannelId());
-                channelMessages.remove(responseData.getId());
-                mDatabase.deleteMessage(messagePlus); //this one because the deleted one doesn't have the entities.
+                //we can delete the unsent message plus, knowing that
+                //when we retrieve newest messages, we'll get the "sent" version.
+                //*boom*
+                mDatabase.deleteMessage(unsentMessagePlus);
 
-                handler.onSuccess();
+                //remove the message from in-memory message map.
+                LinkedHashMap<String, MessagePlus> channelMessages = getChannelMessages(channelId);
+                channelMessages.remove(unsentMessagePlus.getMessage().getId());
+
+                //update the max id.
+                MinMaxPair minMaxPair = getMinMaxPair(channelId);
+                if(channelMessages.size() > 0) {
+                    minMaxPair.maxId = channelMessages.values().iterator().next().getMessage().getId();
+                } else {
+                    minMaxPair.maxId = null;
+                }
+
+                //we finish this off by retrieving the newest messages in case we were missing any
+                //that came before the one we just created.
+                retrieveNewestMessages(channelId, handler);
             }
 
             @Override
@@ -347,6 +424,87 @@ public class MessageManager {
                 handler.onError(error);
             }
         });
+    }
+
+    public synchronized MessagePlus createUnsentMessageAndAttemptSend(final String channelId, Message message) {
+        return createUnsentMessageAndAttemptSend(channelId, message, null);
+    }
+
+    public synchronized MessagePlus createUnsentMessageAndAttemptSend(final String channelId, Message message, final MessageManagerResponseHandler handler) {
+        if(!mConfiguration.isDatabaseInsertionEnabled) {
+            throw new RuntimeException("Database insertion must be enabled in order to use the unsent messages feature");
+        }
+
+        //An unsent message id is always set to the max id + 1.
+        //
+        //This will work because we will never allow message retrieval to happen
+        //until unsent messages are sent to the server and they get their "real"
+        //message id. After they reach the server, we will delete them from existence
+        //on the client and retrieve them from the server.
+        //
+        LinkedHashMap<String, MessagePlus> channelMessages = getChannelMessages(channelId);
+        if(channelMessages.size() == 0) {
+            //we do this so that the max id is known.
+            loadPersistedMessages(channelId, 1);
+        }
+
+        MinMaxPair minMaxPair = getMinMaxPair(channelId);
+        Integer maxInteger = minMaxPair.getMaxAsInteger();
+        Integer newMessageId = maxInteger != null ? maxInteger + 1 : 1;
+        String newMessageIdString = String.valueOf(newMessageId);
+        final MessagePlus messagePlus = MessagePlus.newUnsentMessagePlus(channelId, newMessageIdString, message);
+        mDatabase.insertOrReplaceMessage(messagePlus);
+
+        LinkedHashMap<String, MessagePlus> newChannelMessages = new LinkedHashMap<String, MessagePlus>(channelMessages.size() + 1);
+        newChannelMessages.put(messagePlus.getMessage().getId(), messagePlus);
+        newChannelMessages.putAll(channelMessages);
+        mMessages.put(channelId, newChannelMessages);
+
+        minMaxPair.maxId = newMessageIdString;
+
+        createMessageWithUnsentMessagePlus(channelId, messagePlus, new MessageManagerResponseHandler() {
+            @Override
+            public void onSuccess(List<MessagePlus> responseData, boolean appended) {
+                if(handler != null) {
+                    handler.onSuccess(responseData, appended);
+                }
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                if(handler != null) {
+                    handler.onError(exception);
+                }
+            }
+        });
+        return messagePlus;
+    }
+
+    public synchronized void deleteMessage(final MessagePlus messagePlus, final MessageDeletionResponseHandler handler) {
+        if(messagePlus.isUnsent()) {
+            mDatabase.deleteMessage(messagePlus);
+            Message message = messagePlus.getMessage();
+            LinkedHashMap<String, MessagePlus> channelMessages = mMessages.get(message.getChannelId());
+            channelMessages.remove(message.getId());
+            handler.onSuccess();
+        } else {
+            mClient.deleteMessage(messagePlus.getMessage(), new MessageResponseHandler() {
+                @Override
+                public void onSuccess(Message responseData) {
+                    LinkedHashMap<String, MessagePlus> channelMessages = mMessages.get(responseData.getChannelId());
+                    channelMessages.remove(responseData.getId());
+                    mDatabase.deleteMessage(messagePlus); //this one because the deleted one doesn't have the entities.
+
+                    handler.onSuccess();
+                }
+
+                @Override
+                public void onError(Exception error) {
+                    super.onError(error);
+                    handler.onError(error);
+                }
+            });
+        }
     }
 
     public synchronized void refreshMessage(final Message message, final MessageRefreshResponseHandler handler) {
@@ -410,7 +568,7 @@ public class MessageManager {
         params.put("before_id", beforeId);
         params.put("count", String.valueOf(MAX_MESSAGES_RETURNED_ON_SYNC));
 
-        retrieveMessages(params, channelId, new MessageManagerResponseHandler() {
+        retrieveMessages(params, channelId, new ArrayList<String>(0), new MessageManagerResponseHandler() {
             @Override
             public void onSuccess(List<MessagePlus> responseData, boolean appended) {
                 if(messages.size() == 0) {
@@ -435,14 +593,76 @@ public class MessageManager {
         });
     }
 
-    private synchronized void retrieveMessages(final String channelId, final String sinceId, final String beforeId, final MessageManagerResponseHandler handler) {
+    private synchronized void retrieveMessages(final String channelId, final String sinceId, final String beforeId, final List<String> sentMessageIds, final MessageManagerResponseHandler handler) {
         QueryParameters params = (QueryParameters) mParameters.get(channelId).clone();
         params.put("since_id", sinceId);
         params.put("before_id", beforeId);
-        retrieveMessages(params, channelId, handler);
+        retrieveMessages(params, channelId, sentMessageIds, handler);
     }
 
-    private synchronized void retrieveMessages(final QueryParameters queryParameters, final String channelId, final MessageManagerResponseHandler handler) {
+    private synchronized void sendUnsentMessages(final LinkedHashMap<String, MessagePlus> unsentMessages, final List<String> sentMessageIds, final MessageManagerSendUnsentMessagesHandler handler) {
+        final MessagePlus messagePlus = unsentMessages.get(unsentMessages.keySet().iterator().next());
+        final Message message = messagePlus.getMessage();
+
+        //we had them set for display locally, but we should
+        //let the server generate the "real" entities.
+        message.setEntities(null);
+        final String unsentMessageId = message.getId();
+        mClient.createMessage(message.getChannelId(), message, new MessageResponseHandler() {
+            @Override
+            public void onSuccess(Message responseData) {
+                unsentMessages.remove(unsentMessageId);
+                sentMessageIds.add(message.getId());
+
+                mDatabase.deleteMessage(messagePlus);
+
+                //remove the message from in-memory message map.
+                LinkedHashMap<String, MessagePlus> channelMessages = getChannelMessages(message.getId());
+                channelMessages.remove(message.getId());
+
+                MinMaxPair minMaxPair = getMinMaxPair(message.getChannelId());
+                if(unsentMessages.size() > 0) {
+                    String nextId = unsentMessages.keySet().iterator().next();
+                    minMaxPair.maxId = nextId;
+                    sendUnsentMessages(unsentMessages, sentMessageIds, handler);
+                } else {
+                    if(channelMessages.size() > 0) {
+                        minMaxPair.maxId = channelMessages.keySet().iterator().next();
+                    } else {
+                        minMaxPair.maxId = null;
+                    }
+                    handler.onSuccess(sentMessageIds);
+                }
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                super.onError(exception);
+                handler.onError(exception, sentMessageIds);
+            }
+        });
+    }
+
+    public synchronized void sendUnsentMessages(final String channelId, MessageManagerSendUnsentMessagesHandler handler) {
+        LinkedHashMap<String, MessagePlus> unsentMessages = mUnsentMessages.get(channelId);
+        if(unsentMessages == null) {
+            unsentMessages = mDatabase.getUnsentMessages(channelId);
+            mUnsentMessages.put(channelId, unsentMessages);
+        }
+        if(unsentMessages.size() > 0) {
+            LinkedHashMap<String, MessagePlus> channelMessages = getChannelMessages(channelId);
+            if(channelMessages.size() == 0) {
+                //we do this so that the max id is known.
+                loadPersistedMessages(channelId, 1);
+            }
+            List<String> sentMessageIds = new ArrayList<String>(unsentMessages.size());
+            sendUnsentMessages(unsentMessages, sentMessageIds, handler);
+        } else {
+            handler.onSuccess(new ArrayList<String>(0));
+        }
+    }
+
+    private synchronized void retrieveMessages(final QueryParameters queryParameters, final String channelId, final List<String> sentMessageIds, final MessageManagerResponseHandler handler) {
         mClient.retrieveMessagesInChannel(channelId, queryParameters, new MessageListResponseHandler() {
             @Override
             public void onSuccess(final MessageList responseData) {
@@ -467,11 +687,7 @@ public class MessageManager {
                     minMaxPair.maxId = getMaxId();
                 }
 
-                LinkedHashMap<String, MessagePlus> channelMessages = mMessages.get(channelId);
-                if(channelMessages == null) {
-                    channelMessages = new LinkedHashMap<String, MessagePlus>(responseData.size());
-                    mMessages.put(channelId, channelMessages);
-                }
+                LinkedHashMap<String, MessagePlus> channelMessages = getChannelMessages(channelId);
 
                 ArrayList<MessagePlus> newestMessages = new ArrayList<MessagePlus>(responseData.size());
                 LinkedHashMap<String, MessagePlus> newFullChannelMessagesMap = new LinkedHashMap<String, MessagePlus>(channelMessages.size() + responseData.size());
@@ -499,6 +715,7 @@ public class MessageManager {
                 }
 
                 if(handler != null) {
+                    handler.setSentMessageIds(sentMessageIds);
                     handler.setIsMore(isMore());
                     handler.onSuccess(newestMessages, appended);
                 }
@@ -509,6 +726,7 @@ public class MessageManager {
                 Log.d(TAG, error.getMessage(), error);
 
                 if(handler != null) {
+                    handler.setSentMessageIds(sentMessageIds);
                     handler.onError(error);
                 }
             }
