@@ -753,6 +753,16 @@ public class ADNDatabase {
         return new OrderedMessageBatch(messages, new MinMaxPair(minId, maxId));
     }
 
+    /**
+     * Get all messages marked as unsent in a channel.
+     * 
+     * Unlike other message getters, this one returns the messages in ascending order
+     * (i.e. chronological order) - because this is the order in which they should be sent
+     * to the server.
+     *
+     * @param channelId
+     * @return a LinkedHashMap with message ids as keys, mapped to MessagePlus objects.
+     */
     public LinkedHashMap<String, MessagePlus> getUnsentMessages(String channelId) {
         LinkedHashMap<String, MessagePlus> unsentMessages = new LinkedHashMap<String, MessagePlus>();
 
