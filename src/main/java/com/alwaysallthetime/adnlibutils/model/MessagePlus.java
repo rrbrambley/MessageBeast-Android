@@ -33,7 +33,7 @@ public class MessagePlus {
         setMessageIdWithReflection(messageId, message);
         setChannelIdWithReflection(channelId, message);
 
-        message.setEntities(EntityGenerator.getEntities(message.getText()));
+//        message.setEntities(EntityGenerator.getEntities(message.getText()));
         message.addAnnotation(AnnotationUtility.newDisplayDateAnnotation(date));
 
         MessagePlus messagePlus = new MessagePlus(message);
