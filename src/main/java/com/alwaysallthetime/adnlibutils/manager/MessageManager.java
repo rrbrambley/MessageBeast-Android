@@ -383,6 +383,9 @@ public class MessageManager {
     }
 
     public synchronized void createMessage(final String channelId, final Message message, final MessageManagerResponseHandler handler) {
+        if(getUnsentMessages(channelId).size() > 0) {
+            throw new RuntimeException("This method should not be called when you have unsent messages.");
+        }
         mClient.createMessage(channelId, message, new MessageResponseHandler() {
             @Override
             public void onSuccess(Message responseData) {
