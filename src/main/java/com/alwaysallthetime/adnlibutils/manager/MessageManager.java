@@ -478,10 +478,21 @@ public class MessageManager {
 
     public synchronized void deleteMessage(final MessagePlus messagePlus, final MessageDeletionResponseHandler handler) {
         if(messagePlus.isUnsent()) {
-            mDatabase.deleteMessage(messagePlus);
             Message message = messagePlus.getMessage();
-            LinkedHashMap<String, MessagePlus> channelMessages = mMessages.get(message.getChannelId());
-            channelMessages.remove(message.getId());
+            String messageId = message.getId();
+            String channelId = message.getChannelId();
+            LinkedHashMap<String, MessagePlus> channelMessages = getChannelMessages(channelId);
+
+            mDatabase.deleteMessage(messagePlus);
+            getUnsentMessages(channelId).remove(messageId);
+            channelMessages.remove(messageId);
+
+            MinMaxPair minMaxPair = getMinMaxPair(channelId);
+            if(channelMessages.size() > 0) {
+                minMaxPair.maxId = channelMessages.keySet().iterator().next();
+            } else {
+                minMaxPair.maxId = null;
+            }
             handler.onSuccess();
         } else {
             mClient.deleteMessage(messagePlus.getMessage(), new MessageResponseHandler() {
