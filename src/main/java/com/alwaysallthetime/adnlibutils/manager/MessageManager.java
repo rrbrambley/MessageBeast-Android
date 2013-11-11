@@ -399,43 +399,6 @@ public class MessageManager {
         });
     }
 
-    private synchronized void createMessageWithUnsentMessagePlus(final String channelId, final MessagePlus unsentMessagePlus, final MessageManagerResponseHandler handler) {
-        if(!unsentMessagePlus.isUnsent()) {
-            throw new RuntimeException("The provided MessagePlus is not marked as unsent");
-        }
-        mClient.createMessage(channelId, unsentMessagePlus.getMessage(), new MessageResponseHandler() {
-            @Override
-            public void onSuccess(Message responseData) {
-                //we can delete the unsent message plus, knowing that
-                //when we retrieve newest messages, we'll get the "sent" version.
-                //*boom*
-                mDatabase.deleteMessage(unsentMessagePlus);
-
-                //remove the message from in-memory message map.
-                LinkedHashMap<String, MessagePlus> channelMessages = getChannelMessages(channelId);
-                channelMessages.remove(unsentMessagePlus.getMessage().getId());
-
-                //update the max id.
-                MinMaxPair minMaxPair = getMinMaxPair(channelId);
-                if(channelMessages.size() > 0) {
-                    minMaxPair.maxId = channelMessages.values().iterator().next().getMessage().getId();
-                } else {
-                    minMaxPair.maxId = null;
-                }
-
-                //we finish this off by retrieving the newest messages in case we were missing any
-                //that came before the one we just created.
-                retrieveNewestMessages(channelId, handler);
-            }
-
-            @Override
-            public void onError(Exception error) {
-                super.onError(error);
-                handler.onError(error);
-            }
-        });
-    }
-
     public synchronized MessagePlus createUnsentMessageAndAttemptSend(final String channelId, Message message) {
         return createUnsentMessageAndAttemptSend(channelId, message, null);
     }
@@ -475,21 +438,41 @@ public class MessageManager {
 
         minMaxPair.maxId = newMessageIdString;
 
-        createMessageWithUnsentMessagePlus(channelId, messagePlus, new MessageManagerResponseHandler() {
+        Log.d(TAG, "Created and stored unsent message with id " + newMessageIdString);
+
+        sendUnsentMessages(channelId, new MessageManagerSendUnsentMessagesHandler() {
             @Override
-            public void onSuccess(List<MessagePlus> responseData, boolean appended) {
-                if(handler != null) {
-                    handler.onSuccess(responseData, appended);
-                }
+            public void onSuccess(final List<String> sentMessageIds) {
+                retrieveNewestMessages(channelId, new MessageManagerResponseHandler() {
+                    @Override
+                    public void onSuccess(List<MessagePlus> responseData, boolean appended) {
+                        if(handler != null) {
+                            handler.setSentMessageIds(sentMessageIds);
+                            handler.onSuccess(responseData, appended);
+                        }
+                    }
+
+                    @Override
+                    public void onError(Exception exception) {
+                        Log.d(TAG, exception.getMessage(), exception);
+                        if(handler != null) {
+                            handler.setSentMessageIds(sentMessageIds);
+                            handler.onError(exception);
+                        }
+                    }
+                });
             }
 
             @Override
-            public void onError(Exception exception) {
+            public void onError(Exception exception, List<String> sentMessageIds) {
+                Log.d(TAG, exception.getMessage(), exception);
                 if(handler != null) {
+                    handler.setSentMessageIds(sentMessageIds);
                     handler.onError(exception);
                 }
             }
         });
+
         return messagePlus;
     }
 
@@ -594,7 +577,7 @@ public class MessageManager {
                     retrieveAllMessages(messages, null, minMaxPair.minId, channelId, responseHandler);
                 } else {
                     Log.d(TAG, "Num messages synced: " + responseHandler.getNumMessagesSynced());
-                    responseHandler.setSentMessageIds(new ArrayList<String>(0));
+                    responseHandler.setSentMessageIds(getSentMessageIds());
                     responseHandler.onSuccess(messages, true);
                 }
             }
@@ -622,9 +605,12 @@ public class MessageManager {
         //let the server generate the "real" entities.
         message.setEntities(null);
         final String unsentMessageId = message.getId();
+
         mClient.createMessage(message.getChannelId(), message, new MessageResponseHandler() {
             @Override
             public void onSuccess(Message responseData) {
+                Log.d(TAG, "Successfully sent unsent message with id " + message.getId());
+
                 unsentMessages.remove(unsentMessageId);
                 sentMessageIds.add(message.getId());
 
