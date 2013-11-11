@@ -618,14 +618,13 @@ public class MessageManager {
         //we had them set for display locally, but we should
         //let the server generate the "real" entities.
         message.setEntities(null);
-        final String unsentMessageId = message.getId();
 
         mClient.createMessage(message.getChannelId(), message, new MessageResponseHandler() {
             @Override
             public void onSuccess(Message responseData) {
                 Log.d(TAG, "Successfully sent unsent message with id " + message.getId());
 
-                unsentMessages.remove(unsentMessageId);
+                unsentMessages.remove(message.getId());
                 sentMessageIds.add(message.getId());
 
                 mDatabase.deleteMessage(messagePlus);
