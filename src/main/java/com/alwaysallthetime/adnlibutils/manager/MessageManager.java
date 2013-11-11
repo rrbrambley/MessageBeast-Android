@@ -630,7 +630,7 @@ public class MessageManager {
                 mDatabase.deleteMessage(messagePlus);
 
                 //remove the message from in-memory message map.
-                LinkedHashMap<String, MessagePlus> channelMessages = getChannelMessages(message.getId());
+                LinkedHashMap<String, MessagePlus> channelMessages = getChannelMessages(message.getChannelId());
                 channelMessages.remove(message.getId());
 
                 MinMaxPair minMaxPair = getMinMaxPair(message.getChannelId());
