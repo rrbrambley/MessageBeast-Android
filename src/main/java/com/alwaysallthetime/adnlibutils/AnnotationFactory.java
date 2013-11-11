@@ -19,10 +19,10 @@ public class AnnotationFactory {
 
     public static Annotation getGeolocationAnnotation(double latitude, double longitude, float altitude) {
         HashMap<String, Object> value = new HashMap<String, Object>(2);
-        value.put("latitude", String.valueOf(latitude));
-        value.put("longitude", String.valueOf(longitude));
+        value.put("latitude", Double.valueOf(latitude));
+        value.put("longitude", Double.valueOf(longitude));
         if(altitude != 0) {
-            value.put("altitude", String.valueOf(altitude));
+            value.put("altitude", Double.valueOf(altitude));
         }
         Annotation a = new Annotation(Annotations.GEOLOCATION);
         a.setValue(value);
