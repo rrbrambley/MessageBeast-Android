@@ -935,6 +935,20 @@ public class ADNDatabase {
         }
     }
 
+    public void deletePendingFile(String pendingFileId) {
+        mDatabase.beginTransaction();
+
+        try {
+            String where = COL_PENDING_FILE_ID + " = '" + pendingFileId + "'";
+            mDatabase.delete(TABLE_PENDING_FILES, where, null);
+            mDatabase.setTransactionSuccessful();
+        } catch(Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+        } finally {
+            mDatabase.endTransaction();
+        }
+    }
+
     private double getRoundedValue(double value, int numDecimals) {
         BigDecimal bigValue = new BigDecimal(value);
         return bigValue.setScale(numDecimals, BigDecimal.ROUND_DOWN).doubleValue();
