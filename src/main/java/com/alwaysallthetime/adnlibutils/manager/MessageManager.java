@@ -624,7 +624,6 @@ public class MessageManager {
                     if(channelMessages.size() > 0) {
                         //step back in time until we find the first message that was NOT one
                         //of the unsent messages. this will be the max id.
-                        String nextMaxId = null;
                         Iterator<String> channelMessagesIterator = channelMessages.keySet().iterator();
                         while(channelMessagesIterator.hasNext()) {
                             String next = channelMessagesIterator.next();
