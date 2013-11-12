@@ -79,6 +79,11 @@ public class ADNDatabase {
     public static final String COL_PENDING_FILE_KIND = "pending_file_kind";
     public static final String COL_PENDING_FILE_PUBLIC = "pending_file_public";
 
+    public static final String TABLE_PENDING_OEMBEDS = "pending_oembeds";
+    public static final String COL_PENDING_OEMBED_PENDING_FILE_ID = "pending_oembed_file_id";
+    public static final String COL_PENDING_OEMBED_MESSAGE_ID = "pending_oembed_message_id";
+    public static final String COL_PENDING_OEMBED_CHANNEL_ID = "pending_oembed_channel_id";
+
     /**
      * Precision values to be used when retrieving location instances.
      *
@@ -153,6 +158,14 @@ public class ADNDatabase {
             ") " +
             "VALUES(?, ?, ?, ?, ?, ?, ?)";
 
+    private static final String INSERT_OR_REPLACE_PENDING_OEMBED = "INSERT OR REPLACE INTO " + TABLE_PENDING_OEMBEDS +
+            " (" +
+            COL_PENDING_OEMBED_PENDING_FILE_ID + ", " +
+            COL_PENDING_OEMBED_MESSAGE_ID + ", " +
+            COL_PENDING_OEMBED_CHANNEL_ID +
+            ") " +
+            "VALUES(?, ?, ?)";
+
     private static ADNDatabase sInstance;
 
     private SQLiteDatabase mDatabase;
@@ -162,6 +175,7 @@ public class ADNDatabase {
     private SQLiteStatement mInsertOrReplaceLocationInstance;
     private SQLiteStatement mInsertOrReplaceOEmbedInstance;
     private SQLiteStatement mInsertOrReplacePendingFile;
+    private SQLiteStatement mInsertOrReplacePendingOEmbed;
     private Gson mGson;
 
     public static synchronized ADNDatabase getInstance(Context context) {
@@ -175,6 +189,26 @@ public class ADNDatabase {
         ADNDatabaseOpenHelper openHelper = new ADNDatabaseOpenHelper(context, DB_NAME, null, DB_VERSION);
         mDatabase = openHelper.getWritableDatabase();
         mGson = AppDotNetGson.getPersistenceInstance();
+    }
+
+    private void insertOrReplacePendingOEmbed(String pendingFileId, String messageId, String channelId) {
+        if(mInsertOrReplacePendingOEmbed == null) {
+            mInsertOrReplacePendingOEmbed = mDatabase.compileStatement(INSERT_OR_REPLACE_PENDING_OEMBED);
+        }
+        mDatabase.beginTransaction();
+
+        try {
+            mInsertOrReplacePendingOEmbed.bindString(1, pendingFileId);
+            mInsertOrReplacePendingOEmbed.bindString(2, messageId);
+            mInsertOrReplacePendingOEmbed.bindString(3, channelId);
+            mInsertOrReplacePendingOEmbed.execute();
+            mDatabase.setTransactionSuccessful();
+        } catch(Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+        } finally {
+            mDatabase.endTransaction();
+            mInsertOrReplacePendingOEmbed.clearBindings();
+        }
     }
 
     public void insertOrReplaceMessage(MessagePlus messagePlus) {
@@ -941,6 +975,22 @@ public class ADNDatabase {
         try {
             String where = COL_PENDING_FILE_ID + " = '" + pendingFileId + "'";
             mDatabase.delete(TABLE_PENDING_FILES, where, null);
+            mDatabase.setTransactionSuccessful();
+        } catch(Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+        } finally {
+            mDatabase.endTransaction();
+        }
+    }
+
+    public void deletePendingOEmbed(String pendingFileId, String messageId, String channelId) {
+        mDatabase.beginTransaction();
+
+        try {
+            String where = COL_PENDING_OEMBED_PENDING_FILE_ID + " = '" + pendingFileId + "' AND " +
+                           COL_PENDING_OEMBED_MESSAGE_ID + " = '" + messageId + "' AND " +
+                           COL_PENDING_OEMBED_CHANNEL_ID + " = '" + channelId + "'";
+            mDatabase.delete(TABLE_PENDING_OEMBEDS, where, null);
             mDatabase.setTransactionSuccessful();
         } catch(Exception e) {
             Log.e(TAG, e.getMessage(), e);
