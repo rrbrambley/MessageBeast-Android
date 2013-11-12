@@ -57,7 +57,8 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
             ADNDatabase.COL_PENDING_FILE_TYPE + " TEXT NOT NULL, " +
             ADNDatabase.COL_PENDING_FILE_NAME + " TEXT NOT NULL, " +
             ADNDatabase.COL_PENDING_FILE_MIMETYPE + " TEXT NOT NULL, " +
-            ADNDatabase.COL_PENDING_FILE_KIND + " TEXT " +
+            ADNDatabase.COL_PENDING_FILE_KIND + " TEXT, " +
+            ADNDatabase.COL_PENDING_FILE_PUBLIC + " BOOLEAN " +
             ")";
 
     public ADNDatabaseOpenHelper(Context context, String name, SQLiteDatabase.CursorFactory factory, int version) {

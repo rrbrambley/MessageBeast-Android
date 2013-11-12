@@ -76,6 +76,7 @@ public class ADNDatabase {
     public static final String COL_PENDING_FILE_NAME = "pending_file_name";
     public static final String COL_PENDING_FILE_MIMETYPE = "pending_file_mimetype";
     public static final String COL_PENDING_FILE_KIND = "pending_file_kind";
+    public static final String COL_PENDING_FILE_PUBLIC = "pending_file_public";
 
     /**
      * Precision values to be used when retrieving location instances.
@@ -146,9 +147,10 @@ public class ADNDatabase {
             COL_PENDING_FILE_TYPE + ", " +
             COL_PENDING_FILE_NAME + ", " +
             COL_PENDING_FILE_MIMETYPE + ", " +
-            COL_PENDING_FILE_KIND +
+            COL_PENDING_FILE_KIND + ", " +
+            COL_PENDING_FILE_PUBLIC +
             ") " +
-            "VALUES(?, ?, ?, ?, ?, ?)";
+            "VALUES(?, ?, ?, ?, ?, ?, ?)";
 
     private static ADNDatabase sInstance;
 
@@ -350,7 +352,7 @@ public class ADNDatabase {
         }
     }
 
-    public void insertOrReplacePendingFile(String id, byte[] data, String type, String name, String mimeType, String kind) {
+    public void insertOrReplacePendingFile(String id, byte[] data, String type, String name, String mimeType, String kind, boolean isPublic) {
         if(mInsertOrReplacePendingFile == null) {
             mInsertOrReplacePendingFile = mDatabase.compileStatement(INSERT_OR_REPLACE_PENDING_FILE);
         }
@@ -368,6 +370,7 @@ public class ADNDatabase {
             } else {
                 mInsertOrReplacePendingFile.bindNull(6);
             }
+            mInsertOrReplacePendingFile.bindLong(7, isPublic ? 1 : 0);
             mInsertOrReplacePendingFile.execute();
             mDatabase.setTransactionSuccessful();
         } catch(Exception e) {
@@ -377,6 +380,7 @@ public class ADNDatabase {
             mInsertOrReplacePendingFile.clearBindings();
         }
     }
+
 
     /**
      * Get an OEmbedInstances object representing the complete set of messages with an OEmbed
