@@ -36,7 +36,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -46,6 +45,10 @@ public class MessageManager {
     private static final String TAG = "ADNLibUtils_MessageManager";
 
     private static final int MAX_MESSAGES_RETURNED_ON_SYNC = 100;
+
+    public static final String INTENT_ACTION_UNSENT_MESSAGES_SENT = "com.alwaysallthetime.adnlibutils.manager.MessageManager.intent.unsentMessagesSent";
+    public static final String EXTRA_CHANNEL_ID = "com.alwaysallthetime.adnlibutils.manager.MessageManager.extras.channelId";
+    public static final String EXTRA_SENT_MESSAGE_IDS = "com.alwaysallthetime.adnlibutils.manager.MessageManager.extras.sentMessageIds";
 
     /*
      * public data structures
@@ -64,14 +67,6 @@ public class MessageManager {
         public boolean isMore() {
             return this.isMore;
         }
-
-        void setSentMessageIds(List<String> sentMessageIds) {
-            this.sentMessageIds = sentMessageIds;
-        }
-
-        public List<String> getSentMessageIds() {
-            return this.sentMessageIds;
-        }
     }
 
     public static abstract class MessageManagerSyncResponseHandler extends MessageManagerResponseHandler {
@@ -84,12 +79,6 @@ public class MessageManager {
         public int getNumMessagesSynced() {
             return numMessagesSynced;
         }
-    }
-
-    public interface MessageManagerSendUnsentMessagesHandler {
-        public void onSuccess(List<String> sentMessageIds);
-        public void onFileUploadBegan(String pendingFileId, MessagePlus messagePlus);
-        public void onError(Exception exception, List<String> sentMessageIds);
     }
 
     public interface MessageRefreshResponseHandler {
@@ -373,68 +362,17 @@ public class MessageManager {
         }
     }
 
-    public synchronized void retrieveMessages(final String channelId, final MessageManagerResponseHandler handler) {
-        sendUnsentMessages(channelId, new MessageManagerSendUnsentMessagesHandler() {
-            @Override
-            public void onSuccess(final List<String> sentMessageIds) {
-                MinMaxPair minMaxPair = getMinMaxPair(channelId);
-                retrieveMessages(channelId, minMaxPair.maxId, minMaxPair.minId, sentMessageIds, handler);
-            }
-
-            @Override
-            public void onFileUploadBegan(String pendingFileId, MessagePlus messagePlus) {
-                Log.d(TAG, "began upload of pending file " + pendingFileId + " for message with id " + messagePlus.getMessage().getId());
-            }
-
-            @Override
-            public void onError(Exception exception, List<String> sentMessageIds) {
-                //TODO: handle the sent messages in this case?
-                Log.e(TAG, exception.getMessage(), exception);
-                handler.onError(exception);
-            }
-        });
+    public synchronized boolean retrieveMessages(final String channelId, final MessageManagerResponseHandler handler) {
+        MinMaxPair minMaxPair = getMinMaxPair(channelId);
+        return retrieveMessages(channelId, minMaxPair.maxId, minMaxPair.minId, handler);
     }
 
-    public synchronized void retrieveNewestMessages(final String channelId, final MessageManagerResponseHandler handler) {
-        sendUnsentMessages(channelId, new MessageManagerSendUnsentMessagesHandler() {
-            @Override
-            public void onSuccess(final List<String> sentMessageIds) {
-                retrieveMessages(channelId, getMinMaxPair(channelId).maxId, null, sentMessageIds, handler);
-            }
-
-            @Override
-            public void onFileUploadBegan(String pendingFileId, MessagePlus messagePlus) {
-                Log.d(TAG, "began upload of pending file " + pendingFileId + " for message with id " + messagePlus.getMessage().getId());
-            }
-
-            @Override
-            public void onError(Exception exception, List<String> sentMessageIds) {
-                //TODO: handle the sent messages in this case?
-                Log.e(TAG, exception.getMessage(), exception);
-                handler.onError(exception);
-            }
-        });
+    public synchronized boolean retrieveNewestMessages(final String channelId, final MessageManagerResponseHandler handler) {
+        return retrieveMessages(channelId, getMinMaxPair(channelId).maxId, null, handler);
     }
 
-    public synchronized void retrieveMoreMessages(final String channelId, final MessageManagerResponseHandler handler) {
-        sendUnsentMessages(channelId, new MessageManagerSendUnsentMessagesHandler() {
-            @Override
-            public void onSuccess(final List<String> sentMessageIds) {
-                retrieveMessages(channelId, null, getMinMaxPair(channelId).minId, sentMessageIds, handler);
-            }
-
-            @Override
-            public void onFileUploadBegan(String pendingFileId, MessagePlus messagePlus) {
-                Log.d(TAG, "began upload of pending file " + pendingFileId + " for message with id " + messagePlus.getMessage().getId());
-            }
-
-            @Override
-            public void onError(Exception exception, List<String> sentMessageIds) {
-                //TODO: handle the sent messages in this case?
-                Log.e(TAG, exception.getMessage(), exception);
-                handler.onError(exception);
-            }
-        });
+    public synchronized boolean retrieveMoreMessages(final String channelId, final MessageManagerResponseHandler handler) {
+        return retrieveMessages(channelId, null, getMinMaxPair(channelId).minId, handler);
     }
 
     public synchronized void createMessage(final String channelId, final Message message, final MessageManagerResponseHandler handler) {
@@ -458,14 +396,10 @@ public class MessageManager {
     }
 
     public synchronized MessagePlus createUnsentMessageAndAttemptSend(final String channelId, Message message) {
-        return createUnsentMessageAndAttemptSend(channelId, message, new HashSet<String>(0), null);
+        return createUnsentMessageAndAttemptSend(channelId, message, new HashSet<String>(0));
     }
 
-    public synchronized MessagePlus createUnsentMessageAndAttemptSend(final String channelId, Message message, final MessageManagerResponseHandler handler) {
-        return createUnsentMessageAndAttemptSend(channelId, message, new HashSet<String>(0), handler);
-    }
-
-    public synchronized MessagePlus createUnsentMessageAndAttemptSend(final String channelId, Message message, Set<String> pendingFileIds, final MessageManagerResponseHandler handler) {
+    public synchronized MessagePlus createUnsentMessageAndAttemptSend(final String channelId, Message message, Set<String> pendingFileIds) {
         if(!mConfiguration.isDatabaseInsertionEnabled) {
             throw new RuntimeException("Database insertion must be enabled in order to use the unsent messages feature");
         }
@@ -515,43 +449,7 @@ public class MessageManager {
 
         Log.d(TAG, "Created and stored unsent message with id " + newMessageIdString);
 
-        sendUnsentMessages(channelId, new MessageManagerSendUnsentMessagesHandler() {
-            @Override
-            public void onSuccess(final List<String> sentMessageIds) {
-                retrieveNewestMessages(channelId, new MessageManagerResponseHandler() {
-                    @Override
-                    public void onSuccess(List<MessagePlus> responseData, boolean appended) {
-                        if(handler != null) {
-                            handler.setSentMessageIds(sentMessageIds);
-                            handler.onSuccess(responseData, appended);
-                        }
-                    }
-
-                    @Override
-                    public void onError(Exception exception) {
-                        Log.d(TAG, exception.getMessage(), exception);
-                        if(handler != null) {
-                            handler.setSentMessageIds(sentMessageIds);
-                            handler.onError(exception);
-                        }
-                    }
-                });
-            }
-
-            @Override
-            public void onFileUploadBegan(String pendingFileId, MessagePlus messagePlus) {
-                Log.d(TAG, "began upload of pending file " + pendingFileId + " for message with id " + messagePlus.getMessage().getId());
-            }
-
-            @Override
-            public void onError(Exception exception, List<String> sentMessageIds) {
-                Log.d(TAG, exception.getMessage(), exception);
-                if(handler != null) {
-                    handler.setSentMessageIds(sentMessageIds);
-                    handler.onError(exception);
-                }
-            }
-        });
+        sendUnsentMessages(channelId);
 
         return messagePlus;
     }
@@ -655,7 +553,7 @@ public class MessageManager {
         params.put("before_id", beforeId);
         params.put("count", String.valueOf(MAX_MESSAGES_RETURNED_ON_SYNC));
 
-        retrieveMessages(params, channelId, new ArrayList<String>(0), new MessageManagerResponseHandler() {
+        retrieveMessages(params, channelId, new MessageManagerResponseHandler() {
             @Override
             public void onSuccess(List<MessagePlus> responseData, boolean appended) {
                 if(messages.size() == 0) {
@@ -668,7 +566,6 @@ public class MessageManager {
                     retrieveAllMessages(messages, null, minMaxPair.minId, channelId, responseHandler);
                 } else {
                     Log.d(TAG, "Num messages synced: " + responseHandler.getNumMessagesSynced());
-                    responseHandler.setSentMessageIds(getSentMessageIds());
                     responseHandler.onSuccess(messages, true);
                 }
             }
@@ -681,14 +578,14 @@ public class MessageManager {
         });
     }
 
-    private synchronized void retrieveMessages(final String channelId, final String sinceId, final String beforeId, final List<String> sentMessageIds, final MessageManagerResponseHandler handler) {
+    private synchronized boolean retrieveMessages(final String channelId, final String sinceId, final String beforeId, final MessageManagerResponseHandler handler) {
         QueryParameters params = (QueryParameters) mParameters.get(channelId).clone();
         params.put("since_id", sinceId);
         params.put("before_id", beforeId);
-        retrieveMessages(params, channelId, sentMessageIds, handler);
+        return retrieveMessages(params, channelId, handler);
     }
 
-    private synchronized void sendUnsentMessages(final LinkedHashMap<String, MessagePlus> unsentMessages, final List<String> sentMessageIds, final MessageManagerSendUnsentMessagesHandler handler) {
+    private synchronized void sendUnsentMessages(final LinkedHashMap<String, MessagePlus> unsentMessages, final ArrayList<String> sentMessageIds) {
         final MessagePlus messagePlus = unsentMessages.get(unsentMessages.keySet().iterator().next());
         if(messagePlus.hasPendingOEmbeds()) {
             String pendingFileId = messagePlus.getPendingOEmbeds().iterator().next();
@@ -697,9 +594,6 @@ public class MessageManager {
             //TODO: this should somehow be prepopulated?
 
             FileManager.getInstance(mContext, mClient).startPendingFileUpload(pendingFileId);
-            if(handler != null) {
-                handler.onFileUploadBegan(pendingFileId, messagePlus);
-            }
             return;
         }
         final Message message = messagePlus.getMessage();
@@ -726,7 +620,7 @@ public class MessageManager {
                 if(unsentMessages.size() > 0) {
                     String nextId = unsentMessages.keySet().iterator().next();
                     minMaxPair.maxId = nextId;
-                    sendUnsentMessages(unsentMessages, sentMessageIds, handler);
+                    sendUnsentMessages(unsentMessages, sentMessageIds);
                 } else {
                     if(channelMessages.size() > 0) {
                         //step back in time until we find the first message that was NOT one
@@ -743,23 +637,22 @@ public class MessageManager {
                     } else {
                         minMaxPair.maxId = null;
                     }
-                    if(handler != null) {
-                        handler.onSuccess(sentMessageIds);
-                    }
+
+                    Intent i = new Intent(INTENT_ACTION_UNSENT_MESSAGES_SENT);
+                    i.putExtra(EXTRA_CHANNEL_ID, message.getChannelId());
+                    i.putStringArrayListExtra(EXTRA_SENT_MESSAGE_IDS, sentMessageIds);
+                    mContext.sendBroadcast(i);
                 }
             }
 
             @Override
             public void onError(Exception exception) {
                 super.onError(exception);
-                if(handler != null) {
-                    handler.onError(exception, sentMessageIds);
-                }
             }
         });
     }
 
-    public synchronized void sendUnsentMessages(final String channelId, MessageManagerSendUnsentMessagesHandler handler) {
+    public synchronized void sendUnsentMessages(final String channelId) {
         LinkedHashMap<String, MessagePlus> unsentMessages = getUnsentMessages(channelId);
         if(unsentMessages.size() > 0) {
             LinkedHashMap<String, MessagePlus> channelMessages = getChannelMessages(channelId);
@@ -767,16 +660,16 @@ public class MessageManager {
                 //we do this so that the max id is known.
                 loadPersistedMessages(channelId, unsentMessages.size() + 1);
             }
-            List<String> sentMessageIds = new ArrayList<String>(unsentMessages.size());
-            sendUnsentMessages(unsentMessages, sentMessageIds, handler);
-        } else {
-            if(handler != null) {
-                handler.onSuccess(new ArrayList<String>(0));
-            }
+            ArrayList<String> sentMessageIds = new ArrayList<String>(unsentMessages.size());
+            sendUnsentMessages(unsentMessages, sentMessageIds);
         }
     }
 
-    private synchronized void retrieveMessages(final QueryParameters queryParameters, final String channelId, final List<String> sentMessageIds, final MessageManagerResponseHandler handler) {
+    private synchronized boolean retrieveMessages(final QueryParameters queryParameters, final String channelId, final MessageManagerResponseHandler handler) {
+        LinkedHashMap<String, MessagePlus> unsentMessages = getUnsentMessages(channelId);
+        if(unsentMessages.size() > 0) {
+            return false;
+        }
         mClient.retrieveMessagesInChannel(channelId, queryParameters, new MessageListResponseHandler() {
             @Override
             public void onSuccess(final MessageList responseData) {
@@ -829,7 +722,6 @@ public class MessageManager {
                 }
 
                 if(handler != null) {
-                    handler.setSentMessageIds(sentMessageIds);
                     handler.setIsMore(isMore());
                     handler.onSuccess(newestMessages, appended);
                 }
@@ -840,11 +732,11 @@ public class MessageManager {
                 Log.d(TAG, error.getMessage(), error);
 
                 if(handler != null) {
-                    handler.setSentMessageIds(sentMessageIds);
                     handler.onError(error);
                 }
             }
         });
+        return true;
     }
 
     private void adjustDateAndInsert(MessagePlus mPlus) {
@@ -912,7 +804,7 @@ public class MessageManager {
                             }
 
                             for(String channelId : channelIdsWithMessagesToSend) {
-                                sendUnsentMessages(channelId, null);
+                                sendUnsentMessages(channelId);
                                 Log.d(TAG, "Now retrying send for unsent messages in channel " + channelId);
                             }
                         }
