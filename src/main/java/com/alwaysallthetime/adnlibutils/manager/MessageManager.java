@@ -102,6 +102,8 @@ public class MessageManager {
         public Date getDisplayDate(Message message);
     }
 
+    private static MessageManager sInstance;
+
     private Context mContext;
     private ADNDatabase mDatabase;
     private AppDotNetClient mClient;
@@ -111,6 +113,15 @@ public class MessageManager {
     private HashMap<String, LinkedHashMap<String, MessagePlus>> mUnsentMessages;
     private HashMap<String, QueryParameters> mParameters;
     private HashMap<String, MinMaxPair> mMinMaxPairs;
+
+    public static MessageManager getInstance() {
+        return sInstance;
+    }
+
+    public static MessageManager init(Context context, AppDotNetClient client, MessageManagerConfiguration configuration) {
+        sInstance = new MessageManager(context, client, configuration);
+        return sInstance;
+    }
 
     public MessageManager(Context context, AppDotNetClient client, MessageManagerConfiguration configuration) {
         mContext = context;
