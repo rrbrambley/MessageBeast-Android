@@ -53,7 +53,7 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
 
     public static final String CREATE_PENDING_FILES_TABLE = "CREATE TABLE IF NOT EXISTS " + ADNDatabase.TABLE_PENDING_FILES + "(" +
             ADNDatabase.COL_PENDING_FILE_ID + " TEXT PRIMARY KEY, " +
-            ADNDatabase.COL_PENDING_FILE_DATA + " BLOB NOT NULL, " +
+            ADNDatabase.COL_PENDING_FILE_URI + " TEXT NOT NULL, " +
             ADNDatabase.COL_PENDING_FILE_TYPE + " TEXT NOT NULL, " +
             ADNDatabase.COL_PENDING_FILE_NAME + " TEXT NOT NULL, " +
             ADNDatabase.COL_PENDING_FILE_MIMETYPE + " TEXT NOT NULL, " +

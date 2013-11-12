@@ -5,6 +5,7 @@ import android.database.Cursor;
 import android.database.DatabaseUtils;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteStatement;
+import android.net.Uri;
 import android.util.Log;
 
 import com.alwaysallthetime.adnlib.data.Entities;
@@ -71,7 +72,7 @@ public class ADNDatabase {
 
     public static final String TABLE_PENDING_FILES = "pending_files";
     public static final String COL_PENDING_FILE_ID = "pending_file_id";
-    public static final String COL_PENDING_FILE_DATA = "pending_file_data";
+    public static final String COL_PENDING_FILE_URI = "pending_file_uri";
     public static final String COL_PENDING_FILE_TYPE = "pending_file_type";
     public static final String COL_PENDING_FILE_NAME = "pending_file_name";
     public static final String COL_PENDING_FILE_MIMETYPE = "pending_file_mimetype";
@@ -143,7 +144,7 @@ public class ADNDatabase {
     private static final String INSERT_OR_REPLACE_PENDING_FILE = "INSERT OR REPLACE INTO " + TABLE_PENDING_FILES +
             " (" +
             COL_PENDING_FILE_ID + ", " +
-            COL_PENDING_FILE_DATA + ", " +
+            COL_PENDING_FILE_URI + ", " +
             COL_PENDING_FILE_TYPE + ", " +
             COL_PENDING_FILE_NAME + ", " +
             COL_PENDING_FILE_MIMETYPE + ", " +
@@ -352,7 +353,7 @@ public class ADNDatabase {
         }
     }
 
-    public void insertOrReplacePendingFile(String id, byte[] data, String type, String name, String mimeType, String kind, boolean isPublic) {
+    public void insertOrReplacePendingFile(String id, String uri, String type, String name, String mimeType, String kind, boolean isPublic) {
         if(mInsertOrReplacePendingFile == null) {
             mInsertOrReplacePendingFile = mDatabase.compileStatement(INSERT_OR_REPLACE_PENDING_FILE);
         }
@@ -360,7 +361,7 @@ public class ADNDatabase {
 
         try {
             mInsertOrReplacePendingFile.bindString(1, id);
-            mInsertOrReplacePendingFile.bindBlob(2, data);
+            mInsertOrReplacePendingFile.bindString(2, uri);
             mInsertOrReplacePendingFile.bindString(3, type);
             mInsertOrReplacePendingFile.bindString(4, name);
             mInsertOrReplacePendingFile.bindString(5, mimeType);
