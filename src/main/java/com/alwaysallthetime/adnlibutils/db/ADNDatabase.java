@@ -139,6 +139,17 @@ public class ADNDatabase {
             ") " +
             "VALUES(?, ?, ?, ?, ?)";
 
+    private static final String INSERT_OR_REPLACE_PENDING_FILE = "INSERT OR REPLACE INTO " + TABLE_PENDING_FILES +
+            " (" +
+            COL_PENDING_FILE_ID + ", " +
+            COL_PENDING_FILE_DATA + ", " +
+            COL_PENDING_FILE_TYPE + ", " +
+            COL_PENDING_FILE_NAME + ", " +
+            COL_PENDING_FILE_MIMETYPE + ", " +
+            COL_PENDING_FILE_KIND +
+            ") " +
+            "VALUES(?, ?, ?, ?, ?, ?)";
+
     private static ADNDatabase sInstance;
 
     private SQLiteDatabase mDatabase;
@@ -147,6 +158,7 @@ public class ADNDatabase {
     private SQLiteStatement mInsertOrReplaceGeolocation;
     private SQLiteStatement mInsertOrReplaceLocationInstance;
     private SQLiteStatement mInsertOrReplaceOEmbedInstance;
+    private SQLiteStatement mInsertOrReplacePendingFile;
     private Gson mGson;
 
     public static synchronized ADNDatabase getInstance(Context context) {
@@ -335,6 +347,34 @@ public class ADNDatabase {
                 mDatabase.endTransaction();
                 mInsertOrReplaceOEmbedInstance.clearBindings();
             }
+        }
+    }
+
+    public void insertOrReplacePendingFile(String id, byte[] data, String type, String name, String mimeType, String kind) {
+        if(mInsertOrReplacePendingFile == null) {
+            mInsertOrReplacePendingFile = mDatabase.compileStatement(INSERT_OR_REPLACE_PENDING_FILE);
+        }
+        mDatabase.beginTransaction();
+
+        try {
+            mInsertOrReplacePendingFile.bindString(1, id);
+            mInsertOrReplacePendingFile.bindBlob(2, data);
+            mInsertOrReplacePendingFile.bindString(3, type);
+            mInsertOrReplacePendingFile.bindString(4, name);
+            mInsertOrReplacePendingFile.bindString(5, mimeType);
+
+            if(kind != null) {
+                mInsertOrReplacePendingFile.bindString(6, kind);
+            } else {
+                mInsertOrReplacePendingFile.bindNull(6);
+            }
+            mInsertOrReplacePendingFile.execute();
+            mDatabase.setTransactionSuccessful();
+        } catch(Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+        } finally {
+            mDatabase.endTransaction();
+            mInsertOrReplacePendingFile.clearBindings();
         }
     }
 
