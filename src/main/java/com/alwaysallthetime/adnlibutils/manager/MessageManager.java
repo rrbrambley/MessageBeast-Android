@@ -1,6 +1,9 @@
 package com.alwaysallthetime.adnlibutils.manager;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.location.Address;
 import android.location.Geocoder;
 import android.util.Log;
@@ -9,8 +12,10 @@ import com.alwaysallthetime.adnlib.Annotations;
 import com.alwaysallthetime.adnlib.AppDotNetClient;
 import com.alwaysallthetime.adnlib.QueryParameters;
 import com.alwaysallthetime.adnlib.data.Annotation;
+import com.alwaysallthetime.adnlib.data.File;
 import com.alwaysallthetime.adnlib.data.Message;
 import com.alwaysallthetime.adnlib.data.MessageList;
+import com.alwaysallthetime.adnlib.gson.AppDotNetGson;
 import com.alwaysallthetime.adnlib.response.MessageListResponseHandler;
 import com.alwaysallthetime.adnlib.response.MessageResponseHandler;
 import com.alwaysallthetime.adnlibutils.db.ADNDatabase;
@@ -28,10 +33,13 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class MessageManager {
 
@@ -80,6 +88,7 @@ public class MessageManager {
 
     public interface MessageManagerSendUnsentMessagesHandler {
         public void onSuccess(List<String> sentMessageIds);
+        public void onFileUploadBegan(String pendingFileId, MessagePlus messagePlus);
         public void onError(Exception exception, List<String> sentMessageIds);
     }
 
@@ -111,6 +120,7 @@ public class MessageManager {
 
     private HashMap<String, LinkedHashMap<String, MessagePlus>> mMessages;
     private HashMap<String, LinkedHashMap<String, MessagePlus>> mUnsentMessages;
+    private HashMap<String, List<MessagePlus>> mPendingFiles;
     private HashMap<String, QueryParameters> mParameters;
     private HashMap<String, MinMaxPair> mMinMaxPairs;
 
@@ -133,6 +143,10 @@ public class MessageManager {
         mUnsentMessages = new HashMap<String, LinkedHashMap<String, MessagePlus>>();
         mMinMaxPairs = new HashMap<String, MinMaxPair>();
         mParameters = new HashMap<String, QueryParameters>();
+        mPendingFiles = new HashMap<String, List<MessagePlus>>();
+
+        IntentFilter intentFilter = new IntentFilter(FileUploadService.INTENT_ACTION_FILE_UPLOAD_COMPLETE);
+        context.registerReceiver(fileUploadReceiver, intentFilter);
     }
 
     /**
@@ -341,6 +355,15 @@ public class MessageManager {
         return unsentMessages;
     }
 
+    private synchronized List<MessagePlus> getMessagesNeedingPendingFile(String pendingFileId) {
+        List<MessagePlus> messagePlusses = mPendingFiles.get(pendingFileId);
+        if(messagePlusses == null) {
+            messagePlusses = new ArrayList<MessagePlus>(1);
+            mPendingFiles.put(pendingFileId, messagePlusses);
+        }
+        return messagePlusses;
+    }
+
     public synchronized void clearMessages(String channelId) {
         mMinMaxPairs.put(channelId, null);
         LinkedHashMap<String, MessagePlus> channelMessages = mMessages.get(channelId);
@@ -359,6 +382,11 @@ public class MessageManager {
             }
 
             @Override
+            public void onFileUploadBegan(String pendingFileId, MessagePlus messagePlus) {
+                Log.d(TAG, "began upload of pending file " + pendingFileId + " for message with id " + messagePlus.getMessage().getId());
+            }
+
+            @Override
             public void onError(Exception exception, List<String> sentMessageIds) {
                 //TODO: handle the sent messages in this case?
                 Log.e(TAG, exception.getMessage(), exception);
@@ -373,6 +401,12 @@ public class MessageManager {
             public void onSuccess(final List<String> sentMessageIds) {
                 retrieveMessages(channelId, getMinMaxPair(channelId).maxId, null, sentMessageIds, handler);
             }
+
+            @Override
+            public void onFileUploadBegan(String pendingFileId, MessagePlus messagePlus) {
+                Log.d(TAG, "began upload of pending file " + pendingFileId + " for message with id " + messagePlus.getMessage().getId());
+            }
+
             @Override
             public void onError(Exception exception, List<String> sentMessageIds) {
                 //TODO: handle the sent messages in this case?
@@ -388,6 +422,12 @@ public class MessageManager {
             public void onSuccess(final List<String> sentMessageIds) {
                 retrieveMessages(channelId, null, getMinMaxPair(channelId).minId, sentMessageIds, handler);
             }
+
+            @Override
+            public void onFileUploadBegan(String pendingFileId, MessagePlus messagePlus) {
+                Log.d(TAG, "began upload of pending file " + pendingFileId + " for message with id " + messagePlus.getMessage().getId());
+            }
+
             @Override
             public void onError(Exception exception, List<String> sentMessageIds) {
                 //TODO: handle the sent messages in this case?
@@ -418,10 +458,14 @@ public class MessageManager {
     }
 
     public synchronized MessagePlus createUnsentMessageAndAttemptSend(final String channelId, Message message) {
-        return createUnsentMessageAndAttemptSend(channelId, message, null);
+        return createUnsentMessageAndAttemptSend(channelId, message, new HashSet<String>(0), null);
     }
 
     public synchronized MessagePlus createUnsentMessageAndAttemptSend(final String channelId, Message message, final MessageManagerResponseHandler handler) {
+        return createUnsentMessageAndAttemptSend(channelId, message, new HashSet<String>(0), handler);
+    }
+
+    public synchronized MessagePlus createUnsentMessageAndAttemptSend(final String channelId, Message message, Set<String> pendingFileIds, final MessageManagerResponseHandler handler) {
         if(!mConfiguration.isDatabaseInsertionEnabled) {
             throw new RuntimeException("Database insertion must be enabled in order to use the unsent messages feature");
         }
@@ -443,8 +487,21 @@ public class MessageManager {
         Integer maxInteger = minMaxPair.getMaxAsInteger();
         Integer newMessageId = maxInteger != null ? maxInteger + 1 : 1;
         String newMessageIdString = String.valueOf(newMessageId);
-        final MessagePlus messagePlus = MessagePlus.newUnsentMessagePlus(channelId, newMessageIdString, message);
+
+        MessagePlus.UnsentMessagePlusBuilder unsentBuilder = MessagePlus.UnsentMessagePlusBuilder.newBuilder(channelId, newMessageIdString, message);
+        Iterator<String> iterator = pendingFileIds.iterator();
+        while(iterator.hasNext()) {
+            unsentBuilder.addPendingOEmbed(iterator.next());
+        }
+        final MessagePlus messagePlus = unsentBuilder.build();
         mDatabase.insertOrReplaceMessage(messagePlus);
+
+        //problem to solve - display locations need
+//        if(mConfiguration.isLocationLookupEnabled) {
+//            ArrayList<MessagePlus> mp = new ArrayList<MessagePlus>(1);
+//            mp.add(messagePlus);
+//            lookupLocation(mp, true);
+//        }
 
         LinkedHashMap<String, MessagePlus> channelUnsentMessages = getUnsentMessages(channelId);
         channelUnsentMessages.put(newMessageIdString, messagePlus);
@@ -479,6 +536,11 @@ public class MessageManager {
                         }
                     }
                 });
+            }
+
+            @Override
+            public void onFileUploadBegan(String pendingFileId, MessagePlus messagePlus) {
+                Log.d(TAG, "began upload of pending file " + pendingFileId + " for message with id " + messagePlus.getMessage().getId());
             }
 
             @Override
@@ -628,6 +690,18 @@ public class MessageManager {
 
     private synchronized void sendUnsentMessages(final LinkedHashMap<String, MessagePlus> unsentMessages, final List<String> sentMessageIds, final MessageManagerSendUnsentMessagesHandler handler) {
         final MessagePlus messagePlus = unsentMessages.get(unsentMessages.keySet().iterator().next());
+        if(messagePlus.hasPendingOEmbeds()) {
+            String pendingFileId = messagePlus.getPendingOEmbeds().iterator().next();
+            List<MessagePlus> messagesNeedingPendingFile = getMessagesNeedingPendingFile(pendingFileId);
+            messagesNeedingPendingFile.add(messagePlus);
+            //TODO: this should somehow be prepopulated?
+
+            FileManager.getInstance(mContext, mClient).startPendingFileUpload(pendingFileId);
+            if(handler != null) {
+                handler.onFileUploadBegan(pendingFileId, messagePlus);
+            }
+            return;
+        }
         final Message message = messagePlus.getMessage();
 
         //we had them set for display locally, but we should
@@ -669,14 +743,18 @@ public class MessageManager {
                     } else {
                         minMaxPair.maxId = null;
                     }
-                    handler.onSuccess(sentMessageIds);
+                    if(handler != null) {
+                        handler.onSuccess(sentMessageIds);
+                    }
                 }
             }
 
             @Override
             public void onError(Exception exception) {
                 super.onError(exception);
-                handler.onError(exception, sentMessageIds);
+                if(handler != null) {
+                    handler.onError(exception, sentMessageIds);
+                }
             }
         });
     }
@@ -692,7 +770,9 @@ public class MessageManager {
             List<String> sentMessageIds = new ArrayList<String>(unsentMessages.size());
             sendUnsentMessages(unsentMessages, sentMessageIds, handler);
         } else {
-            handler.onSuccess(new ArrayList<String>(0));
+            if(handler != null) {
+                handler.onSuccess(new ArrayList<String>(0));
+            }
         }
     }
 
@@ -803,6 +883,47 @@ public class MessageManager {
 
         return null;
     }
+
+    private final BroadcastReceiver fileUploadReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if(FileUploadService.INTENT_ACTION_FILE_UPLOAD_COMPLETE.equals(intent.getAction())) {
+                String pendingFileId = intent.getStringExtra(FileUploadService.EXTRA_PENDING_FILE_ID);
+                if(pendingFileId != null) {
+                    boolean success = intent.getBooleanExtra(FileUploadService.EXTRA_SUCCESS, false);
+                    if(success) {
+                        Log.d(TAG, "Successfully uploaded pending file with id " + pendingFileId);
+
+                        List<MessagePlus> messagesNeedingFile = mPendingFiles.get(pendingFileId);
+                        if(messagesNeedingFile != null) {
+                            HashSet<String> channelIdsWithMessagesToSend = new HashSet<String>();
+                            String fileJson = intent.getStringExtra(FileUploadService.EXTRA_FILE);
+                            File file = AppDotNetGson.getPersistenceInstance().fromJson(fileJson, File.class);
+
+                            for(MessagePlus messagePlus : messagesNeedingFile) {
+                                Message message = messagePlus.getMessage();
+                                messagePlus.replacePendingOEmbedWithOEmbedAnnotation(pendingFileId, file);
+                                mDatabase.insertOrReplaceMessage(messagePlus);
+                                mDatabase.deletePendingOEmbed(pendingFileId, message.getId(), message.getChannelId());
+
+                                if(messagePlus.getPendingOEmbeds().size() == 0) {
+                                    channelIdsWithMessagesToSend.add(message.getChannelId());
+                                }
+                            }
+
+                            for(String channelId : channelIdsWithMessagesToSend) {
+                                sendUnsentMessages(channelId, null);
+                                Log.d(TAG, "Now retrying send for unsent messages in channel " + channelId);
+                            }
+                        }
+                    } else {
+                        //TODO
+                        Log.e(TAG, "Failed to upload pending file with id " + pendingFileId);
+                    }
+                }
+            }
+        }
+    };
 
     public static class MessageManagerConfiguration {
 

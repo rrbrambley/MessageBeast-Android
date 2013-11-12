@@ -23,10 +23,12 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class ADNDatabase {
 
@@ -227,6 +229,12 @@ public class ADNDatabase {
             mInsertOrReplaceMessage.bindLong(5, messagePlus.isUnsent() ? 1 : 0);
             mInsertOrReplaceMessage.execute();
 
+            Set<String> pendingOEmbeds = messagePlus.getPendingOEmbeds();
+            if(pendingOEmbeds != null) {
+                for(String pendingOEmbed : pendingOEmbeds) {
+                    insertOrReplacePendingOEmbed(pendingOEmbed, message.getId(), message.getChannelId());
+                }
+            }
             mDatabase.setTransactionSuccessful();
         } catch(Exception e) {
             Log.e(TAG, e.getMessage(), e);
@@ -444,6 +452,27 @@ public class ADNDatabase {
         return file;
     }
 
+    public Set<String> getPendingOEmbeds(String messageId, String channelId) {
+        HashSet<String> pendingOEmbeds = new HashSet<String>();
+        Cursor cursor = null;
+        try {
+            String where = COL_PENDING_OEMBED_MESSAGE_ID + " = ? AND " + COL_PENDING_OEMBED_CHANNEL_ID + " = ?";
+            String args[] = new String[] { messageId, channelId };
+            cursor = mDatabase.query(TABLE_PENDING_OEMBEDS, new String[] { COL_PENDING_OEMBED_PENDING_FILE_ID }, where, args, null, null, null, null);
+
+            while(cursor.moveToNext()) {
+                String pendingFileId = cursor.getString(0);
+                pendingOEmbeds.add(pendingFileId);
+            }
+        } catch(Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+        } finally {
+            if(cursor != null) {
+                cursor.close();
+            }
+        }
+        return pendingOEmbeds;
+    }
 
     /**
      * Get an OEmbedInstances object representing the complete set of messages with an OEmbed
@@ -756,6 +785,7 @@ public class ADNDatabase {
      */
     public OrderedMessageBatch getMessages(String channelId, Collection<String> messageIds) {
         LinkedHashMap<String, MessagePlus> messages = new LinkedHashMap<String, MessagePlus>();
+        ArrayList<MessagePlus> unsentMessages = new ArrayList<MessagePlus>();
         String maxId = null;
         String minId = null;
         Cursor cursor = null;
@@ -796,6 +826,9 @@ public class ADNDatabase {
                     if(maxId == null) {
                         maxId = messageId;
                     }
+                    if(isUnsent) {
+                        unsentMessages.add(messagePlus);
+                    }
                 } while(cursor.moveToNext());
 
                 if(message != null) {
@@ -808,6 +841,11 @@ public class ADNDatabase {
             if(cursor != null) {
                 cursor.close();
             }
+        }
+        for(MessagePlus messagePlus : unsentMessages) {
+            Message message = messagePlus.getMessage();
+            Set<String> pendingOEmbeds = getPendingOEmbeds(message.getId(), message.getChannelId());
+            messagePlus.setPendingOEmbeds(pendingOEmbeds);
         }
         return new OrderedMessageBatch(messages, new MinMaxPair(minId, maxId));
     }
@@ -906,6 +944,11 @@ public class ADNDatabase {
             if(cursor != null) {
                 cursor.close();
             }
+        }
+        for(MessagePlus messagePlus : unsentMessages.values()) {
+            Message message = messagePlus.getMessage();
+            Set<String> pendingOEmbeds = getPendingOEmbeds(message.getId(), message.getChannelId());
+            messagePlus.setPendingOEmbeds(pendingOEmbeds);
         }
         return unsentMessages;
     }

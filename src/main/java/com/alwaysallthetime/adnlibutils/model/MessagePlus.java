@@ -4,16 +4,19 @@ import android.util.Log;
 
 import com.alwaysallthetime.adnlib.data.Annotatable;
 import com.alwaysallthetime.adnlib.data.Annotation;
+import com.alwaysallthetime.adnlib.data.File;
 import com.alwaysallthetime.adnlib.data.Message;
+import com.alwaysallthetime.adnlibutils.AnnotationFactory;
 import com.alwaysallthetime.adnlibutils.AnnotationUtility;
-import com.alwaysallthetime.adnlibutils.EntityGenerator;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class MessagePlus {
 
@@ -26,9 +29,11 @@ public class MessagePlus {
     private boolean mHasSetOEmbedValues;
     private List<PhotoOEmbed> mPhotoOEmbeds;
     private List<Html5VideoOEmbed> mHtml5VideoOEmbeds;
+
+    private Set<String> mPendingOEmbeds;
     private boolean mIsUnsent;
 
-    public static MessagePlus newUnsentMessagePlus(String channelId, String messageId, Message message) {
+    private static MessagePlus newUnsentMessagePlus(String channelId, String messageId, Message message) {
         Date date = new Date();
         setMessageIdWithReflection(messageId, message);
         setChannelIdWithReflection(channelId, message);
@@ -41,6 +46,18 @@ public class MessagePlus {
         messagePlus.setDisplayDate(date);
 
         return messagePlus;
+    }
+
+    public boolean replacePendingOEmbedWithOEmbedAnnotation(String pendingFileId, File file) {
+        boolean removed = mPendingOEmbeds.remove(pendingFileId);
+        if(removed) {
+            mMessage.addAnnotation(AnnotationFactory.getOEmbedAnnotation(file));
+        }
+        return removed;
+    }
+
+    public void setPendingOEmbeds(Set<String> pendingOEmbeds) {
+        mPendingOEmbeds = pendingOEmbeds;
     }
 
     public MessagePlus(Message message) {
@@ -102,6 +119,14 @@ public class MessagePlus {
 
     public boolean isUnsent() {
         return mIsUnsent;
+    }
+
+    public boolean hasPendingOEmbeds() {
+        return mPendingOEmbeds != null && mPendingOEmbeds.size() > 0;
+    }
+
+    public Set<String> getPendingOEmbeds() {
+        return mPendingOEmbeds;
     }
 
     public void addOEmbedsFromAnnotations(List<Annotation> annotations) {
@@ -369,6 +394,35 @@ public class MessagePlus {
             if(dateString != null) {
                 this.urlExpires = AnnotationUtility.getDateFromIso8601String(dateString);
             }
+        }
+    }
+
+    public static class UnsentMessagePlusBuilder {
+        private String channelId;
+        private String messageId;
+        private Message message;
+        private LinkedHashSet<String> pendingOEmbeds;
+
+        public static UnsentMessagePlusBuilder newBuilder(String channelId, String messageId, Message message) {
+            UnsentMessagePlusBuilder builder = new UnsentMessagePlusBuilder();
+            builder.channelId = channelId;
+            builder.messageId = messageId;
+            builder.message = message;
+            return builder;
+        }
+
+        public UnsentMessagePlusBuilder addPendingOEmbed(String pendingFileId) {
+            if(pendingOEmbeds == null) {
+                pendingOEmbeds = new LinkedHashSet<String>();
+            }
+            pendingOEmbeds.add(pendingFileId);
+            return this;
+        }
+
+        public MessagePlus build() {
+            MessagePlus messagePlus = newUnsentMessagePlus(channelId, messageId, message);
+            messagePlus.setPendingOEmbeds(pendingOEmbeds);
+            return messagePlus;
         }
     }
 }
