@@ -11,6 +11,7 @@ import com.alwaysallthetime.adnlib.AppDotNetClient;
 import com.alwaysallthetime.adnlib.data.File;
 import com.alwaysallthetime.adnlib.gson.AppDotNetGson;
 import com.alwaysallthetime.adnlib.response.FileResponseHandler;
+import com.alwaysallthetime.adnlibutils.db.PendingFile;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -20,15 +21,28 @@ public class FileUploadService extends IntentService {
 
     private static final String TAG = "ADNLibUtils_FileUploadService";
 
+    //register a broadcast receiver for this stuff
     public static final String INTENT_ACTION_FILE_UPLOAD_COMPLETE = "com.alwaysallthetime.adnlibutils.manager.extras.FileUploadService.action.fileUpload";
     public static final String EXTRA_SUCCESS = "com.alwaysallthetime.adnlibutils.manager.extras.FileUploadService.extras.success";
     public static final String EXTRA_FILE = "com.alwaysallthetime.adnlibutils.manager.extras.FileUploadService.extras.file";
 
+    //
+    //start the service with either:
+    //
+
+    //1. These
     public static final String EXTRA_FILE_URI = "com.alwaysallthetime.adnlibutils.manager.extras.FileUploadService.extras.bitmapUri";
     public static final String EXTRA_FILE_TYPE = "com.alwaysallthetime.adnlibutils.manager.extras.FileUploadService.extras.fileType";
     public static final String EXTRA_FILENAME = "com.alwaysallthetime.adnlibutils.manager.extras.FileUploadService.extras.filename";
     public static final String EXTRA_FILE_KIND = "com.alwaysallthetime.adnlibutils.manager.extras.FileUploadService.extras.kind";
     public static final String EXTRA_PUBLIC = "com.alwaysallthetime.adnlibutils.manager.extras.FileUploadService.extras.public";
+
+    //
+    //OR
+    //
+
+    //2. This:
+    public static final String EXTRA_PENDING_FILE_ID = "com.alwaysallthetime.adnlibutils.manager.extras.FileUploadService.extras.pendingFileId";
 
     public FileUploadService() {
         super(FileUploadService.class.getSimpleName());
@@ -36,25 +50,38 @@ public class FileUploadService extends IntentService {
 
     @Override
     protected void onHandleIntent(Intent intent) {
-        Uri fileUri = intent.getParcelableExtra(EXTRA_FILE_URI);
-        String fileType = intent.getStringExtra(EXTRA_FILE_TYPE);
-        String filename = intent.getStringExtra(EXTRA_FILENAME);
-        String fileKind = intent.getStringExtra(EXTRA_FILE_KIND);
-        boolean isFilePublic = intent.getBooleanExtra(EXTRA_PUBLIC, false);
+        if(intent.hasExtra(EXTRA_PENDING_FILE_ID)) {
+            String pendingFileId = intent.getStringExtra(EXTRA_PENDING_FILE_ID);
+            PendingFile pf = FileManager.getInstance().getPendingFile(pendingFileId);
+            byte[] fileBytes = getBytes(pf.getUri());
+            createFile(fileBytes, pf.getType(), pf.getName(), pf.getMimeType(), pf.getKind(), pf.isPublic(), pendingFileId);
+        } else {
+            Uri fileUri = intent.getParcelableExtra(EXTRA_FILE_URI);
+            String fileType = intent.getStringExtra(EXTRA_FILE_TYPE);
+            String filename = intent.getStringExtra(EXTRA_FILENAME);
+            String fileKind = intent.getStringExtra(EXTRA_FILE_KIND);
+            boolean isFilePublic = intent.getBooleanExtra(EXTRA_PUBLIC, false);
 
-        String mimeType = getMimeType(fileUri);
-        byte[] fileBytes = getBytes(fileUri);
+            String mimeType = getMimeType(fileUri);
+            byte[] fileBytes = getBytes(fileUri);
 
+            createFile(fileBytes, fileType, filename, mimeType, fileKind, isFilePublic, null);
+        }
+    }
+
+    private void createFile(byte[] data, String fileType, String filename, String mimeType, String fileKind, boolean isPublic, final String pendingFileId) {
         MessageManager messageManager = MessageManager.getInstance();
         AppDotNetClient client = messageManager.getClient();
-
-        File file = new File(fileKind, fileType, filename, isFilePublic);
-        client.createFile(file, fileBytes, mimeType, new FileResponseHandler() {
+        File file = new File(fileKind, fileType, filename, isPublic);
+        client.createFile(file, data, mimeType, new FileResponseHandler() {
             @Override
             public void onSuccess(File responseData) {
                 Intent i = new Intent(INTENT_ACTION_FILE_UPLOAD_COMPLETE);
                 i.putExtra(EXTRA_SUCCESS, true);
                 i.putExtra(EXTRA_FILE, AppDotNetGson.getPersistenceInstance().toJson(responseData));
+                if(pendingFileId != null) {
+                    i.putExtra(EXTRA_PENDING_FILE_ID, pendingFileId);
+                }
                 sendBroadcast(i);
             }
 
@@ -64,6 +91,9 @@ public class FileUploadService extends IntentService {
 
                 Intent i = new Intent(INTENT_ACTION_FILE_UPLOAD_COMPLETE);
                 i.putExtra(EXTRA_SUCCESS, false);
+                if(pendingFileId != null) {
+                    i.putExtra(EXTRA_PENDING_FILE_ID, pendingFileId);
+                }
                 sendBroadcast(i);
             }
         });
