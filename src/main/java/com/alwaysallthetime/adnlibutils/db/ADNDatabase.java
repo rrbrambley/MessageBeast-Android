@@ -69,6 +69,14 @@ public class ADNDatabase {
     public static final String COL_OEMBED_INSTANCE_COUNT = "oembed_instance_count";
     public static final String COL_OEMBED_INSTANCE_DATE = "oembed_instance_date";
 
+    public static final String TABLE_PENDING_FILES = "pending_files";
+    public static final String COL_PENDING_FILE_ID = "pending_file_id";
+    public static final String COL_PENDING_FILE_DATA = "pending_file_data";
+    public static final String COL_PENDING_FILE_TYPE = "pending_file_type";
+    public static final String COL_PENDING_FILE_NAME = "pending_file_name";
+    public static final String COL_PENDING_FILE_MIMETYPE = "pending_file_mimetype";
+    public static final String COL_PENDING_FILE_KIND = "pending_file_kind";
+
     /**
      * Precision values to be used when retrieving location instances.
      *

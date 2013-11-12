@@ -51,6 +51,15 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
             ADNDatabase.COL_OEMBED_INSTANCE_DATE + " INTEGER NOT NULL, " +
             "PRIMARY KEY (" + ADNDatabase.COL_OEMBED_INSTANCE_TYPE + ", " + ADNDatabase.COL_OEMBED_INSTANCE_MESSAGE_ID + " ))";
 
+    public static final String CREATE_PENDING_FILES_TABLE = "CREATE TABLE IF NOT EXISTS " + ADNDatabase.TABLE_PENDING_FILES + "(" +
+            ADNDatabase.COL_PENDING_FILE_ID + " TEXT PRIMARY KEY, " +
+            ADNDatabase.COL_PENDING_FILE_DATA + " BLOB NOT NULL, " +
+            ADNDatabase.COL_PENDING_FILE_TYPE + " TEXT NOT NULL, " +
+            ADNDatabase.COL_PENDING_FILE_NAME + " TEXT NOT NULL, " +
+            ADNDatabase.COL_PENDING_FILE_MIMETYPE + " TEXT NOT NULL, " +
+            ADNDatabase.COL_PENDING_FILE_KIND + " TEXT " +
+            ")";
+
     public ADNDatabaseOpenHelper(Context context, String name, SQLiteDatabase.CursorFactory factory, int version) {
         super(context, name, factory, version);
     }
@@ -65,6 +74,7 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
             db.execSQL(CREATE_GEOLOCATIONS_TABLE);
             db.execSQL(CREATE_LOCATION_INSTANCES_TABLE);
             db.execSQL(CREATE_OEMBED_INSTANCES_TABLE);
+            db.execSQL(CREATE_PENDING_FILES_TABLE);
             db.setTransactionSuccessful();
         } catch(Exception exception) {
             Log.e(TAG, exception.getMessage(), exception);
