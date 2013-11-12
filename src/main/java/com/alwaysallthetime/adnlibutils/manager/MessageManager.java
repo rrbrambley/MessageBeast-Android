@@ -55,7 +55,6 @@ public class MessageManager {
      */
     public static abstract class MessageManagerResponseHandler {
         private boolean isMore;
-        private List<String> sentMessageIds;
 
         public abstract void onSuccess(final List<MessagePlus> responseData, final boolean appended);
         public abstract void onError(Exception exception);
