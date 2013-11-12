@@ -297,6 +297,10 @@ public class MessageManager {
         return mMessages.get(channelId);
     }
 
+    public AppDotNetClient getClient() {
+        return mClient;
+    }
+
     public List<MessagePlus> getMessageList(String channelId) {
         Map<String, MessagePlus> messageMap = mMessages.get(channelId);
         if(messageMap == null) {
