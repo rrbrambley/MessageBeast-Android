@@ -1,19 +1,21 @@
 package com.alwaysallthetime.adnlibutils.db;
 
+import android.net.Uri;
+
 import com.alwaysallthetime.adnlib.data.File;
 
 public class PendingFile {
     private String mId;
-    private byte[] mData;
+    private Uri mUri;
     private String mType;
     private String mName;
     private String mMimeType;
     private String mKind;
     private boolean mIsPublic;
 
-    public PendingFile(String id, byte[] data, String type, String name, String mimeType, String kind, boolean isPublic) {
+    public PendingFile(String id, Uri uri, String type, String name, String mimeType, String kind, boolean isPublic) {
         mId = id;
-        mData = data;
+        mUri = uri;
         mType = type;
         mName = name;
         mMimeType = mimeType;
@@ -25,8 +27,8 @@ public class PendingFile {
         return mId;
     }
 
-    public byte[] getData() {
-        return mData;
+    public Uri getUri() {
+        return mUri;
     }
 
     public String getType() {
