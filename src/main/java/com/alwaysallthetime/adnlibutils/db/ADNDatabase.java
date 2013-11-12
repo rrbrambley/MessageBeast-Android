@@ -382,6 +382,34 @@ public class ADNDatabase {
         }
     }
 
+    public PendingFile getPendingFile(String id) {
+        Cursor cursor = null;
+        PendingFile file = null;
+        try {
+            String where = COL_PENDING_FILE_ID + " = ?";
+            String args[] = new String[] { id };
+            cursor = mDatabase.query(TABLE_PENDING_FILES, null, where, args, null, null, null, null);
+
+            if(cursor.moveToNext()) {
+                String uri = cursor.getString(1);
+                String type = cursor.getString(2);
+                String name = cursor.getString(3);
+                String mimeType = cursor.getString(4);
+                String kind = cursor.getString(5);
+                boolean isPublic = cursor.getInt(6) == 1;
+
+                file = new PendingFile(id, Uri.parse(uri), type, name, mimeType, kind, isPublic);
+            }
+        } catch(Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+        } finally {
+            if(cursor != null) {
+                cursor.close();
+            }
+        }
+        return file;
+    }
+
 
     /**
      * Get an OEmbedInstances object representing the complete set of messages with an OEmbed
