@@ -25,6 +25,7 @@ public class FileUploadService extends IntentService {
     public static final String INTENT_ACTION_FILE_UPLOAD_COMPLETE = "com.alwaysallthetime.adnlibutils.manager.extras.FileUploadService.action.fileUpload";
     public static final String EXTRA_SUCCESS = "com.alwaysallthetime.adnlibutils.manager.extras.FileUploadService.extras.success";
     public static final String EXTRA_FILE = "com.alwaysallthetime.adnlibutils.manager.extras.FileUploadService.extras.file";
+    public static final String EXTRA_FILE_NOT_FOUND = "com.alwaysallthetime.adnlibutils.manager.extras.FileUploadService.extras.fileNotFound";
 
     //
     //start the service with either:
@@ -54,7 +55,11 @@ public class FileUploadService extends IntentService {
             String pendingFileId = intent.getStringExtra(EXTRA_PENDING_FILE_ID);
             PendingFile pf = FileManager.getInstance().getPendingFile(pendingFileId);
             byte[] fileBytes = getBytes(pf.getUri());
-            createFile(fileBytes, pf.getType(), pf.getName(), pf.getMimeType(), pf.getKind(), pf.isPublic(), pendingFileId);
+            if(fileBytes != null) {
+                createFile(fileBytes, pf.getType(), pf.getName(), pf.getMimeType(), pf.getKind(), pf.isPublic(), pendingFileId);
+            } else {
+                sendFileNotFoundBroadcast(null);
+            }
         } else {
             Uri fileUri = intent.getParcelableExtra(EXTRA_FILE_URI);
             String fileType = intent.getStringExtra(EXTRA_FILE_TYPE);
@@ -64,9 +69,22 @@ public class FileUploadService extends IntentService {
 
             String mimeType = getMimeType(fileUri);
             byte[] fileBytes = getBytes(fileUri);
-
-            createFile(fileBytes, fileType, filename, mimeType, fileKind, isFilePublic, null);
+            if(fileBytes != null) {
+                createFile(fileBytes, fileType, filename, mimeType, fileKind, isFilePublic, null);
+            } else {
+                sendFileNotFoundBroadcast(null);
+            }
         }
+    }
+
+    private void sendFileNotFoundBroadcast(String pendingFileId) {
+        Intent i = new Intent(INTENT_ACTION_FILE_UPLOAD_COMPLETE);
+        i.putExtra(EXTRA_SUCCESS, false);
+        if(pendingFileId != null) {
+            i.putExtra(EXTRA_PENDING_FILE_ID, pendingFileId);
+        }
+        i.putExtra(EXTRA_FILE_NOT_FOUND, true);
+        sendBroadcast(i);
     }
 
     private void createFile(byte[] data, String fileType, String filename, String mimeType, String fileKind, boolean isPublic, final String pendingFileId) {
@@ -137,6 +155,6 @@ public class FileUploadService extends IntentService {
                 }
             }
         }
-        return baos.toByteArray();
+        return baos != null ? baos.toByteArray() : null;
     }
 }
