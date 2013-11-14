@@ -52,4 +52,12 @@ public class AnnotationFactory {
         a.setValue(value);
         return a;
     }
+
+    public static Annotation getSingleValueAnnotation(String type, String valueName, Object valueObject) {
+        Annotation annotation = new Annotation(type);
+        HashMap<String, Object> value = new HashMap<String, Object>(1);
+        value.put(valueName, valueObject);
+        annotation.setValue(value);
+        return annotation;
+    }
 }
