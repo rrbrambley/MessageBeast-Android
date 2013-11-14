@@ -1,14 +1,18 @@
 package com.alwaysallthetime.adnlibutils;
 
 import com.alwaysallthetime.adnlib.AppDotNetClient;
+import com.alwaysallthetime.adnlib.GeneralParameter;
 import com.alwaysallthetime.adnlib.QueryParameters;
+import com.alwaysallthetime.adnlib.data.Annotation;
 import com.alwaysallthetime.adnlib.data.Channel;
 import com.alwaysallthetime.adnlib.data.ChannelList;
 import com.alwaysallthetime.adnlib.data.User;
 import com.alwaysallthetime.adnlib.response.ChannelListResponseHandler;
 import com.alwaysallthetime.adnlib.response.ChannelResponseHandler;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 /**
  * A utility for creating and retrieving channels that are intended to be used
@@ -76,6 +80,10 @@ public class PrivateChannelUtility {
     }
 
     public static void createChannel(final AppDotNetClient client, final String channelType, final PrivateChannelHandler handler) {
+        createChannel(client, channelType, new ArrayList<Annotation>(0), handler);
+    }
+
+    public static void createChannel(final AppDotNetClient client, final String channelType, List<Annotation> channelAnnotations, final PrivateChannelHandler handler) {
         User currentUser = ADNSharedPreferences.getToken().getUser();
 
         Channel c = new Channel();
@@ -90,7 +98,12 @@ public class PrivateChannelUtility {
         c.setWriters(writer);
         c.setReaders(reader);
 
-        client.createChannel(c, new ChannelResponseHandler() {
+        for(Annotation a : channelAnnotations) {
+            c.addAnnotation(a);
+        }
+
+        QueryParameters params = new QueryParameters(GeneralParameter.INCLUDE_CHANNEL_ANNOTATIONS);
+        client.createChannel(c, params, new ChannelResponseHandler() {
             @Override
             public void onSuccess(final Channel responseData) {
                 client.subscribeChannel(responseData, new ChannelResponseHandler() {
