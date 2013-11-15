@@ -657,6 +657,7 @@ public class ADNDatabase {
             if(cursor.moveToNext()) {
                 String locality = cursor.getString(0);
                 String subLocality = cursor.getString(1);
+                cursor.close();
                 return new Geolocation(locality, subLocality, latitude, longitude);
             }
         } catch(Exception e) {
