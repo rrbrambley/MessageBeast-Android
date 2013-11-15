@@ -59,7 +59,7 @@ public class MessageManager {
         public abstract void onSuccess(final List<MessagePlus> responseData, final boolean appended);
         public abstract void onError(Exception exception);
 
-        void setIsMore(boolean isMore) {
+        public void setIsMore(boolean isMore) {
             this.isMore = isMore;
         }
 
