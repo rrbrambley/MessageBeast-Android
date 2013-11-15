@@ -295,7 +295,7 @@ public class MessageManager {
         }
     }
 
-    public Map<String, MessagePlus> getMessageMap(String channelId) {
+    public LinkedHashMap<String, MessagePlus> getMessageMap(String channelId) {
         return mMessages.get(channelId);
     }
 
