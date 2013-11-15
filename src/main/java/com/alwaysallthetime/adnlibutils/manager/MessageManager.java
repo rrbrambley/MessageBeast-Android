@@ -189,7 +189,7 @@ public class MessageManager {
         return loadAndConfigureTemporaryMessages(channelId, hashtagInstances.getMessageIds());
     }
 
-    private LinkedHashMap<String, MessagePlus> loadAndConfigureTemporaryMessages(String channelId, Collection<String> messageIds) {
+    public LinkedHashMap<String, MessagePlus> loadAndConfigureTemporaryMessages(String channelId, Collection<String> messageIds) {
         OrderedMessageBatch orderedMessageBatch = mDatabase.getMessages(channelId, messageIds);
         LinkedHashMap<String, MessagePlus> messages = orderedMessageBatch.getMessages();
 
