@@ -86,6 +86,12 @@ public class ADNDatabase {
     public static final String COL_PENDING_OEMBED_MESSAGE_ID = "pending_oembed_message_id";
     public static final String COL_PENDING_OEMBED_CHANNEL_ID = "pending_oembed_channel_id";
 
+    public static final String TABLE_ACTION_MESSAGES = "action_messages";
+    public static final String COL_ACTION_MESSAGE_ID = "action_message_id";
+    public static final String COL_ACTION_CHANNEL_ID = "action_channel_id";
+    public static final String COL_ASSOCIATED_MESSAGE_ID = "action_associated_message_id";
+    public static final String COL_ASSOCIATED_CHANNEL_ID = "action_associated_channel_id";
+
     /**
      * Precision values to be used when retrieving location instances.
      *

@@ -69,6 +69,13 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
                               ADNDatabase.COL_PENDING_OEMBED_MESSAGE_ID + ", " +
                               ADNDatabase.COL_PENDING_OEMBED_CHANNEL_ID + " ))";
 
+    public static final String CREATE_ACTION_MESSAGES_TABLE = "CREATE TABLE IF NOT EXISTS " + ADNDatabase.TABLE_ACTION_MESSAGES + "(" +
+            ADNDatabase.COL_ACTION_MESSAGE_ID + " TEXT NOT NULL, " +
+            ADNDatabase.COL_ACTION_CHANNEL_ID + " TEXT NOT NULL, " +
+            ADNDatabase.COL_ASSOCIATED_MESSAGE_ID + " TEXT NOT NULL, " +
+            ADNDatabase.COL_ASSOCIATED_CHANNEL_ID + " TEXT NOT NULL, " +
+            "PRIMARY KEY (" + ADNDatabase.COL_ACTION_CHANNEL_ID + ", " + ADNDatabase.COL_ASSOCIATED_MESSAGE_ID + " ))";
+
     public ADNDatabaseOpenHelper(Context context, String name, SQLiteDatabase.CursorFactory factory, int version) {
         super(context, name, factory, version);
     }
@@ -85,6 +92,7 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
             db.execSQL(CREATE_OEMBED_INSTANCES_TABLE);
             db.execSQL(CREATE_PENDING_FILES_TABLE);
             db.execSQL(CREATE_PENDING_OEMBEDS_TABLE);
+            db.execSQL(CREATE_ACTION_MESSAGES_TABLE);
             db.setTransactionSuccessful();
         } catch(Exception exception) {
             Log.e(TAG, exception.getMessage(), exception);
