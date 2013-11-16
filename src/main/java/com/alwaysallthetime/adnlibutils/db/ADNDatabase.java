@@ -89,8 +89,8 @@ public class ADNDatabase {
     public static final String TABLE_ACTION_MESSAGES = "action_messages";
     public static final String COL_ACTION_MESSAGE_ID = "action_message_id";
     public static final String COL_ACTION_MESSAGE_CHANNEL_ID = "action_channel_id";
-    public static final String COL_ACTION_MESSAGE_ASSOCIATED_MESSAGE_ID = "action_associated_message_id";
-    public static final String COL_ACTION_MESSAGE_ASSOCIATED_CHANNEL_ID = "action_associated_channel_id";
+    public static final String COL_ACTION_MESSAGE_TARGET_MESSAGE_ID = "action_target_message_id";
+    public static final String COL_ACTION_MESSAGE_TARGET_CHANNEL_ID = "action_target_channel_id";
 
     /**
      * Precision values to be used when retrieving location instances.
