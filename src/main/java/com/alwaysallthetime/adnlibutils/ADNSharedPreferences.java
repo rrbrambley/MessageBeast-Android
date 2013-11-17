@@ -19,6 +19,7 @@ public class ADNSharedPreferences {
     private static final String CONFIGURATION_DATE = "configurationDate";
     private static final String USER_OBJECT = "user";
     private static final String CHANNEL_OBJECT = "channel";
+    private static final String ACTION_CHANNEL_OBJECT = "actionChannel";
 
     private static SharedPreferences sPrefs;
     private static Gson gson;
@@ -113,6 +114,27 @@ public class ADNSharedPreferences {
     public static void deletePrivateChannel(Channel channel) {
         final SharedPreferences.Editor editor = sPrefs.edit();
         editor.remove(CHANNEL_OBJECT + "_" + channel.getType());
+        editor.commit();
+    }
+
+    public static Channel getActionChannel(String actionType, String targetChannelId) {
+        final String json = sPrefs.getString(ACTION_CHANNEL_OBJECT + "_" + actionType + "_" + targetChannelId, null);
+        if(json != null) {
+            return gson.fromJson(json, Channel.class);
+        }
+        return null;
+    }
+
+    public static void saveActionChannel(Channel actionChannel, String actionType, String targetChannelId) {
+        final SharedPreferences.Editor editor = sPrefs.edit();
+        final String json = gson.toJson(actionChannel);
+        editor.putString(ACTION_CHANNEL_OBJECT + "_" + actionType + "_" + targetChannelId, json);
+        editor.commit();
+    }
+
+    public static void deleteActionChannel(Channel actionChannel, String actionType, String targetChannelId) {
+        final SharedPreferences.Editor editor = sPrefs.edit();
+        editor.remove(ACTION_CHANNEL_OBJECT + "_" + actionType + "_" + targetChannelId);
         editor.commit();
     }
 }
