@@ -78,6 +78,10 @@ public class MessageManager {
         public int getNumMessagesSynced() {
             return numMessagesSynced;
         }
+
+        public void onBatchSynced(List<MessagePlus> messages) {
+            //override this to do some processing on a batch by batch basis
+        }
     }
 
     public interface MessageRefreshResponseHandler {
@@ -559,6 +563,7 @@ public class MessageManager {
                     messages.addAll(responseData);
                 }
                 responseHandler.setNumMessagesSynced(responseHandler.getNumMessagesSynced() + responseData.size());
+                responseHandler.onBatchSynced(responseData);
 
                 if(isMore()) {
                     MinMaxPair minMaxPair = getMinMaxPair(channelId);
