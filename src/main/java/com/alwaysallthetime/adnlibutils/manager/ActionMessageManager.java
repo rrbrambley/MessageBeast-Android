@@ -21,11 +21,13 @@ import com.alwaysallthetime.adnlibutils.model.MessagePlus;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeMap;
 
 public class ActionMessageManager {
     private static final String TAG = "ADNLibUtils_ActionMessageManager";
@@ -39,7 +41,7 @@ public class ActionMessageManager {
     private ADNDatabase mDatabase;
 
     //action channel id : (target message id : target message plus)
-    private HashMap<String, LinkedHashMap<String, MessagePlus>> mActionedMessages;
+    private HashMap<String, TreeMap<String, MessagePlus>> mActionedMessages;
 
     private HashMap<String, Channel> mActionChannels;
 
@@ -59,7 +61,7 @@ public class ActionMessageManager {
     private ActionMessageManager(MessageManager messageManager) {
         mMessageManager = messageManager;
         mActionChannels = new HashMap<String, Channel>(1);
-        mActionedMessages = new HashMap<String, LinkedHashMap<String, MessagePlus>>(1);
+        mActionedMessages = new HashMap<String, TreeMap<String, MessagePlus>>(1);
 
         Context context = ADNApplication.getContext();
         mDatabase = ADNDatabase.getInstance(context);
@@ -138,10 +140,10 @@ public class ActionMessageManager {
         }
     }
 
-    private LinkedHashMap<String, MessagePlus> getOrCreateActionMessageMap(String channelId) {
-        LinkedHashMap<String, MessagePlus> channelMap = mActionedMessages.get(channelId);
+    private TreeMap<String, MessagePlus> getOrCreateActionMessageMap(String channelId) {
+        TreeMap<String, MessagePlus> channelMap = mActionedMessages.get(channelId);
         if(channelMap == null) {
-            channelMap = new LinkedHashMap<String, MessagePlus>();
+            channelMap = new TreeMap<String, MessagePlus>(sIdComparator);
             mActionedMessages.put(channelId, channelMap);
         }
         return channelMap;
@@ -166,7 +168,7 @@ public class ActionMessageManager {
     }
 
     public synchronized List<MessagePlus> getActionedMessages(String actionChannelId, String targetChannelId) {
-        LinkedHashMap<String, MessagePlus> channelActionedMessages = mActionedMessages.get(actionChannelId);
+        TreeMap<String, MessagePlus> channelActionedMessages = mActionedMessages.get(actionChannelId);
         if(channelActionedMessages == null) {
             LinkedHashMap<String, MessagePlus> loadedMessagesFromActionChannel = mMessageManager.getMessageMap(actionChannelId);
             if(loadedMessagesFromActionChannel == null || loadedMessagesFromActionChannel.size() == 0) {
@@ -174,8 +176,10 @@ public class ActionMessageManager {
             }
             Set<String> newTargetMessageIds = getTargetMessageIds(loadedMessagesFromActionChannel.values());
             LinkedHashMap<String, MessagePlus> newTargetMessages = mMessageManager.loadAndConfigureTemporaryMessages(targetChannelId, newTargetMessageIds);
-            mActionedMessages.put(actionChannelId, newTargetMessages);
-            return new ArrayList<MessagePlus>(newTargetMessages.values());
+            TreeMap<String, MessagePlus> newSortedTargetMessages = new TreeMap<String, MessagePlus>(sIdComparator);
+            newSortedTargetMessages.putAll(newTargetMessages);
+            mActionedMessages.put(actionChannelId, newSortedTargetMessages);
+            return new ArrayList<MessagePlus>(newSortedTargetMessages.values());
         } else {
             return new ArrayList<MessagePlus>(channelActionedMessages.values());
         }
@@ -188,7 +192,7 @@ public class ActionMessageManager {
             LinkedHashMap<String, MessagePlus> moreTargetMessages = mMessageManager.loadAndConfigureTemporaryMessages(targetChannelId, newTargetMessageIds);
 
             //save them to the in-memory map
-            LinkedHashMap<String, MessagePlus> channelActionMessages = getOrCreateActionMessageMap(actionChannelId);
+            TreeMap<String, MessagePlus> channelActionMessages = getOrCreateActionMessageMap(actionChannelId);
             channelActionMessages.putAll(moreTargetMessages);
 
             responseHandler.setIsMore(more.size() == MAX_BATCH_LOAD_FROM_DISK);
@@ -204,7 +208,7 @@ public class ActionMessageManager {
                     LinkedHashMap<String, MessagePlus> moreTargetMessages = mMessageManager.loadAndConfigureTemporaryMessages(targetChannelId, newTargetMessageIds);
 
                     //save them to the in-memory map
-                    LinkedHashMap<String, MessagePlus> channelActionMessages = getOrCreateActionMessageMap(actionChannelId);
+                    TreeMap<String, MessagePlus> channelActionMessages = getOrCreateActionMessageMap(actionChannelId);
                     channelActionMessages.putAll(moreTargetMessages);
 
                     responseHandler.setIsMore(isMore());
@@ -221,7 +225,7 @@ public class ActionMessageManager {
     }
 
     public synchronized void applyChannelAction(String actionChannelId, MessagePlus targetMessagePlus) {
-        LinkedHashMap<String, MessagePlus> actionedMessages = getOrCreateActionMessageMap(actionChannelId);
+        TreeMap<String, MessagePlus> actionedMessages = getOrCreateActionMessageMap(actionChannelId);
         Message message = targetMessagePlus.getMessage();
         String targetMessageId = message.getId();
         if(actionedMessages.get(targetMessageId) == null) {
@@ -231,12 +235,7 @@ public class ActionMessageManager {
             m.addAnnotation(a);
 
             MessagePlus unsentActionMessage = mMessageManager.createUnsentMessageAndAttemptSend(actionChannelId, m);
-
-            LinkedHashMap<String, MessagePlus> newActionedMessages = new LinkedHashMap<String, MessagePlus>(actionedMessages.size() + 1);
-            newActionedMessages.put(targetMessageId, targetMessagePlus);
-            newActionedMessages.putAll(actionedMessages);
-            mActionedMessages.put(actionChannelId, newActionedMessages);
-
+            actionedMessages.put(targetMessageId, targetMessagePlus);
             mDatabase.insertOrReplaceActionMessage(unsentActionMessage, targetMessageId, message.getChannelId());
         }
     }
@@ -289,6 +288,16 @@ public class ActionMessageManager {
                     });
                 }
             }
+        }
+    };
+
+    private static Comparator<String> sIdComparator = new Comparator<String>() {
+        @Override
+        public int compare(String lhs, String rhs) {
+            Integer lhsInteger = new Integer(Integer.parseInt(lhs));
+            Integer rhsInteger = new Integer(Integer.parseInt(rhs));
+            //we want desc order (reverse chronological order)
+            return rhsInteger.compareTo(lhsInteger);
         }
     };
 }
