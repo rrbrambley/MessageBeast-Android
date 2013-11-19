@@ -226,7 +226,7 @@ public class MessageManager {
             Message message = messagePlus.getMessage();
 
             Annotation checkin = message.getFirstAnnotationOfType(Annotations.CHECKIN);
-            if(checkin != null) {
+            if(DisplayLocation.isDisplayableCheckinAnnotation(checkin)) {
                 messagePlus.setDisplayLocation(DisplayLocation.fromCheckinAnnotation(checkin));
                 if(persistIfEnabled && mConfiguration.isDatabaseInsertionEnabled) {
                     mDatabase.insertOrReplaceDisplayLocationInstance(messagePlus);
