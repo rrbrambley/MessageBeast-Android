@@ -66,6 +66,16 @@ public class DisplayLocation implements Parcelable {
         return loc;
     }
 
+    public static boolean isDisplayableCheckinAnnotation(Annotation checkin) {
+        if(checkin != null) {
+            HashMap<String, Object> value = checkin.getValue();
+            if(value != null && value.get("latitude") != null && value.get("longitude") != null) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public DisplayLocation(String name, double latitude, double longitude) {
         mLatitude = latitude;
         mLongitude = longitude;
