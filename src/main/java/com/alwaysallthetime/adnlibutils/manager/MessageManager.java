@@ -655,6 +655,10 @@ public class MessageManager {
         });
     }
 
+    public synchronized boolean hasUnsentMessages(String channelId) {
+        return getUnsentMessages(channelId).size() > 0;
+    }
+
     public synchronized void sendUnsentMessages(final String channelId) {
         LinkedHashMap<String, MessagePlus> unsentMessages = getUnsentMessages(channelId);
         if(unsentMessages.size() > 0) {
