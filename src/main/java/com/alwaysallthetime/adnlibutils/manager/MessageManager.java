@@ -22,6 +22,7 @@ import com.alwaysallthetime.adnlibutils.db.ADNDatabase;
 import com.alwaysallthetime.adnlibutils.db.DisplayLocationInstances;
 import com.alwaysallthetime.adnlibutils.db.HashtagInstances;
 import com.alwaysallthetime.adnlibutils.db.OrderedMessageBatch;
+import com.alwaysallthetime.adnlibutils.db.PendingFile;
 import com.alwaysallthetime.adnlibutils.model.DisplayLocation;
 import com.alwaysallthetime.adnlibutils.model.Geolocation;
 import com.alwaysallthetime.adnlibutils.model.MessagePlus;
@@ -818,8 +819,10 @@ public class MessageManager {
                             }
                         }
                     } else {
-                        //TODO
                         Log.e(TAG, "Failed to upload pending file with id " + pendingFileId);
+                        PendingFile pendingFile = mDatabase.getPendingFile(pendingFileId);
+                        pendingFile.incrementSendAttempts();
+                        mDatabase.insertOrReplacePendingFile(pendingFile);
                     }
                 }
             }

@@ -59,7 +59,8 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
             ADNDatabase.COL_PENDING_FILE_NAME + " TEXT NOT NULL, " +
             ADNDatabase.COL_PENDING_FILE_MIMETYPE + " TEXT NOT NULL, " +
             ADNDatabase.COL_PENDING_FILE_KIND + " TEXT, " +
-            ADNDatabase.COL_PENDING_FILE_PUBLIC + " BOOLEAN " +
+            ADNDatabase.COL_PENDING_FILE_PUBLIC + " BOOLEAN, " +
+            ADNDatabase.COL_PENDING_FILE_SEND_ATTEMPTS + " INTEGER " +
             ")";
 
     public static final String CREATE_PENDING_OEMBEDS_TABLE = "CREATE TABLE IF NOT EXISTS " + ADNDatabase.TABLE_PENDING_OEMBEDS + "(" +

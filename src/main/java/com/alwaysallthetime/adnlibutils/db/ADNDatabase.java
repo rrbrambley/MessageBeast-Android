@@ -81,6 +81,7 @@ public class ADNDatabase {
     public static final String COL_PENDING_FILE_MIMETYPE = "pending_file_mimetype";
     public static final String COL_PENDING_FILE_KIND = "pending_file_kind";
     public static final String COL_PENDING_FILE_PUBLIC = "pending_file_public";
+    public static final String COL_PENDING_FILE_SEND_ATTEMPTS = "pending_file_send_attempts";
 
     public static final String TABLE_PENDING_OEMBEDS = "pending_oembeds";
     public static final String COL_PENDING_OEMBED_PENDING_FILE_ID = "pending_oembed_file_id";
@@ -164,9 +165,10 @@ public class ADNDatabase {
             COL_PENDING_FILE_NAME + ", " +
             COL_PENDING_FILE_MIMETYPE + ", " +
             COL_PENDING_FILE_KIND + ", " +
-            COL_PENDING_FILE_PUBLIC +
+            COL_PENDING_FILE_PUBLIC + ", " +
+            COL_PENDING_FILE_SEND_ATTEMPTS +
             ") " +
-            "VALUES(?, ?, ?, ?, ?, ?, ?)";
+            "VALUES(?, ?, ?, ?, ?, ?, ?, ?)";
 
     private static final String INSERT_OR_REPLACE_PENDING_OEMBED = "INSERT OR REPLACE INTO " + TABLE_PENDING_OEMBEDS +
             " (" +
@@ -414,7 +416,11 @@ public class ADNDatabase {
         }
     }
 
-    public void insertOrReplacePendingFile(String id, String uri, String type, String name, String mimeType, String kind, boolean isPublic) {
+    public void insertOrReplacePendingFile(PendingFile pendingFile) {
+        insertOrReplacePendingFile(pendingFile.getId(), pendingFile.getUri().toString(), pendingFile.getType(), pendingFile.getName(), pendingFile.getMimeType(), pendingFile.getKind(), pendingFile.isPublic(), pendingFile.getNumSendAttempts());
+    }
+
+    public void insertOrReplacePendingFile(String id, String uri, String type, String name, String mimeType, String kind, boolean isPublic, int numSendAttempts) {
         if(mInsertOrReplacePendingFile == null) {
             mInsertOrReplacePendingFile = mDatabase.compileStatement(INSERT_OR_REPLACE_PENDING_FILE);
         }
@@ -433,6 +439,7 @@ public class ADNDatabase {
                 mInsertOrReplacePendingFile.bindNull(6);
             }
             mInsertOrReplacePendingFile.bindLong(7, isPublic ? 1 : 0);
+            mInsertOrReplacePendingFile.bindLong(8, numSendAttempts);
             mInsertOrReplacePendingFile.execute();
             mDatabase.setTransactionSuccessful();
         } catch(Exception e) {
@@ -541,8 +548,9 @@ public class ADNDatabase {
                 String mimeType = cursor.getString(4);
                 String kind = cursor.getString(5);
                 boolean isPublic = cursor.getInt(6) == 1;
+                int sendAttempts = cursor.getInt(7);
 
-                file = new PendingFile(id, Uri.parse(uri), type, name, mimeType, kind, isPublic);
+                file = new PendingFile(id, Uri.parse(uri), type, name, mimeType, kind, isPublic, sendAttempts);
             }
         } catch(Exception e) {
             Log.e(TAG, e.getMessage(), e);

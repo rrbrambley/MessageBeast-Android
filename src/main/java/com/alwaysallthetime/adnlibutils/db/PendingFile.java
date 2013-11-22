@@ -12,8 +12,9 @@ public class PendingFile {
     private String mMimeType;
     private String mKind;
     private boolean mIsPublic;
+    private int mNumSendAttempts;
 
-    public PendingFile(String id, Uri uri, String type, String name, String mimeType, String kind, boolean isPublic) {
+    public PendingFile(String id, Uri uri, String type, String name, String mimeType, String kind, boolean isPublic, int sendAttempts) {
         mId = id;
         mUri = uri;
         mType = type;
@@ -21,6 +22,7 @@ public class PendingFile {
         mMimeType = mimeType;
         mKind = kind;
         mIsPublic = isPublic;
+        mNumSendAttempts = sendAttempts;
     }
 
     public String getId() {
@@ -53,5 +55,14 @@ public class PendingFile {
 
     public File getFile() {
         return new File(mKind, mType, mName, mIsPublic);
+    }
+
+    public int getNumSendAttempts() {
+        return mNumSendAttempts;
+    }
+
+    public int incrementSendAttempts() {
+        mNumSendAttempts++;
+        return mNumSendAttempts;
     }
 }

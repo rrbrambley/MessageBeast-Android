@@ -44,7 +44,7 @@ public class FileManager {
 
     public String addPendingFile(Uri uri, String type, String name, String mimeType, String kind, boolean isPublic) {
         String id = UUID.randomUUID().toString();
-        mDatabase.insertOrReplacePendingFile(id, uri.toString(), type, name, mimeType, kind, isPublic);
+        mDatabase.insertOrReplacePendingFile(id, uri.toString(), type, name, mimeType, kind, isPublic, 0);
         return id;
     }
 
