@@ -42,6 +42,7 @@ public class ADNDatabase {
     public static final String COL_MESSAGE_DATE = "message_date";
     public static final String COL_MESSAGE_JSON = "message_json";
     public static final String COL_MESSAGE_UNSENT = "message_unsent";
+    public static final String COL_MESSAGE_SEND_ATTEMPTS = "message_send_attempts";
 
     public static final String TABLE_HASHTAG_INSTANCES = "hashtags";
     public static final String COL_HASHTAG_INSTANCE_NAME = "hashtag_name";
@@ -109,9 +110,10 @@ public class ADNDatabase {
             COL_MESSAGE_CHANNEL_ID + ", " +
             COL_MESSAGE_DATE + ", " +
             COL_MESSAGE_JSON + ", " +
-            COL_MESSAGE_UNSENT +
+            COL_MESSAGE_UNSENT + ", " +
+            COL_MESSAGE_SEND_ATTEMPTS +
             ") " +
-            "VALUES(?, ?, ?, ?, ?)";
+            "VALUES(?, ?, ?, ?, ?, ?)";
 
     private static final String INSERT_OR_REPLACE_HASHTAG = "INSERT OR REPLACE INTO " + TABLE_HASHTAG_INSTANCES +
             " (" +
@@ -243,6 +245,7 @@ public class ADNDatabase {
             mInsertOrReplaceMessage.bindLong(3, displayDate.getTime());
             mInsertOrReplaceMessage.bindString(4, mGson.toJson(message));
             mInsertOrReplaceMessage.bindLong(5, messagePlus.isUnsent() ? 1 : 0);
+            mInsertOrReplaceMessage.bindLong(6, messagePlus.getNumSendAttempts());
             mInsertOrReplaceMessage.execute();
 
             Set<String> pendingOEmbeds = messagePlus.getPendingOEmbeds();
@@ -916,11 +919,13 @@ public class ADNDatabase {
                     long date = cursor.getLong(2);
                     String messageJson = cursor.getString(3);
                     boolean isUnsent = cursor.getInt(4) == 1;
+                    int numSendAttempts = cursor.getInt(5);
                     message = mGson.fromJson(messageJson, Message.class);
 
                     MessagePlus messagePlus = new MessagePlus(message);
                     messagePlus.setDisplayDate(new Date(date));
                     messagePlus.setIsUnsent(isUnsent);
+                    messagePlus.setNumSendAttempts(numSendAttempts);
                     messages.put(messageId, messagePlus);
 
                     if(maxId == null) {
@@ -980,11 +985,13 @@ public class ADNDatabase {
                     long date = cursor.getLong(2);
                     String messageJson = cursor.getString(3);
                     boolean isUnsent = cursor.getInt(4) == 1;
+                    int numSendAttempts = cursor.getInt(5);
                     message = mGson.fromJson(messageJson, Message.class);
 
                     MessagePlus messagePlus = new MessagePlus(message);
                     messagePlus.setDisplayDate(new Date(date));
                     messagePlus.setIsUnsent(isUnsent);
+                    messagePlus.setNumSendAttempts(numSendAttempts);
                     messages.put(messageId, messagePlus);
 
                     if(maxId == null) {
@@ -1023,7 +1030,7 @@ public class ADNDatabase {
         try {
             String where = COL_MESSAGE_CHANNEL_ID + " = ? AND " + COL_MESSAGE_UNSENT + " = ?";
             String[] args = new String[] { channelId, String.valueOf(1) };
-            String[] cols = new String[] { COL_MESSAGE_ID, COL_MESSAGE_DATE, COL_MESSAGE_JSON };
+            String[] cols = new String[] { COL_MESSAGE_ID, COL_MESSAGE_DATE, COL_MESSAGE_JSON, COL_MESSAGE_SEND_ATTEMPTS };
             String orderBy = COL_MESSAGE_DATE + " ASC";
 
             cursor = mDatabase.query(TABLE_MESSAGES, cols, where, args, null, null, orderBy, null);
@@ -1031,11 +1038,13 @@ public class ADNDatabase {
                 String messageId = cursor.getString(0);
                 long date = cursor.getLong(1);
                 String messageJson = cursor.getString(2);
+                int sendAttempts = cursor.getInt(3);
 
                 Message message = mGson.fromJson(messageJson, Message.class);
                 MessagePlus messagePlus = new MessagePlus(message);
                 messagePlus.setDisplayDate(new Date(date));
                 messagePlus.setIsUnsent(true);
+                messagePlus.setNumSendAttempts(sendAttempts);
                 unsentMessages.put(messageId, messagePlus);
             }
         } catch(Exception e) {

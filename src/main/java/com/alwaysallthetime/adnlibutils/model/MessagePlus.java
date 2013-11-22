@@ -32,6 +32,7 @@ public class MessagePlus {
 
     private Set<String> mPendingOEmbeds;
     private boolean mIsUnsent;
+    private int mSendAttempts;
 
     private static MessagePlus newUnsentMessagePlus(String channelId, String messageId, Message message) {
         Date date = new Date();
@@ -119,6 +120,19 @@ public class MessagePlus {
 
     public boolean isUnsent() {
         return mIsUnsent;
+    }
+
+    public int getNumSendAttempts() {
+        return mSendAttempts;
+    }
+
+    public void setNumSendAttempts(int numAttempts) {
+        mSendAttempts = numAttempts;
+    }
+
+    public int incrementSendAttempts() {
+        mSendAttempts++;
+        return mSendAttempts;
     }
 
     public boolean hasPendingOEmbeds() {

@@ -651,6 +651,8 @@ public class MessageManager {
             @Override
             public void onError(Exception exception) {
                 super.onError(exception);
+                messagePlus.incrementSendAttempts();
+                mDatabase.insertOrReplaceMessage(messagePlus);
             }
         });
     }
