@@ -969,6 +969,7 @@ public class ADNDatabase {
 
     public OrderedMessageBatch getMessages(String channelId, Date beforeDate, int limit) {
         LinkedHashMap<String, MessagePlus> messages = new LinkedHashMap<String, MessagePlus>();
+        ArrayList<MessagePlus> unsentMessages = new ArrayList<MessagePlus>();
         String maxId = null;
         String minId = null;
         Cursor cursor = null;
@@ -1005,6 +1006,9 @@ public class ADNDatabase {
                     if(maxId == null) {
                         maxId = messageId;
                     }
+                    if(isUnsent) {
+                        unsentMessages.add(messagePlus);
+                    }
                 } while(cursor.moveToNext());
 
                 if(message != null) {
@@ -1017,6 +1021,11 @@ public class ADNDatabase {
             if(cursor != null) {
                 cursor.close();
             }
+        }
+        for(MessagePlus messagePlus : unsentMessages) {
+            Message message = messagePlus.getMessage();
+            Set<String> pendingOEmbeds = getPendingOEmbeds(message.getId(), message.getChannelId());
+            messagePlus.setPendingOEmbeds(pendingOEmbeds);
         }
         return new OrderedMessageBatch(messages, new MinMaxPair(minId, maxId));
     }
