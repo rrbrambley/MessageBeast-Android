@@ -88,6 +88,11 @@ public class ADNDatabase {
     public static final String COL_PENDING_OEMBED_MESSAGE_ID = "pending_oembed_message_id";
     public static final String COL_PENDING_OEMBED_CHANNEL_ID = "pending_oembed_channel_id";
 
+    public static final String TABLE_PENDING_MESSAGE_DELETIONS = "pending_message_deletions";
+    public static final String COL_PENDING_MESSAGE_DELETION_MESSAGE_ID = "pending_message_deletion_message_id";
+    public static final String COL_PENDING_MESSAGE_DELETION_CHANNEL_ID = "pending_message_deletion_channel_id";
+    public static final String COL_PENDING_MESSAGE_DELETION_DELETE_ASSOCIATED_FILES = "pending_message_deletion_delete_files";
+
     public static final String TABLE_ACTION_MESSAGES = "action_messages";
     public static final String COL_ACTION_MESSAGE_ID = "action_message_id";
     public static final String COL_ACTION_MESSAGE_CHANNEL_ID = "action_channel_id";
