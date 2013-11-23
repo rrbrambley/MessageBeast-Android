@@ -895,72 +895,24 @@ public class ADNDatabase {
      * @return OrderedMessageBatch
      */
     public OrderedMessageBatch getMessages(String channelId, Collection<String> messageIds) {
-        LinkedHashMap<String, MessagePlus> messages = new LinkedHashMap<String, MessagePlus>();
-        ArrayList<MessagePlus> unsentMessages = new ArrayList<MessagePlus>();
-        String maxId = null;
-        String minId = null;
-        Cursor cursor = null;
-        try {
-            String where = COL_MESSAGE_CHANNEL_ID + " =? AND " + COL_MESSAGE_ID + " IN (";
-            String[] args = new String[messageIds.size() + 1];
-            args[0] = channelId;
+        String where = COL_MESSAGE_CHANNEL_ID + " =? AND " + COL_MESSAGE_ID + " IN (";
+        String[] args = new String[messageIds.size() + 1];
+        args[0] = channelId;
 
-            int index = 1;
-            Iterator<String> iterator = messageIds.iterator();
-            while(iterator.hasNext()) {
-                args[index] = iterator.next();
-                if(index > 1) {
-                    where += ", ?";
-                } else {
-                    where += " ?";
-                }
-                index++;
+        int index = 1;
+        Iterator<String> iterator = messageIds.iterator();
+        while(iterator.hasNext()) {
+            args[index] = iterator.next();
+            if(index > 1) {
+                where += ", ?";
+            } else {
+                where += " ?";
             }
-            where += ")";
-            String orderBy = COL_MESSAGE_DATE + " DESC";
-            cursor = mDatabase.query(TABLE_MESSAGES, null, where, args, null, null, orderBy, null);
-
-            Message message = null;
-            if(cursor.moveToNext()) {
-                do {
-                    String messageId = cursor.getString(0);
-                    long date = cursor.getLong(2);
-                    String messageJson = cursor.getString(3);
-                    boolean isUnsent = cursor.getInt(4) == 1;
-                    int numSendAttempts = cursor.getInt(5);
-                    message = mGson.fromJson(messageJson, Message.class);
-
-                    MessagePlus messagePlus = new MessagePlus(message);
-                    messagePlus.setDisplayDate(new Date(date));
-                    messagePlus.setIsUnsent(isUnsent);
-                    messagePlus.setNumSendAttempts(numSendAttempts);
-                    messages.put(messageId, messagePlus);
-
-                    if(maxId == null) {
-                        maxId = messageId;
-                    }
-                    if(isUnsent) {
-                        unsentMessages.add(messagePlus);
-                    }
-                } while(cursor.moveToNext());
-
-                if(message != null) {
-                    minId = message.getId();
-                }
-            }
-        } catch(Exception e) {
-            Log.e(TAG, e.getMessage(), e);
-        } finally {
-            if(cursor != null) {
-                cursor.close();
-            }
+            index++;
         }
-        for(MessagePlus messagePlus : unsentMessages) {
-            Message message = messagePlus.getMessage();
-            Set<String> pendingOEmbeds = getPendingOEmbeds(message.getId(), message.getChannelId());
-            messagePlus.setPendingOEmbeds(pendingOEmbeds);
-        }
-        return new OrderedMessageBatch(messages, new MinMaxPair(minId, maxId));
+        where += ")";
+        String orderBy = COL_MESSAGE_DATE + " DESC";
+        return getMessages(where, args, orderBy, null);
     }
 
     public OrderedMessageBatch getMessages(String channelId, int limit) {
@@ -968,24 +920,28 @@ public class ADNDatabase {
     }
 
     public OrderedMessageBatch getMessages(String channelId, Date beforeDate, int limit) {
+        String where = COL_MESSAGE_CHANNEL_ID + " =?";
+        if(beforeDate != null) {
+            where += " AND " + COL_MESSAGE_DATE + " < ?";
+        }
+        String[] args = null;
+        if(beforeDate != null) {
+            args = new String[] { channelId,  String.valueOf(beforeDate.getTime()) };
+        } else {
+            args = new String[] { channelId };
+        }
+        String orderBy = COL_MESSAGE_DATE + " DESC";
+        return getMessages(where, args, orderBy, String.valueOf(limit));
+    }
+
+    private OrderedMessageBatch getMessages(String where, String[] args, String orderBy, String limit) {
         LinkedHashMap<String, MessagePlus> messages = new LinkedHashMap<String, MessagePlus>();
         ArrayList<MessagePlus> unsentMessages = new ArrayList<MessagePlus>();
         String maxId = null;
         String minId = null;
         Cursor cursor = null;
         try {
-            String where = COL_MESSAGE_CHANNEL_ID + " =?";
-            if(beforeDate != null) {
-                where += " AND " + COL_MESSAGE_DATE + " < ?";
-            }
-            String[] args = null;
-            if(beforeDate != null) {
-                args = new String[] { channelId,  String.valueOf(beforeDate.getTime()) };
-            } else {
-                args = new String[] { channelId };
-            }
-            String orderBy = COL_MESSAGE_DATE + " DESC";
-            cursor = mDatabase.query(TABLE_MESSAGES, null, where, args, null, null, orderBy, String.valueOf(limit));
+            cursor = mDatabase.query(TABLE_MESSAGES, null, where, args, null, null, orderBy, limit);
 
             Message message = null;
             if(cursor.moveToNext()) {
