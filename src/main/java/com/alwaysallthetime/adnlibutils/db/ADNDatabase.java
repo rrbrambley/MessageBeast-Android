@@ -175,6 +175,14 @@ public class ADNDatabase {
             ") " +
             "VALUES(?, ?, ?, ?, ?, ?, ?, ?)";
 
+    private static final String INSERT_OR_REPLACE_PENDING_MESSAGE_DELETION = "INSERT OR REPLACE INTO " + TABLE_PENDING_MESSAGE_DELETIONS +
+            " (" +
+            COL_PENDING_MESSAGE_DELETION_MESSAGE_ID + ", " +
+            COL_PENDING_MESSAGE_DELETION_CHANNEL_ID + ", " +
+            COL_PENDING_MESSAGE_DELETION_DELETE_ASSOCIATED_FILES +
+            ") " +
+            "VALUES(?, ?, ?)";
+
     private static final String INSERT_OR_REPLACE_PENDING_OEMBED = "INSERT OR REPLACE INTO " + TABLE_PENDING_OEMBEDS +
             " (" +
             COL_PENDING_OEMBED_PENDING_FILE_ID + ", " +
@@ -201,6 +209,7 @@ public class ADNDatabase {
     private SQLiteStatement mInsertOrReplaceLocationInstance;
     private SQLiteStatement mInsertOrReplaceOEmbedInstance;
     private SQLiteStatement mInsertOrReplacePendingFile;
+    private SQLiteStatement mInsertOrReplacePendingDeletion;
     private SQLiteStatement mInsertOrReplacePendingOEmbed;
     private SQLiteStatement mInsertOrReplaceActionMessage;
     private Gson mGson;
@@ -452,6 +461,27 @@ public class ADNDatabase {
         } finally {
             mDatabase.endTransaction();
             mInsertOrReplacePendingFile.clearBindings();
+        }
+    }
+
+    public void insertOrReplacePendingDeletion(MessagePlus messagePlus, boolean deleteFiles) {
+        if(mInsertOrReplacePendingDeletion == null) {
+            mInsertOrReplacePendingDeletion = mDatabase.compileStatement(INSERT_OR_REPLACE_PENDING_MESSAGE_DELETION);
+        }
+        mDatabase.beginTransaction();
+
+        try {
+            Message message = messagePlus.getMessage();
+            mInsertOrReplacePendingDeletion.bindString(1, message.getId());
+            mInsertOrReplacePendingDeletion.bindString(2, message.getChannelId());
+            mInsertOrReplacePendingDeletion.bindLong(3, deleteFiles ? 1 : 0);
+            mInsertOrReplacePendingDeletion.execute();
+            mDatabase.setTransactionSuccessful();
+        } catch(Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+        } finally {
+            mDatabase.endTransaction();
+            mInsertOrReplacePendingDeletion.clearBindings();
         }
     }
 
@@ -1040,6 +1070,32 @@ public class ADNDatabase {
         return unsentMessages;
     }
 
+    public HashMap<String, PendingMessageDeletion> getPendingMessageDeletions(String channelId) {
+        HashMap<String, PendingMessageDeletion> deletions = new HashMap<String, PendingMessageDeletion>();
+
+        Cursor cursor = null;
+        try {
+            String where = COL_PENDING_MESSAGE_DELETION_CHANNEL_ID + " = ?";
+            String[] args = new String[] { channelId };
+            String[] cols = new String[] { COL_PENDING_MESSAGE_DELETION_MESSAGE_ID, COL_PENDING_MESSAGE_DELETION_DELETE_ASSOCIATED_FILES };
+            cursor = mDatabase.query(TABLE_PENDING_MESSAGE_DELETIONS, cols, where, args, null, null, null, null);
+
+            while(cursor.moveToNext()) {
+                String messageId = cursor.getString(0);
+                boolean deleteAssociatedFiles = cursor.getInt(1) == 1;
+                PendingMessageDeletion deletion = new PendingMessageDeletion(messageId, channelId, deleteAssociatedFiles);
+                deletions.put(messageId, deletion);
+            }
+        } catch(Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+        } finally {
+            if(cursor != null) {
+                cursor.close();
+            }
+        }
+        return deletions;
+    }
+
     public void deleteMessage(MessagePlus messagePlus) {
         mDatabase.beginTransaction();
 
@@ -1078,6 +1134,10 @@ public class ADNDatabase {
         } finally {
             mDatabase.endTransaction();
         }
+    }
+
+    public void deletePendingMessageDeletion(String messageId) {
+        mDatabase.delete(TABLE_PENDING_MESSAGE_DELETIONS, COL_PENDING_MESSAGE_DELETION_MESSAGE_ID + " = '" + messageId + "'", null);
     }
 
     private void deleteOEmbedInstances(String type, String messageId) {
