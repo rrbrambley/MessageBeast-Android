@@ -240,8 +240,34 @@ public class ActionMessageManager {
         }
     }
 
-    public synchronized void unapplyChannelAction(MessagePlus messagePlus) {
-        //TODO
+    public synchronized void removeChannelAction(String actionChannelId, MessagePlus targetMessagePlus) {
+        Message message = targetMessagePlus.getMessage();
+        final String targetMessageId = message.getId();
+        ArrayList<String> targetMessageIds = new ArrayList<String>(1);
+        targetMessageIds.add(targetMessageId);
+        List<ActionMessage> actionMessages = mDatabase.getActionMessagesForTargetMessages(targetMessageIds);
+
+        if(actionMessages.size() == 1) {
+            mDatabase.deleteActionMessage(actionChannelId, targetMessageId);
+            TreeMap<String, MessagePlus> actionedMessages = getOrCreateActionMessageMap(actionChannelId);
+            actionedMessages.remove(targetMessageId);
+
+            final ActionMessage actionMessage = actionMessages.get(0);
+            MessagePlus actionMessagePlus = mDatabase.getMessage(actionChannelId, actionMessage.getActionMessageId());
+
+            //the success/failure of this should not matter - on failure, it will be a pending deletion
+            mMessageManager.deleteMessage(actionMessagePlus, new MessageManager.MessageDeletionResponseHandler() {
+                @Override
+                public void onSuccess() {
+                    Log.d(TAG, "Successfully deleted action message " + actionMessage.getActionMessageId() + " for target message " + targetMessageId);
+                }
+
+                @Override
+                public void onError(Exception exception) {
+                    Log.d(TAG, "Failed to delete action message " + actionMessage.getActionMessageId() + " for target message " + targetMessageId);
+                }
+            });
+        }
     }
 
     private final BroadcastReceiver sentMessageReceiver = new BroadcastReceiver() {
