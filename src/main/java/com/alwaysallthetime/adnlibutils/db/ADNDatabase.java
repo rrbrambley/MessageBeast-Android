@@ -922,6 +922,17 @@ public class ADNDatabase {
         return instances;
     }
 
+    public MessagePlus getMessage(String channelId, String messageId) {
+        HashSet<String> ids = new HashSet<String>(1);
+        ids.add(messageId);
+        OrderedMessageBatch messages = getMessages(channelId, ids);
+        LinkedHashMap<String, MessagePlus> orderedMessages = messages.getMessages();
+        if(orderedMessages.size() == 1) {
+            return orderedMessages.values().iterator().next();
+        }
+        return null;
+    }
+
     /**
      * Get Messages in a Channel
      *
