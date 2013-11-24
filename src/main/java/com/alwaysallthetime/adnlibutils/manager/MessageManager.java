@@ -23,6 +23,7 @@ import com.alwaysallthetime.adnlibutils.db.DisplayLocationInstances;
 import com.alwaysallthetime.adnlibutils.db.HashtagInstances;
 import com.alwaysallthetime.adnlibutils.db.OrderedMessageBatch;
 import com.alwaysallthetime.adnlibutils.db.PendingFile;
+import com.alwaysallthetime.adnlibutils.db.PendingMessageDeletion;
 import com.alwaysallthetime.adnlibutils.model.DisplayLocation;
 import com.alwaysallthetime.adnlibutils.model.Geolocation;
 import com.alwaysallthetime.adnlibutils.model.MessagePlus;
@@ -480,17 +481,25 @@ public class MessageManager {
             mClient.deleteMessage(messagePlus.getMessage(), new MessageResponseHandler() {
                 @Override
                 public void onSuccess(Message responseData) {
-                    LinkedHashMap<String, MessagePlus> channelMessages = mMessages.get(responseData.getChannelId());
-                    channelMessages.remove(responseData.getId());
-                    mDatabase.deleteMessage(messagePlus); //this one because the deleted one doesn't have the entities.
-
+                    delete();
                     handler.onSuccess();
+                    mDatabase.deletePendingMessageDeletion(responseData.getId());
                 }
 
                 @Override
                 public void onError(Exception error) {
                     super.onError(error);
                     handler.onError(error);
+                    delete();
+                    mDatabase.insertOrReplacePendingDeletion(messagePlus, false);
+                }
+
+                private void delete() {
+                    LinkedHashMap<String, MessagePlus> channelMessages = mMessages.get(messagePlus.getMessage().getChannelId());
+                    if(channelMessages != null) {
+                        channelMessages.remove(messagePlus.getMessage().getId());
+                    }
+                    mDatabase.deleteMessage(messagePlus); //this one because the deleted one doesn't have the entities.
                 }
             });
         }
@@ -662,6 +671,11 @@ public class MessageManager {
         return getUnsentMessages(channelId).size() > 0;
     }
 
+    public synchronized void sendAllUnsent(final String channelId) {
+        sendUnsentMessages(channelId);
+        sendPendingDeletions(channelId);
+    }
+
     public synchronized void sendUnsentMessages(final String channelId) {
         LinkedHashMap<String, MessagePlus> unsentMessages = getUnsentMessages(channelId);
         if(unsentMessages.size() > 0) {
@@ -675,9 +689,24 @@ public class MessageManager {
         }
     }
 
+    public synchronized void sendPendingDeletions(final String channelId) {
+        HashMap<String, PendingMessageDeletion> pendingMessageDeletions = mDatabase.getPendingMessageDeletions(channelId);
+        if(pendingMessageDeletions.size() > 0) {
+            for(String messageId : pendingMessageDeletions.keySet()) {
+                mClient.deleteMessage(channelId, messageId, new MessageResponseHandler() {
+                    @Override
+                    public void onSuccess(Message responseData) {
+                        mDatabase.deletePendingMessageDeletion(responseData.getId());
+                    }
+                });
+            }
+        }
+    }
+
     private synchronized boolean retrieveMessages(final QueryParameters queryParameters, final String channelId, final MessageManagerResponseHandler handler) {
         LinkedHashMap<String, MessagePlus> unsentMessages = getUnsentMessages(channelId);
-        if(unsentMessages.size() > 0) {
+        HashMap<String, PendingMessageDeletion> pendingMessageDeletions = mDatabase.getPendingMessageDeletions(channelId);
+        if(unsentMessages.size() > 0 || pendingMessageDeletions.size() > 0) {
             return false;
         }
         mClient.retrieveMessagesInChannel(channelId, queryParameters, new MessageListResponseHandler() {
