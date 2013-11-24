@@ -209,7 +209,7 @@ public class ADNDatabase {
     private SQLiteStatement mInsertOrReplaceLocationInstance;
     private SQLiteStatement mInsertOrReplaceOEmbedInstance;
     private SQLiteStatement mInsertOrReplacePendingFile;
-    private SQLiteStatement mInsertOrReplacePendingDeletion;
+    private SQLiteStatement mInsertOrReplacePendingMessageDeletion;
     private SQLiteStatement mInsertOrReplacePendingOEmbed;
     private SQLiteStatement mInsertOrReplaceActionMessage;
     private Gson mGson;
@@ -465,23 +465,23 @@ public class ADNDatabase {
     }
 
     public void insertOrReplacePendingDeletion(MessagePlus messagePlus, boolean deleteFiles) {
-        if(mInsertOrReplacePendingDeletion == null) {
-            mInsertOrReplacePendingDeletion = mDatabase.compileStatement(INSERT_OR_REPLACE_PENDING_MESSAGE_DELETION);
+        if(mInsertOrReplacePendingMessageDeletion == null) {
+            mInsertOrReplacePendingMessageDeletion = mDatabase.compileStatement(INSERT_OR_REPLACE_PENDING_MESSAGE_DELETION);
         }
         mDatabase.beginTransaction();
 
         try {
             Message message = messagePlus.getMessage();
-            mInsertOrReplacePendingDeletion.bindString(1, message.getId());
-            mInsertOrReplacePendingDeletion.bindString(2, message.getChannelId());
-            mInsertOrReplacePendingDeletion.bindLong(3, deleteFiles ? 1 : 0);
-            mInsertOrReplacePendingDeletion.execute();
+            mInsertOrReplacePendingMessageDeletion.bindString(1, message.getId());
+            mInsertOrReplacePendingMessageDeletion.bindString(2, message.getChannelId());
+            mInsertOrReplacePendingMessageDeletion.bindLong(3, deleteFiles ? 1 : 0);
+            mInsertOrReplacePendingMessageDeletion.execute();
             mDatabase.setTransactionSuccessful();
         } catch(Exception e) {
             Log.e(TAG, e.getMessage(), e);
         } finally {
             mDatabase.endTransaction();
-            mInsertOrReplacePendingDeletion.clearBindings();
+            mInsertOrReplacePendingMessageDeletion.clearBindings();
         }
     }
 
