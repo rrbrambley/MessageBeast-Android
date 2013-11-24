@@ -170,7 +170,7 @@ public class ActionMessageManager {
 
     public synchronized List<MessagePlus> getActionedMessages(String actionChannelId, String targetChannelId) {
         TreeMap<String, MessagePlus> channelActionedMessages = mActionedMessages.get(actionChannelId);
-        if(channelActionedMessages == null) {
+        if(channelActionedMessages == null || channelActionedMessages.size() == 0) {
             LinkedHashMap<String, MessagePlus> loadedMessagesFromActionChannel = mMessageManager.getMessageMap(actionChannelId);
             if(loadedMessagesFromActionChannel == null || loadedMessagesFromActionChannel.size() == 0) {
                 loadedMessagesFromActionChannel = mMessageManager.loadPersistedMessages(actionChannelId, MAX_BATCH_LOAD_FROM_DISK);
