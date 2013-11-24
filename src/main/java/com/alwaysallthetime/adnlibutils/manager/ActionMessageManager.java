@@ -73,7 +73,7 @@ public class ActionMessageManager {
             @Override
             public void onSuccess(List<MessagePlus> responseData, boolean appended) {
                 responseHandler.onSuccess(responseData, appended);
-                Log.d(TAG, "Synced " + responseHandler.getNumMessagesSynced() + " messages for action channel " + actionChannelId);
+                Log.d(TAG, "Synced " + getNumMessagesSynced() + " messages for action channel " + actionChannelId);
             }
 
             @Override
