@@ -32,7 +32,7 @@ import java.util.TreeMap;
 public class ActionMessageManager {
     private static final String TAG = "ADNLibUtils_ActionMessageManager";
 
-    public static final QueryParameters FAVORITES_QUERY_PARAMETERS = new QueryParameters(GeneralParameter.INCLUDE_MACHINE,
+    public static final QueryParameters ACTION_MESSAGE_QUERY_PARAMETERS = new QueryParameters(GeneralParameter.INCLUDE_MACHINE,
             GeneralParameter.INCLUDE_MESSAGE_ANNOTATIONS, GeneralParameter.EXCLUDE_DELETED);
 
     private static final int MAX_BATCH_LOAD_FROM_DISK = 40;
@@ -110,7 +110,7 @@ public class ActionMessageManager {
                             @Override
                             public void onResponse(Channel channel) {
                                 mActionChannels.put(channel.getId(), channel);
-                                mMessageManager.setParameters(channel.getId(), FAVORITES_QUERY_PARAMETERS);
+                                mMessageManager.setParameters(channel.getId(), ACTION_MESSAGE_QUERY_PARAMETERS);
                                 handler.onInitialized(channel);
                             }
 
@@ -122,7 +122,7 @@ public class ActionMessageManager {
                         });
                     } else {
                         mActionChannels.put(channel.getId(), channel);
-                        mMessageManager.setParameters(channel.getId(), FAVORITES_QUERY_PARAMETERS);
+                        mMessageManager.setParameters(channel.getId(), ACTION_MESSAGE_QUERY_PARAMETERS);
                         handler.onInitialized(channel);
                     }
                 }
@@ -135,7 +135,7 @@ public class ActionMessageManager {
             });
         } else {
             mActionChannels.put(actionChannel.getId(), actionChannel);
-            mMessageManager.setParameters(actionChannel.getId(), FAVORITES_QUERY_PARAMETERS);
+            mMessageManager.setParameters(actionChannel.getId(), ACTION_MESSAGE_QUERY_PARAMETERS);
             handler.onInitialized(actionChannel);
         }
     }
