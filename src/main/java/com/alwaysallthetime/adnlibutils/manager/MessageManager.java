@@ -578,7 +578,8 @@ public class MessageManager {
         params.put("before_id", beforeId);
         params.put("count", String.valueOf(MAX_MESSAGES_RETURNED_ON_SYNC));
 
-        retrieveMessages(params, channelId, new MessageManagerResponseHandler() {
+        boolean keepInMemory = messages.size() == 0;
+        retrieveMessages(params, channelId, keepInMemory, new MessageManagerResponseHandler() {
             @Override
             public void onSuccess(List<MessagePlus> responseData, boolean appended) {
                 if(messages.size() == 0) {
@@ -588,8 +589,11 @@ public class MessageManager {
                 responseHandler.onBatchSynced(responseData);
 
                 if(isMore()) {
-                    MinMaxPair minMaxPair = getMinMaxPair(channelId);
-                    retrieveAllMessages(messages, null, minMaxPair.minId, channelId, responseHandler);
+                    //never rely on MinMaxPair for min id here because
+                    //when keepInMemory = false, the MinMaxPair will not change
+                    //(and this would keep requesting the same batch over and over).
+                    MessagePlus minMessage = responseData.get(responseData.size() - 1);
+                    retrieveAllMessages(messages, null, minMessage.getMessage().getId(), channelId, responseHandler);
                 } else {
                     Log.d(TAG, "Num messages synced: " + responseHandler.getNumMessagesSynced());
                     responseHandler.onSuccess(messages, true);
@@ -608,7 +612,7 @@ public class MessageManager {
         QueryParameters params = (QueryParameters) mParameters.get(channelId).clone();
         params.put("since_id", sinceId);
         params.put("before_id", beforeId);
-        return retrieveMessages(params, channelId, handler);
+        return retrieveMessages(params, channelId, true, handler);
     }
 
     private synchronized void sendUnsentMessages(final LinkedHashMap<String, MessagePlus> unsentMessages, final ArrayList<String> sentMessageIds) {
@@ -715,7 +719,7 @@ public class MessageManager {
         }
     }
 
-    private synchronized boolean retrieveMessages(final QueryParameters queryParameters, final String channelId, final MessageManagerResponseHandler handler) {
+    private synchronized boolean retrieveMessages(final QueryParameters queryParameters, final String channelId, final boolean keepInMemory, final MessageManagerResponseHandler handler) {
         LinkedHashMap<String, MessagePlus> unsentMessages = getUnsentMessages(channelId);
         HashMap<String, PendingMessageDeletion> pendingMessageDeletions = mDatabase.getPendingMessageDeletions(channelId);
         if(unsentMessages.size() > 0 || pendingMessageDeletions.size() > 0) {
@@ -729,18 +733,20 @@ public class MessageManager {
                 String sinceId = queryParameters.get("since_id");
 
                 MinMaxPair minMaxPair = getMinMaxPair(channelId);
-                if(beforeId != null && sinceId == null) {
+                if(beforeId != null && sinceId == null && keepInMemory) {
                     String newMinId = getMinId();
                     if(newMinId != null) {
                         minMaxPair.minId = newMinId;
                     }
                 } else if(beforeId == null && sinceId != null) {
                     appended = false;
-                    String newMaxId = getMaxId();
-                    if(newMaxId != null) {
-                        minMaxPair.maxId = newMaxId;
+                    if(keepInMemory) {
+                        String newMaxId = getMaxId();
+                        if(newMaxId != null) {
+                            minMaxPair.maxId = newMaxId;
+                        }
                     }
-                } else if(beforeId == null && sinceId == null) {
+                } else if(beforeId == null && sinceId == null && keepInMemory) {
                     minMaxPair.minId = getMinId();
                     minMaxPair.maxId = getMaxId();
                 }
@@ -763,7 +769,10 @@ public class MessageManager {
                 if(!appended) {
                     newFullChannelMessagesMap.putAll(channelMessages);
                 }
-                mMessages.put(channelId, newFullChannelMessagesMap);
+
+                if(keepInMemory) {
+                    mMessages.put(channelId, newFullChannelMessagesMap);
+                }
 
                 if(mConfiguration.isLocationLookupEnabled) {
                     lookupLocation(newestMessages, true);
