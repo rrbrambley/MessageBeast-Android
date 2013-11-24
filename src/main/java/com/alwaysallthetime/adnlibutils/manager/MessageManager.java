@@ -464,18 +464,12 @@ public class MessageManager {
             Message message = messagePlus.getMessage();
             String messageId = message.getId();
             String channelId = message.getChannelId();
-            LinkedHashMap<String, MessagePlus> channelMessages = getChannelMessages(channelId);
 
             mDatabase.deleteMessage(messagePlus);
             getUnsentMessages(channelId).remove(messageId);
-            channelMessages.remove(messageId);
 
-            MinMaxPair minMaxPair = getMinMaxPair(channelId);
-            if(channelMessages.size() > 0) {
-                minMaxPair.maxId = channelMessages.keySet().iterator().next();
-            } else {
-                minMaxPair.maxId = null;
-            }
+            onMessageDeleted(messageId, channelId);
+
             handler.onSuccess();
         } else {
             mClient.deleteMessage(messagePlus.getMessage(), new MessageResponseHandler() {
@@ -495,13 +489,31 @@ public class MessageManager {
                 }
 
                 private void delete() {
-                    LinkedHashMap<String, MessagePlus> channelMessages = mMessages.get(messagePlus.getMessage().getChannelId());
-                    if(channelMessages != null) {
-                        channelMessages.remove(messagePlus.getMessage().getId());
-                    }
                     mDatabase.deleteMessage(messagePlus); //this one because the deleted one doesn't have the entities.
+                    onMessageDeleted(messagePlus.getMessage().getId(), messagePlus.getMessage().getChannelId());
                 }
             });
+        }
+    }
+
+    private synchronized void onMessageDeleted(String messageId, String channelId) {
+        LinkedHashMap<String, MessagePlus> channelMessages = getChannelMessages(channelId);
+        channelMessages.remove(messageId);
+
+        MinMaxPair minMaxPair = getMinMaxPair(channelId);
+        if(channelMessages.size() > 0) {
+            minMaxPair.maxId = channelMessages.keySet().iterator().next();
+        } else {
+            minMaxPair.maxId = null;
+        }
+
+        if(messageId.equals(minMaxPair.minId)) {
+            Iterator<String> iterator = channelMessages.keySet().iterator();
+            String lastId = null;
+            while(iterator.hasNext()) {
+                lastId = iterator.next();
+            }
+            minMaxPair.minId = lastId;
         }
     }
 
