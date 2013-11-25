@@ -173,11 +173,11 @@ public class PrivateChannelUtility {
             c.addAnnotation(a);
         }
 
-        QueryParameters params = new QueryParameters(GeneralParameter.INCLUDE_CHANNEL_ANNOTATIONS);
+        final QueryParameters params = new QueryParameters(GeneralParameter.INCLUDE_CHANNEL_ANNOTATIONS);
         client.createChannel(c, params, new ChannelResponseHandler() {
             @Override
             public void onSuccess(final Channel responseData) {
-                client.subscribeChannel(responseData, new ChannelResponseHandler() {
+                client.subscribeChannel(responseData, params, new ChannelResponseHandler() {
                     @Override
                     public void onSuccess(Channel responseData) {
                         handler.onResponse(responseData);
