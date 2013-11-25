@@ -62,14 +62,6 @@ public class PrivateChannelUtility {
         return actionChannels.get(actionType);
     }
 
-    public static String getTargetChannelId(Channel actionChannel) {
-        Annotation a = actionChannel.getFirstAnnotationOfType(CHANNEL_ANNOTATION_TYPE_METADATA);
-        if(a != null) {
-            return (String) a.getValue().get(ACTION_METADATA_KEY_TARGET_CHANNEL_ID);
-        }
-        return null;
-    }
-
     public static void retrieveChannel(AppDotNetClient client, final String channelType, final PrivateChannelHandler handler) {
         QueryParameters params = new QueryParameters();
         params.put("channel_types", channelType);

@@ -14,6 +14,7 @@ import com.alwaysallthetime.adnlib.data.Channel;
 import com.alwaysallthetime.adnlib.data.Message;
 import com.alwaysallthetime.adnlibutils.ADNApplication;
 import com.alwaysallthetime.adnlibutils.AnnotationFactory;
+import com.alwaysallthetime.adnlibutils.AnnotationUtility;
 import com.alwaysallthetime.adnlibutils.PrivateChannelUtility;
 import com.alwaysallthetime.adnlibutils.db.ADNDatabase;
 import com.alwaysallthetime.adnlibutils.db.ActionMessage;
@@ -303,7 +304,7 @@ public class ActionMessageManager {
                     //retrieve the new ones
 
                     Channel actionChannel = mActionChannels.get(channelId);
-                    final String targetChannelId = PrivateChannelUtility.getTargetChannelId(actionChannel);
+                    final String targetChannelId = AnnotationUtility.getTargetChannelId(actionChannel);
                     mMessageManager.retrieveNewestMessages(channelId, new MessageManager.MessageManagerResponseHandler() {
                         @Override
                         public void onSuccess(List<MessagePlus> responseData, boolean appended) {

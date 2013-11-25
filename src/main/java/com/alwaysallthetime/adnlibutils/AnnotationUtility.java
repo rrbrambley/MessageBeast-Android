@@ -4,6 +4,7 @@ import android.util.Log;
 
 import com.alwaysallthetime.adnlib.Annotations;
 import com.alwaysallthetime.adnlib.data.Annotation;
+import com.alwaysallthetime.adnlib.data.Channel;
 import com.alwaysallthetime.adnlib.data.Message;
 
 import java.text.ParseException;
@@ -85,6 +86,22 @@ public class AnnotationUtility {
                     return url;
                 }
             }
+        }
+        return null;
+    }
+
+    public static String getActionChannelType(Channel channel) {
+        Annotation a = channel.getFirstAnnotationOfType(PrivateChannelUtility.CHANNEL_ANNOTATION_TYPE_METADATA);
+        if(a != null) {
+            return (String) a.getValue().get(PrivateChannelUtility.ACTION_METADATA_KEY_ACTION_TYPE);
+        }
+        return null;
+    }
+
+    public static String getTargetChannelId(Channel actionChannel) {
+        Annotation a = actionChannel.getFirstAnnotationOfType(PrivateChannelUtility.CHANNEL_ANNOTATION_TYPE_METADATA);
+        if(a != null) {
+            return (String) a.getValue().get(PrivateChannelUtility.ACTION_METADATA_KEY_TARGET_CHANNEL_ID);
         }
         return null;
     }
