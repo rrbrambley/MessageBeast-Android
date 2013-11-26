@@ -360,6 +360,14 @@ public class MessagePlus {
                 this.urlExpires = null;
             }
         }
+
+        public String getUrl() {
+            return url;
+        }
+
+        public Date getUrlExpires() {
+            return urlExpires;
+        }
     }
 
     public static class Html5VideoOEmbed extends OEmbed {
@@ -392,6 +400,10 @@ public class MessagePlus {
 
         public OEmbedSource getFirstSource() {
             return sources.size() > 0 ? sources.get(0) : null;
+        }
+
+        public String getPosterUrl() {
+            return posterUrl;
         }
     }
 
