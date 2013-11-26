@@ -247,9 +247,7 @@ public class ActionMessageManager {
         }
     }
 
-    public synchronized void removeChannelAction(String actionChannelId, MessagePlus targetMessagePlus) {
-        Message message = targetMessagePlus.getMessage();
-        final String targetMessageId = message.getId();
+    public synchronized void removeChannelAction(String actionChannelId, final String targetMessageId) {
         ArrayList<String> targetMessageIds = new ArrayList<String>(1);
         targetMessageIds.add(targetMessageId);
         List<ActionMessage> actionMessages = mDatabase.getActionMessagesForTargetMessages(targetMessageIds);
