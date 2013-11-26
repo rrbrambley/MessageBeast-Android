@@ -232,18 +232,20 @@ public class ActionMessageManager {
     }
 
     public synchronized void applyChannelAction(String actionChannelId, MessagePlus targetMessagePlus) {
-        TreeMap<String, MessagePlus> actionedMessages = getOrCreateActionedMessagesMap(actionChannelId);
-        Message message = targetMessagePlus.getMessage();
-        String targetMessageId = message.getId();
-        if(actionedMessages.get(targetMessageId) == null) {
-            //create machine only message in action channel that points to the target message id.
-            Message m = new Message(true);
-            Annotation a = AnnotationFactory.getSingleValueAnnotation(PrivateChannelUtility.MESSAGE_ANNOTATION_TARGET_MESSAGE, PrivateChannelUtility.TARGET_MESSAGE_KEY_ID, targetMessageId);
-            m.addAnnotation(a);
+        if(!isActioned(actionChannelId, targetMessagePlus.getMessage().getId())) {
+            TreeMap<String, MessagePlus> actionedMessages = getOrCreateActionedMessagesMap(actionChannelId);
+            Message message = targetMessagePlus.getMessage();
+            String targetMessageId = message.getId();
+            if(actionedMessages.get(targetMessageId) == null) {
+                //create machine only message in action channel that points to the target message id.
+                Message m = new Message(true);
+                Annotation a = AnnotationFactory.getSingleValueAnnotation(PrivateChannelUtility.MESSAGE_ANNOTATION_TARGET_MESSAGE, PrivateChannelUtility.TARGET_MESSAGE_KEY_ID, targetMessageId);
+                m.addAnnotation(a);
 
-            MessagePlus unsentActionMessage = mMessageManager.createUnsentMessageAndAttemptSend(actionChannelId, m);
-            actionedMessages.put(targetMessageId, targetMessagePlus);
-            mDatabase.insertOrReplaceActionMessage(unsentActionMessage, targetMessageId, message.getChannelId());
+                MessagePlus unsentActionMessage = mMessageManager.createUnsentMessageAndAttemptSend(actionChannelId, m);
+                actionedMessages.put(targetMessageId, targetMessagePlus);
+                mDatabase.insertOrReplaceActionMessage(unsentActionMessage, targetMessageId, message.getChannelId());
+            }
         }
     }
 
