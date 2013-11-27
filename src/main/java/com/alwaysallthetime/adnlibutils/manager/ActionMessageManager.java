@@ -90,7 +90,7 @@ public class ActionMessageManager {
             @Override
             public void onError(Exception exception) {
                 Log.e(TAG, exception.getMessage(), exception);
-                //TODO
+                responseHandler.onError(exception);
             }
         });
     }
