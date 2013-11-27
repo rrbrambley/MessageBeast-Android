@@ -20,7 +20,9 @@ import com.alwaysallthetime.adnlib.gson.AppDotNetGson;
 import com.alwaysallthetime.adnlib.response.MessageListResponseHandler;
 import com.alwaysallthetime.adnlib.response.MessageResponseHandler;
 import com.alwaysallthetime.adnlibutils.ADNSharedPreferences;
+import com.alwaysallthetime.adnlibutils.AnnotationUtility;
 import com.alwaysallthetime.adnlibutils.FullSyncState;
+import com.alwaysallthetime.adnlibutils.PrivateChannelUtility;
 import com.alwaysallthetime.adnlibutils.db.ADNDatabase;
 import com.alwaysallthetime.adnlibutils.db.DisplayLocationInstances;
 import com.alwaysallthetime.adnlibutils.db.HashtagInstances;
@@ -87,6 +89,11 @@ public class MessageManager {
         public void onBatchSynced(List<MessagePlus> messages) {
             //override this to do some processing on a batch by batch basis
         }
+    }
+
+    public interface MessageManagerMultiChannelSyncResponseHandler {
+        public void onSuccess();
+        public void onError(Exception exception);
     }
 
     public interface MessageRefreshResponseHandler {
@@ -577,6 +584,62 @@ public class MessageManager {
             }
         }
         return state;
+    }
+
+
+    /**
+     * Sync and persist all Messages for every provided Channel.
+     *
+     * Each Channel is synced - one at a time. If an Action Channel is encountered, the
+     * ActionMessageManager is used to sync the Messages in that Channel. Unlike the
+     * other retrieveAndPersistAllMessages method that accepts a single Channel id, this
+     * method examines the FullSyncState for a Channel and skips it if it is marked COMPLETE.
+     *
+     * @param channels
+     * @param responseHandler
+     */
+    public synchronized void retrieveAndPersistAllMessages(Channel[] channels, MessageManagerMultiChannelSyncResponseHandler responseHandler) {
+        int i = 0;
+        while(i < channels.length && getFullSyncState(channels[i].getId()) == FullSyncState.COMPLETE) {
+            i++;
+        }
+        if(i == channels.length) {
+            responseHandler.onSuccess();
+        } else {
+            retrieveAndPersistAllMessages(channels, i, responseHandler);
+        }
+    }
+
+    private synchronized void retrieveAndPersistAllMessages(final Channel[] channels, final int currentChannelIndex, final MessageManagerMultiChannelSyncResponseHandler responseHandler) {
+        MessageManagerSyncResponseHandler currentChannelSyncHandler = new MessageManagerSyncResponseHandler() {
+            @Override
+            public void onSuccess(List<MessagePlus> responseData, boolean appended) {
+                int i = currentChannelIndex + 1;
+                while(i < channels.length && getFullSyncState(channels[i].getId()) == FullSyncState.COMPLETE) {
+                    i++;
+                }
+                if(i == channels.length) {
+                    responseHandler.onSuccess();
+                } else {
+                    retrieveAndPersistAllMessages(channels, i, responseHandler);
+                }
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                Log.e(TAG, exception.getMessage(), exception);
+                responseHandler.onError(exception);
+            }
+        };
+
+        Channel nextChannel = channels[currentChannelIndex];
+        String type = nextChannel.getType();
+        if(PrivateChannelUtility.CHANNEL_TYPE_ACTION.equals(type)) {
+            String targetChannelId = AnnotationUtility.getTargetChannelId(nextChannel);
+            ActionMessageManager.getInstance(MessageManager.this).retrieveAndPersistAllActionMessages(nextChannel.getId(), targetChannelId, currentChannelSyncHandler);
+        } else {
+            retrieveAndPersistAllMessages(channels[currentChannelIndex].getId(), currentChannelSyncHandler);
+        }
     }
 
     /**
