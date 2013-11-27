@@ -529,17 +529,32 @@ public class ADNDatabase {
     }
 
     public List<ActionMessage> getActionMessagesForTargetMessages(List<String> targetMessageIds) {
+        return getActionMessagesForTargetMessages(null, targetMessageIds);
+    }
+
+    public List<ActionMessage> getActionMessagesForTargetMessages(String actionChannelId, List<String> targetMessageIds) {
         ArrayList<ActionMessage> actionMessages = new ArrayList<ActionMessage>();
         Cursor cursor = null;
         try {
-            String where = COL_ACTION_MESSAGE_TARGET_MESSAGE_ID + " IN (";
-            String[] args = new String[targetMessageIds.size()];
+            String where = "";
+            String[] args = null;
+            int inStartIndex = 0;
+            if(actionChannelId != null) {
+                args = new String[targetMessageIds.size() + 1];
+                args[0] = actionChannelId;
+                where += COL_ACTION_MESSAGE_CHANNEL_ID + " = ? AND ";
+                inStartIndex = 1;
+            } else {
+                args = new String[targetMessageIds.size()];
+            }
 
-            int index = 0;
+            where += COL_ACTION_MESSAGE_TARGET_MESSAGE_ID + " IN (";
+
+            int index = inStartIndex;
             Iterator<String> iterator = targetMessageIds.iterator();
             while(iterator.hasNext()) {
                 args[index] = iterator.next();
-                if(index > 0) {
+                if(index > inStartIndex) {
                     where += ", ?";
                 } else {
                     where += " ?";
