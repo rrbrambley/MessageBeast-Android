@@ -273,8 +273,8 @@ public class ActionMessageManager {
         @Override
         public void onReceive(Context context, Intent intent) {
             if(MessageManager.INTENT_ACTION_UNSENT_MESSAGES_SENT.equals(intent.getAction())) {
-                String channelId = intent.getStringExtra(MessageManager.EXTRA_CHANNEL_ID);
-                ArrayList<String> sentMessageIds = intent.getStringArrayListExtra(MessageManager.EXTRA_SENT_MESSAGE_IDS);
+                final String channelId = intent.getStringExtra(MessageManager.EXTRA_CHANNEL_ID);
+                final ArrayList<String> sentMessageIds = intent.getStringArrayListExtra(MessageManager.EXTRA_SENT_MESSAGE_IDS);
 
                 //this is not an action channel.
                 //it might be a target channel of one of our action channels though.
@@ -300,6 +300,9 @@ public class ActionMessageManager {
                     mMessageManager.retrieveNewestMessages(channelId, new MessageManager.MessageManagerResponseHandler() {
                         @Override
                         public void onSuccess(List<MessagePlus> responseData, boolean appended) {
+                            for(String sentMessageId : sentMessageIds) {
+                                mDatabase.deleteActionMessage(sentMessageId);
+                            }
                             for(MessagePlus mp : responseData) {
                                 String targetMessageId = AnnotationUtility.getTargetMessageId(mp.getMessage());
                                 mDatabase.insertOrReplaceActionMessage(mp, targetMessageId, targetChannelId);
