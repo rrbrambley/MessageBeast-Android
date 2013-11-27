@@ -1,5 +1,7 @@
 package com.alwaysallthetime.adnlibutils;
 
+import android.util.Log;
+
 import com.alwaysallthetime.adnlib.AppDotNetClient;
 import com.alwaysallthetime.adnlib.GeneralParameter;
 import com.alwaysallthetime.adnlib.QueryParameters;
@@ -23,6 +25,8 @@ import java.util.List;
  */
 public class PrivateChannelUtility {
 
+    private static final String TAG = "ADNLibUtils_PrivateChannelUtility";
+
     public static final String CHANNEL_TYPE_ACTION = "com.alwaysallthetime.action";
 
     public static final String CHANNEL_ANNOTATION_TYPE_METADATA = "com.alwaysallthetime.action.metadata";
@@ -37,6 +41,11 @@ public class PrivateChannelUtility {
 
     public interface PrivateChannelHandler {
         public void onResponse(Channel channel);
+        public void onError(Exception error);
+    }
+
+    public interface PrivateChannelGetOrCreateHandler {
+        public void onResponse(Channel channel, boolean createdNewChannel);
         public void onError(Exception error);
     }
 
@@ -104,6 +113,41 @@ public class PrivateChannelUtility {
                 handler.onError(error);
             }
         });
+    }
+
+    public static void getOrCreateChannel(final AppDotNetClient client, final String channelType, final PrivateChannelGetOrCreateHandler handler) {
+        Channel channel = getChannel(channelType);
+        if(channel == null) {
+            retrieveChannel(client, channelType, new PrivateChannelHandler() {
+                @Override
+                public void onResponse(Channel channel) {
+                    if(channel == null) {
+                        createChannel(client, channelType, new PrivateChannelHandler() {
+                            @Override
+                            public void onResponse(Channel channel) {
+                                handler.onResponse(channel, true);
+                            }
+
+                            @Override
+                            public void onError(Exception error) {
+                                Log.e(TAG, error.getMessage(), error);
+                                handler.onError(error);
+                            }
+                        });
+                    } else {
+                        handler.onResponse(channel, false);
+                    }
+                }
+
+                @Override
+                public void onError(Exception error) {
+                    Log.e(TAG, error.getMessage(), error);
+                    handler.onError(error);
+                }
+            });
+        } else {
+            handler.onResponse(channel, false);
+        }
     }
 
     public static void createChannel(final AppDotNetClient client, final String channelType, final PrivateChannelHandler handler) {
