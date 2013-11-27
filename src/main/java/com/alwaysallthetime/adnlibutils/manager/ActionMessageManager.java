@@ -6,7 +6,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.util.Log;
 
-import com.alwaysallthetime.adnlib.AppDotNetClient;
 import com.alwaysallthetime.adnlib.GeneralParameter;
 import com.alwaysallthetime.adnlib.QueryParameters;
 import com.alwaysallthetime.adnlib.data.Annotation;
@@ -102,45 +101,20 @@ public class ActionMessageManager {
     }
 
     public synchronized void initActionChannel(final String actionType, final Channel targetChannel, final ActionChannelInitializedHandler handler) {
-        Channel actionChannel = PrivateChannelUtility.getActionChannel(actionType, targetChannel.getId());
-        if(actionChannel == null) {
-            final AppDotNetClient client = mMessageManager.getClient();
-            PrivateChannelUtility.retrieveActionChannel(client, actionType, targetChannel.getId(), new PrivateChannelUtility.PrivateChannelHandler() {
-                @Override
-                public void onResponse(Channel channel) {
-                    if(channel == null) {
-                        PrivateChannelUtility.createActionChannel(client, actionType, targetChannel.getId(), new PrivateChannelUtility.PrivateChannelHandler() {
-                            @Override
-                            public void onResponse(Channel channel) {
-                                mActionChannels.put(channel.getId(), channel);
-                                mMessageManager.setParameters(channel.getId(), ACTION_MESSAGE_QUERY_PARAMETERS);
-                                handler.onInitialized(channel);
-                            }
+        PrivateChannelUtility.getOrCreateActionChannel(mMessageManager.getClient(), actionType, targetChannel, new PrivateChannelUtility.PrivateChannelGetOrCreateHandler() {
+            @Override
+            public void onResponse(Channel channel, boolean createdNewChannel) {
+                mActionChannels.put(channel.getId(), channel);
+                mMessageManager.setParameters(channel.getId(), ACTION_MESSAGE_QUERY_PARAMETERS);
+                handler.onInitialized(channel);
+            }
 
-                            @Override
-                            public void onError(Exception error) {
-                                Log.d(TAG, error.getMessage(), error);
-                                handler.onException(error);
-                            }
-                        });
-                    } else {
-                        mActionChannels.put(channel.getId(), channel);
-                        mMessageManager.setParameters(channel.getId(), ACTION_MESSAGE_QUERY_PARAMETERS);
-                        handler.onInitialized(channel);
-                    }
-                }
-
-                @Override
-                public void onError(Exception error) {
-                    Log.d(TAG, error.getMessage(), error);
-                    handler.onException(error);
-                }
-            });
-        } else {
-            mActionChannels.put(actionChannel.getId(), actionChannel);
-            mMessageManager.setParameters(actionChannel.getId(), ACTION_MESSAGE_QUERY_PARAMETERS);
-            handler.onInitialized(actionChannel);
-        }
+            @Override
+            public void onError(Exception error) {
+                Log.e(TAG, error.getMessage(), error);
+                handler.onException(error);
+            }
+        });
     }
 
     private TreeMap<String, MessagePlus> getOrCreateActionedMessagesMap(String channelId) {

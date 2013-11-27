@@ -150,6 +150,41 @@ public class PrivateChannelUtility {
         }
     }
 
+    public static void getOrCreateActionChannel(final AppDotNetClient client, final String actionType, final Channel targetChannel, final PrivateChannelGetOrCreateHandler handler) {
+        Channel actionChannel = PrivateChannelUtility.getActionChannel(actionType, targetChannel.getId());
+        if(actionChannel == null) {
+            retrieveActionChannel(client, actionType, targetChannel.getId(), new PrivateChannelHandler() {
+                @Override
+                public void onResponse(Channel channel) {
+                    if(channel == null) {
+                        createActionChannel(client, actionType, targetChannel.getId(), new PrivateChannelHandler() {
+                            @Override
+                            public void onResponse(Channel channel) {
+                                handler.onResponse(channel, true);
+                            }
+
+                            @Override
+                            public void onError(Exception error) {
+                                Log.d(TAG, error.getMessage(), error);
+                                handler.onError(error);
+                            }
+                        });
+                    } else {
+                        handler.onResponse(channel, false);
+                    }
+                }
+
+                @Override
+                public void onError(Exception error) {
+                    Log.e(TAG, error.getMessage(), error);
+                    handler.onError(error);
+                }
+            });
+        } else {
+            handler.onResponse(actionChannel, false);
+        }
+    }
+
     public static void createChannel(final AppDotNetClient client, final String channelType, final PrivateChannelHandler handler) {
         createChannel(client, channelType, new ArrayList<Annotation>(0), new PrivateChannelHandler() {
             @Override
