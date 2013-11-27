@@ -623,7 +623,7 @@ public class MessageManager {
             messagesNeedingPendingFile.add(messagePlus);
             //TODO: this should somehow be prepopulated?
 
-            FileManager.getInstance(mContext, mClient).startPendingFileUpload(pendingFileId);
+            FileManager.getInstance().startPendingFileUpload(pendingFileId);
             return;
         }
         final Message message = messagePlus.getMessage();

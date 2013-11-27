@@ -6,9 +6,9 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.Uri;
 
-import com.alwaysallthetime.adnlib.AppDotNetClient;
 import com.alwaysallthetime.adnlib.data.File;
 import com.alwaysallthetime.adnlib.gson.AppDotNetGson;
+import com.alwaysallthetime.adnlibutils.ADNApplication;
 import com.alwaysallthetime.adnlibutils.db.ADNDatabase;
 import com.alwaysallthetime.adnlibutils.db.PendingFile;
 
@@ -18,28 +18,22 @@ public class FileManager {
 
     private final Context mContext;
     private ADNDatabase mDatabase;
-    private AppDotNetClient mClient;
 
     private static FileManager sInstance;
 
     public static FileManager getInstance() {
-        return sInstance;
-    }
-
-    public static FileManager getInstance(Context context, AppDotNetClient client) {
         if(sInstance == null) {
-            sInstance = new FileManager(context, client);
+            sInstance = new FileManager();
         }
         return sInstance;
     }
 
-    private FileManager(Context context, AppDotNetClient client) {
-        mContext = context;
-        mDatabase = ADNDatabase.getInstance(context);
-        mClient = client;
+    private FileManager() {
+        mContext = ADNApplication.getContext();
+        mDatabase = ADNDatabase.getInstance(mContext);
 
         IntentFilter intentFilter = new IntentFilter(FileUploadService.INTENT_ACTION_FILE_UPLOAD_COMPLETE);
-        context.registerReceiver(fileUploadReceiver, intentFilter);
+        mContext.registerReceiver(fileUploadReceiver, intentFilter);
     }
 
     public String addPendingFile(Uri uri, String type, String name, String mimeType, String kind, boolean isPublic) {
