@@ -251,6 +251,7 @@ public class PrivateChannelUtility {
                 client.subscribeChannel(responseData, params, new ChannelResponseHandler() {
                     @Override
                     public void onSuccess(Channel responseData) {
+                        ADNSharedPreferences.setFullSyncState(responseData.getId(), FullSyncState.COMPLETE);
                         handler.onResponse(responseData);
                     }
                 });

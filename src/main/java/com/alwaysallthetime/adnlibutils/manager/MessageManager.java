@@ -18,6 +18,8 @@ import com.alwaysallthetime.adnlib.data.MessageList;
 import com.alwaysallthetime.adnlib.gson.AppDotNetGson;
 import com.alwaysallthetime.adnlib.response.MessageListResponseHandler;
 import com.alwaysallthetime.adnlib.response.MessageResponseHandler;
+import com.alwaysallthetime.adnlibutils.ADNSharedPreferences;
+import com.alwaysallthetime.adnlibutils.FullSyncState;
 import com.alwaysallthetime.adnlibutils.db.ADNDatabase;
 import com.alwaysallthetime.adnlibutils.db.DisplayLocationInstances;
 import com.alwaysallthetime.adnlibutils.db.HashtagInstances;
@@ -544,12 +546,21 @@ public class MessageManager {
         });
     }
 
+    public FullSyncState getFullSyncState(String channelId) {
+        return ADNSharedPreferences.getFullSyncState(channelId);
+    }
+
+    public void setFullSyncState(String channelId, FullSyncState state) {
+        ADNSharedPreferences.setFullSyncState(channelId, state);
+    }
+
     /**
      * Sync and persist all Messages in a Channel.
      *
      * This is intended to be used as a one-time sync, e.g. after a user signs in. For this reason,
      * it is required that your MessageManagerConfiguration has its isDatabaseInsertionEnabled property
-     * set to true.
+     * set to true. Typically, you should call getFullSyncState() to check whether this channel has
+     * already been synced before calling this method.
      *
      * Because this could potentially result in a very large amount of Messages being obtained,
      * the provided MessageManagerResponseHandler will only be passed the first 100 Messages that are
@@ -566,6 +577,7 @@ public class MessageManager {
         if(!mConfiguration.isDatabaseInsertionEnabled) {
             throw new RuntimeException("Database insertion must be enabled to use this functionality.");
         }
+        ADNSharedPreferences.setFullSyncState(channelId, FullSyncState.STARTED);
         final ArrayList<MessagePlus> messages = new ArrayList<MessagePlus>(MAX_MESSAGES_RETURNED_ON_SYNC);
         String sinceId = null;
         String beforeId = null;
@@ -595,6 +607,7 @@ public class MessageManager {
                     MessagePlus minMessage = responseData.get(responseData.size() - 1);
                     retrieveAllMessages(messages, null, minMessage.getMessage().getId(), channelId, responseHandler);
                 } else {
+                    ADNSharedPreferences.setFullSyncState(channelId, FullSyncState.COMPLETE);
                     Log.d(TAG, "Num messages synced: " + responseHandler.getNumMessagesSynced());
                     responseHandler.onSuccess(messages, true);
                 }

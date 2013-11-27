@@ -20,6 +20,7 @@ public class ADNSharedPreferences {
     private static final String USER_OBJECT = "user";
     private static final String CHANNEL_OBJECT = "channel";
     private static final String ACTION_CHANNEL_OBJECT = "actionChannel";
+    private static final String FULL_SYNC_STATE = "fullSyncState";
 
     private static SharedPreferences sPrefs;
     private static Gson gson;
@@ -27,6 +28,16 @@ public class ADNSharedPreferences {
     static {
         sPrefs = PreferenceManager.getDefaultSharedPreferences(ADNApplication.getContext());
         gson = AppDotNetGson.getPersistenceInstance();
+    }
+
+    public static FullSyncState getFullSyncState(String channelId) {
+        return FullSyncState.fromOrdinal(sPrefs.getInt(FULL_SYNC_STATE + "_" + channelId, 0));
+    }
+
+    public static void setFullSyncState(String channelId, FullSyncState state) {
+        SharedPreferences.Editor edit = sPrefs.edit();
+        edit.putInt(FULL_SYNC_STATE + "_" + channelId, state.ordinal());
+        edit.commit();
     }
 
     public static boolean isLoggedIn() {
