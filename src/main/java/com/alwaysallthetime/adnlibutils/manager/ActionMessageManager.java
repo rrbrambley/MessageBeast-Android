@@ -83,7 +83,7 @@ public class ActionMessageManager {
                 super.onBatchSynced(messages);
 
                 for(MessagePlus actionMessage : messages) {
-                    String targetMessageId = getTargetMessageId(actionMessage);
+                    String targetMessageId = AnnotationUtility.getTargetMessageId(actionMessage.getMessage());
                     mDatabase.insertOrReplaceActionMessage(actionMessage, targetMessageId, targetChannelId);
                 }
             }
@@ -152,20 +152,10 @@ public class ActionMessageManager {
         return channelMap;
     }
 
-    private String getTargetMessageId(MessagePlus actionMessage) {
-        Annotation targetMessage = actionMessage.getMessage().getFirstAnnotationOfType(PrivateChannelUtility.MESSAGE_ANNOTATION_TARGET_MESSAGE);
-        if(targetMessage != null) {
-            return (String) targetMessage.getValue().get(PrivateChannelUtility.TARGET_MESSAGE_KEY_ID);
-        } else {
-            Log.e(TAG, "Action message " + actionMessage.getMessage().getId() + " does not have target message annotation");
-            return null;
-        }
-    }
-
     private Set<String> getTargetMessageIds(Collection<MessagePlus> messagePlusses) {
         HashSet<String> newTargetMessageIds = new HashSet<String>(messagePlusses.size());
         for(MessagePlus mp : messagePlusses) {
-            newTargetMessageIds.add(getTargetMessageId(mp));
+            newTargetMessageIds.add(AnnotationUtility.getTargetMessageId(mp.getMessage()));
         }
         return newTargetMessageIds;
     }
@@ -309,7 +299,7 @@ public class ActionMessageManager {
                         @Override
                         public void onSuccess(List<MessagePlus> responseData, boolean appended) {
                             for(MessagePlus mp : responseData) {
-                                String targetMessageId = getTargetMessageId(mp);
+                                String targetMessageId = AnnotationUtility.getTargetMessageId(mp.getMessage());
                                 mDatabase.insertOrReplaceActionMessage(mp, targetMessageId, targetChannelId);
                             }
                         }

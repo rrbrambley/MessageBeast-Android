@@ -106,6 +106,14 @@ public class AnnotationUtility {
         return null;
     }
 
+    public static String getTargetMessageId(Message actionMessage) {
+        Annotation targetMessage = actionMessage.getFirstAnnotationOfType(PrivateChannelUtility.MESSAGE_ANNOTATION_TARGET_MESSAGE);
+        if(targetMessage != null) {
+            return (String) targetMessage.getValue().get(PrivateChannelUtility.TARGET_MESSAGE_KEY_ID);
+        }
+        return null;
+    }
+
     private static void initFormatter() {
         if(mIso8601Format == null) {
             mIso8601Format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
