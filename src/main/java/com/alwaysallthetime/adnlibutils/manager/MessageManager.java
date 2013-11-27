@@ -12,6 +12,7 @@ import com.alwaysallthetime.adnlib.Annotations;
 import com.alwaysallthetime.adnlib.AppDotNetClient;
 import com.alwaysallthetime.adnlib.QueryParameters;
 import com.alwaysallthetime.adnlib.data.Annotation;
+import com.alwaysallthetime.adnlib.data.Channel;
 import com.alwaysallthetime.adnlib.data.File;
 import com.alwaysallthetime.adnlib.data.Message;
 import com.alwaysallthetime.adnlib.data.MessageList;
@@ -552,6 +553,30 @@ public class MessageManager {
 
     public void setFullSyncState(String channelId, FullSyncState state) {
         ADNSharedPreferences.setFullSyncState(channelId, state);
+    }
+
+    /**
+     * Get a FullSyncState representing the sync state of multiple channels.
+     * In some cases, we might need several channels to be synced, and one
+     * or more of them may be in a NOT_STARTED or STARTED state. Since we typically
+     * would not need to disclose granular details about the sync state of
+     * many channels to a user, this method will return STARTED if *any* channel
+     * in the provided array is in the STARTED state. Otherwise, NOT_STARTED will
+     * be returned if any of the channels is not COMPLETE.
+     *
+     * @param channels
+     * @return A FullSyncState representing the sync state of the provided group of Channels.
+     */
+    public synchronized FullSyncState getFullSyncState(Channel[] channels) {
+        FullSyncState state = FullSyncState.COMPLETE;
+        for(Channel channel : channels) {
+            if(getFullSyncState(channel.getId()) == FullSyncState.STARTED) {
+                return FullSyncState.STARTED;
+            } else if(getFullSyncState(channel.getId()) == FullSyncState.NOT_STARTED) {
+                state = FullSyncState.NOT_STARTED;
+            }
+        }
+        return state;
     }
 
     /**
