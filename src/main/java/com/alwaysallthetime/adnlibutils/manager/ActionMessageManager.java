@@ -242,7 +242,7 @@ public class ActionMessageManager {
     public synchronized void removeChannelAction(String actionChannelId, final String targetMessageId) {
         ArrayList<String> targetMessageIds = new ArrayList<String>(1);
         targetMessageIds.add(targetMessageId);
-        List<ActionMessage> actionMessages = mDatabase.getActionMessagesForTargetMessages(targetMessageIds);
+        List<ActionMessage> actionMessages = mDatabase.getActionMessagesForTargetMessages(actionChannelId, targetMessageIds);
 
         if(actionMessages.size() == 1) {
             mDatabase.deleteActionMessage(actionChannelId, targetMessageId);
@@ -264,6 +264,8 @@ public class ActionMessageManager {
                     Log.d(TAG, "Failed to delete action message " + actionMessage.getActionMessageId() + " for target message " + targetMessageId);
                 }
             });
+        } else {
+            Log.e(TAG, "Calling removeChannelAction, but actionChannelId " + actionChannelId + " and targetMessageId " + targetMessageId + " yielded 0 db results. wtf.");
         }
     }
 
