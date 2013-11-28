@@ -68,6 +68,20 @@ public class ActionMessageManager {
         context.registerReceiver(sentMessageReceiver, new IntentFilter(MessageManager.INTENT_ACTION_UNSENT_MESSAGES_SENT));
     }
 
+    /**
+     * Sync and persist all Action Messages in a Channel.
+     *
+     * Instead of using the similar MessageManager method, this method should be used
+     * to sync messages for an Action Channel. As batches of Messages are obtained, the Target Message id
+     * for each Action Message will be extracted from annotations and stored to the sqlite database
+     * for lookup at a later time.
+     *
+     * @param actionChannelId The id of the Action Channel for which messages will be synced.
+     * @param targetChannelId The id of the Target Channel
+     * @param responseHandler MessageManagerSyncResponseHandler
+     *
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#retrieveAndPersistAllMessages(String, com.alwaysallthetime.adnlibutils.manager.MessageManager.MessageManagerSyncResponseHandler)  
+     */
     public void retrieveAndPersistAllActionMessages(final String actionChannelId, final String targetChannelId, final MessageManager.MessageManagerSyncResponseHandler responseHandler) {
         mMessageManager.retrieveAndPersistAllMessages(actionChannelId, new MessageManager.MessageManagerSyncResponseHandler() {
             @Override
