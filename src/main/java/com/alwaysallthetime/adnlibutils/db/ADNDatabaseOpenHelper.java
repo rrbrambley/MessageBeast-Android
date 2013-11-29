@@ -9,11 +9,12 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
 
     private static final String TAG = "ADNLibUtils_AADNDatabaseOpenHelper";
 
-    private static final String CREATE_MESSAGES_TABLE = "CREATE TABLE IF NOT EXISTS " + ADNDatabase.TABLE_MESSAGES + "(" +
+    private static final String CREATE_MESSAGES_TABLE = "CREATE VIRTUAL TABLE IF NOT EXISTS " + ADNDatabase.TABLE_MESSAGES + " USING fts3 (" +
             ADNDatabase.COL_MESSAGE_ID + " TEXT PRIMARY KEY, " +
             ADNDatabase.COL_MESSAGE_CHANNEL_ID + " TEXT NOT NULL, " +
             ADNDatabase.COL_MESSAGE_DATE + " INTEGER NOT NULL, " +
             ADNDatabase.COL_MESSAGE_JSON + " TEXT NOT NULL, " +
+            ADNDatabase.COL_MESSAGE_TEXT + " TEXT NOT NULL, " +
             ADNDatabase.COL_MESSAGE_UNSENT + " BOOLEAN, " +
             ADNDatabase.COL_MESSAGE_SEND_ATTEMPTS + " INTEGER " +
             ")";
