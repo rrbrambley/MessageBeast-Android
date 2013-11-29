@@ -947,6 +947,12 @@ public class ADNDatabase {
         return instances;
     }
 
+    public OrderedMessageBatch searchForMessages(String channelId, String query) {
+        String where = COL_MESSAGE_CHANNEL_ID + " = ? AND " + COL_MESSAGE_TEXT + " MATCH ?";
+        String[] args = new String[] { channelId, query };
+        return getMessages(where, args, null, null);
+    }
+
     public MessagePlus getMessage(String channelId, String messageId) {
         HashSet<String> ids = new HashSet<String>(1);
         ids.add(messageId);
