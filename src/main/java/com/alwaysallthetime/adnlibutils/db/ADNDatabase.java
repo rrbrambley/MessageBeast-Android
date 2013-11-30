@@ -258,17 +258,18 @@ public class ADNDatabase {
         Date displayDate = messagePlus.getDisplayDate();
         Message message = messagePlus.getMessage();
         String text = message.getText();
-        if(text == null) {
-            text = "";
-        }
-        message.setText("");
+        message.setText(null);
 
         try {
             mInsertOrReplaceMessage.bindString(1, message.getId());
             mInsertOrReplaceMessage.bindString(2, message.getChannelId());
             mInsertOrReplaceMessage.bindLong(3, displayDate.getTime());
             mInsertOrReplaceMessage.bindString(4, mGson.toJson(message));
-            mInsertOrReplaceMessage.bindString(5, text);
+            if(text != null) {
+                mInsertOrReplaceMessage.bindString(5, text);
+            } else {
+                mInsertOrReplaceMessage.bindNull(5);
+            }
             mInsertOrReplaceMessage.bindLong(6, messagePlus.isUnsent() ? 1 : 0);
             mInsertOrReplaceMessage.bindLong(7, messagePlus.getNumSendAttempts());
             mInsertOrReplaceMessage.execute();
