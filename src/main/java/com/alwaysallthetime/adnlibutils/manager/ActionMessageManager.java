@@ -109,11 +109,28 @@ public class ActionMessageManager {
         });
     }
 
+    /**
+     * Return true if the specified target Message has had an action performed on it (the action
+     * whose id is actionChannelId).
+     *
+     * @param actionChannelId the id of the Action Channel
+     * @param targetMessageId The id of the target Message
+     *
+     * @return true if the specified target Message has had an action performed on it.
+     */
     public boolean isActioned(String actionChannelId, String targetMessageId) {
         return getOrCreateActionedMessagesMap(actionChannelId).get(targetMessageId) != null ||
                 mDatabase.hasActionMessage(actionChannelId, targetMessageId);
     }
 
+    /**
+     * Initialize an Action Channel. This is typically done at app startup and must be done before
+     * any other ActionMessageManager methods are used on the channel.
+     *
+     * @param actionType The identifier for the Action Channel (e.g. com.alwaysallthetime.pizzaparty)
+     * @param targetChannel The Channel whose messages will have actions performed.
+     * @param handler ActionChannelInitializedHandler
+     */
     public synchronized void initActionChannel(final String actionType, final Channel targetChannel, final ActionChannelInitializedHandler handler) {
         PrivateChannelUtility.getOrCreateActionChannel(mMessageManager.getClient(), actionType, targetChannel, new PrivateChannelUtility.PrivateChannelGetOrCreateHandler() {
             @Override
