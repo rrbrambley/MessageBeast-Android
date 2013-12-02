@@ -151,7 +151,7 @@ public class PrivateChannelUtility {
     }
 
     public static void getOrCreateActionChannel(final AppDotNetClient client, final String actionType, final Channel targetChannel, final PrivateChannelGetOrCreateHandler handler) {
-        Channel actionChannel = PrivateChannelUtility.getActionChannel(actionType, targetChannel.getId());
+        Channel actionChannel = getActionChannel(actionType, targetChannel.getId());
         if(actionChannel == null) {
             retrieveActionChannel(client, actionType, targetChannel.getId(), new PrivateChannelHandler() {
                 @Override
