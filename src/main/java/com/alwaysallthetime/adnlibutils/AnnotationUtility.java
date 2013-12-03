@@ -13,6 +13,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TimeZone;
 
 /**
  * Created by brambley on 10/9/13.
@@ -117,6 +118,7 @@ public class AnnotationUtility {
     private static void initFormatter() {
         if(mIso8601Format == null) {
             mIso8601Format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+            mIso8601Format.setTimeZone(TimeZone.getTimeZone("UTC"));
         }
     }
 }
