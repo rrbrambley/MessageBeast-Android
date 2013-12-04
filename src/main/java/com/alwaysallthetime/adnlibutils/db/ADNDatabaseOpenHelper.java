@@ -14,7 +14,7 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
             ADNDatabase.COL_MESSAGE_CHANNEL_ID + " TEXT NOT NULL, " +
             ADNDatabase.COL_MESSAGE_DATE + " INTEGER NOT NULL, " +
             ADNDatabase.COL_MESSAGE_JSON + " TEXT NOT NULL, " +
-            ADNDatabase.COL_MESSAGE_TEXT + " TEXT NOT NULL, " +
+            ADNDatabase.COL_MESSAGE_TEXT + " TEXT, " +
             ADNDatabase.COL_MESSAGE_UNSENT + " BOOLEAN, " +
             ADNDatabase.COL_MESSAGE_SEND_ATTEMPTS + " INTEGER " +
             ")";
