@@ -539,11 +539,11 @@ public class ADNDatabase {
         return false;
     }
 
-    public List<ActionMessageSpec> getActionMessagesForTargetMessages(List<String> targetMessageIds) {
-        return getActionMessagesForTargetMessages(null, targetMessageIds);
+    public List<ActionMessageSpec> getActionMessageSpecsForTargetMessages(List<String> targetMessageIds) {
+        return getActionMessageSpecsForTargetMessages(null, targetMessageIds);
     }
 
-    public List<ActionMessageSpec> getActionMessagesForTargetMessages(String actionChannelId, List<String> targetMessageIds) {
+    public List<ActionMessageSpec> getActionMessageSpecsForTargetMessages(String actionChannelId, List<String> targetMessageIds) {
         ArrayList<ActionMessageSpec> actionMessageSpecs = new ArrayList<ActionMessageSpec>();
         Cursor cursor = null;
         try {

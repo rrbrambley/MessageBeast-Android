@@ -266,7 +266,7 @@ public class ActionMessageManager {
     public synchronized void removeChannelAction(String actionChannelId, final String targetMessageId) {
         ArrayList<String> targetMessageIds = new ArrayList<String>(1);
         targetMessageIds.add(targetMessageId);
-        List<ActionMessageSpec> actionMessageSpecs = mDatabase.getActionMessagesForTargetMessages(actionChannelId, targetMessageIds);
+        List<ActionMessageSpec> actionMessageSpecs = mDatabase.getActionMessageSpecsForTargetMessages(actionChannelId, targetMessageIds);
 
         if(actionMessageSpecs.size() == 1) {
             mDatabase.deleteActionMessage(actionChannelId, targetMessageId);
@@ -309,7 +309,7 @@ public class ActionMessageManager {
                     mActionedMessages.remove(channelId);
 
                     //remove all action messages that point to this now nonexistent target message id
-                    List<ActionMessageSpec> sentTargetMessages = mDatabase.getActionMessagesForTargetMessages(sentMessageIds);
+                    List<ActionMessageSpec> sentTargetMessages = mDatabase.getActionMessageSpecsForTargetMessages(sentMessageIds);
                     for(ActionMessageSpec actionMessageSpec : sentTargetMessages) {
                         String actionChannelId = actionMessageSpec.getActionChannelId();
                         mDatabase.deleteActionMessage(actionChannelId, actionMessageSpec.getTargetMessageId());
