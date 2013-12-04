@@ -539,12 +539,12 @@ public class ADNDatabase {
         return false;
     }
 
-    public List<ActionMessage> getActionMessagesForTargetMessages(List<String> targetMessageIds) {
+    public List<ActionMessageSpec> getActionMessagesForTargetMessages(List<String> targetMessageIds) {
         return getActionMessagesForTargetMessages(null, targetMessageIds);
     }
 
-    public List<ActionMessage> getActionMessagesForTargetMessages(String actionChannelId, List<String> targetMessageIds) {
-        ArrayList<ActionMessage> actionMessages = new ArrayList<ActionMessage>();
+    public List<ActionMessageSpec> getActionMessagesForTargetMessages(String actionChannelId, List<String> targetMessageIds) {
+        ArrayList<ActionMessageSpec> actionMessageSpecs = new ArrayList<ActionMessageSpec>();
         Cursor cursor = null;
         try {
             String where = "";
@@ -581,8 +581,8 @@ public class ADNDatabase {
                 String tMessageId = cursor.getString(2);
                 String tChannelId = cursor.getString(3);
 
-                ActionMessage actionMessage = new ActionMessage(aMessageId, aChannelId, tMessageId, tChannelId);
-                actionMessages.add(actionMessage);
+                ActionMessageSpec actionMessageSpec = new ActionMessageSpec(aMessageId, aChannelId, tMessageId, tChannelId);
+                actionMessageSpecs.add(actionMessageSpec);
             }
         } catch(Exception e) {
             Log.e(TAG, e.getMessage(), e);
@@ -591,7 +591,7 @@ public class ADNDatabase {
                 cursor.close();
             }
         }
-        return actionMessages;
+        return actionMessageSpecs;
     }
 
     public PendingFile getPendingFile(String id) {

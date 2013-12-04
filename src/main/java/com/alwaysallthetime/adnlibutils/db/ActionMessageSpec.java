@@ -1,12 +1,12 @@
 package com.alwaysallthetime.adnlibutils.db;
 
-public class ActionMessage {
+public class ActionMessageSpec {
     private String mActionMessageId;
     private String mActionChannelId;
     private String mTargetMessageId;
     private String mTargetChannelId;
 
-    public ActionMessage(String actionMessageId, String actionChannelId, String targetMessageId, String targetChannelId) {
+    public ActionMessageSpec(String actionMessageId, String actionChannelId, String targetMessageId, String targetChannelId) {
         mActionMessageId = actionMessageId;
         mActionChannelId = actionChannelId;
         mTargetMessageId = targetMessageId;

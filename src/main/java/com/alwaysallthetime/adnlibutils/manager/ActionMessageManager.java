@@ -16,7 +16,7 @@ import com.alwaysallthetime.adnlibutils.AnnotationFactory;
 import com.alwaysallthetime.adnlibutils.AnnotationUtility;
 import com.alwaysallthetime.adnlibutils.PrivateChannelUtility;
 import com.alwaysallthetime.adnlibutils.db.ADNDatabase;
-import com.alwaysallthetime.adnlibutils.db.ActionMessage;
+import com.alwaysallthetime.adnlibutils.db.ActionMessageSpec;
 import com.alwaysallthetime.adnlibutils.model.MessagePlus;
 
 import java.util.ArrayList;
@@ -266,26 +266,26 @@ public class ActionMessageManager {
     public synchronized void removeChannelAction(String actionChannelId, final String targetMessageId) {
         ArrayList<String> targetMessageIds = new ArrayList<String>(1);
         targetMessageIds.add(targetMessageId);
-        List<ActionMessage> actionMessages = mDatabase.getActionMessagesForTargetMessages(actionChannelId, targetMessageIds);
+        List<ActionMessageSpec> actionMessageSpecs = mDatabase.getActionMessagesForTargetMessages(actionChannelId, targetMessageIds);
 
-        if(actionMessages.size() == 1) {
+        if(actionMessageSpecs.size() == 1) {
             mDatabase.deleteActionMessage(actionChannelId, targetMessageId);
             TreeMap<String, MessagePlus> actionedMessages = getOrCreateActionedMessagesMap(actionChannelId);
             actionedMessages.remove(targetMessageId);
 
-            final ActionMessage actionMessage = actionMessages.get(0);
-            MessagePlus actionMessagePlus = mDatabase.getMessage(actionChannelId, actionMessage.getActionMessageId());
+            final ActionMessageSpec actionMessageSpec = actionMessageSpecs.get(0);
+            MessagePlus actionMessagePlus = mDatabase.getMessage(actionChannelId, actionMessageSpec.getActionMessageId());
 
             //the success/failure of this should not matter - on failure, it will be a pending deletion
             mMessageManager.deleteMessage(actionMessagePlus, new MessageManager.MessageDeletionResponseHandler() {
                 @Override
                 public void onSuccess() {
-                    Log.d(TAG, "Successfully deleted action message " + actionMessage.getActionMessageId() + " for target message " + targetMessageId);
+                    Log.d(TAG, "Successfully deleted action message " + actionMessageSpec.getActionMessageId() + " for target message " + targetMessageId);
                 }
 
                 @Override
                 public void onError(Exception exception) {
-                    Log.d(TAG, "Failed to delete action message " + actionMessage.getActionMessageId() + " for target message " + targetMessageId);
+                    Log.d(TAG, "Failed to delete action message " + actionMessageSpec.getActionMessageId() + " for target message " + targetMessageId);
                 }
             });
         } else {
@@ -309,10 +309,10 @@ public class ActionMessageManager {
                     mActionedMessages.remove(channelId);
 
                     //remove all action messages that point to this now nonexistent target message id
-                    List<ActionMessage> sentTargetMessages = mDatabase.getActionMessagesForTargetMessages(sentMessageIds);
-                    for(ActionMessage actionMessage : sentTargetMessages) {
-                        String actionChannelId = actionMessage.getActionChannelId();
-                        mDatabase.deleteActionMessage(actionChannelId, actionMessage.getTargetMessageId());
+                    List<ActionMessageSpec> sentTargetMessages = mDatabase.getActionMessagesForTargetMessages(sentMessageIds);
+                    for(ActionMessageSpec actionMessageSpec : sentTargetMessages) {
+                        String actionChannelId = actionMessageSpec.getActionChannelId();
+                        mDatabase.deleteActionMessage(actionChannelId, actionMessageSpec.getTargetMessageId());
                     }
                 } else {
                     //it's an action channel
