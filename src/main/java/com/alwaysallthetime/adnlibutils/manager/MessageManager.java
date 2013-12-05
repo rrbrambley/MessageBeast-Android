@@ -793,7 +793,7 @@ public class MessageManager {
         sendPendingDeletions(channelId);
     }
 
-    public synchronized void sendUnsentMessages(final String channelId) {
+    public synchronized boolean sendUnsentMessages(final String channelId) {
         LinkedHashMap<String, MessagePlus> unsentMessages = getUnsentMessages(channelId);
         if(unsentMessages.size() > 0) {
             LinkedHashMap<String, MessagePlus> channelMessages = getChannelMessages(channelId);
@@ -803,7 +803,9 @@ public class MessageManager {
             }
             ArrayList<String> sentMessageIds = new ArrayList<String>(unsentMessages.size());
             sendUnsentMessages(unsentMessages, sentMessageIds);
+            return true;
         }
+        return false;
     }
 
     public synchronized void sendPendingDeletions(final String channelId) {
