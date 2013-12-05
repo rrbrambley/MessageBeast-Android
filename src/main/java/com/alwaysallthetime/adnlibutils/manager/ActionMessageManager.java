@@ -116,7 +116,7 @@ public class ActionMessageManager {
 
                 for(MessagePlus actionMessage : messages) {
                     String targetMessageId = AnnotationUtility.getTargetMessageId(actionMessage.getMessage());
-                    mDatabase.insertOrReplaceActionMessage(actionMessage, targetMessageId, targetChannelId);
+                    mDatabase.insertOrReplaceActionMessageSpec(actionMessage, targetMessageId, targetChannelId);
                 }
             }
 
@@ -139,7 +139,7 @@ public class ActionMessageManager {
      */
     public boolean isActioned(String actionChannelId, String targetMessageId) {
         return getOrCreateActionedMessagesMap(actionChannelId).get(targetMessageId) != null ||
-                mDatabase.hasActionMessage(actionChannelId, targetMessageId);
+                mDatabase.hasActionMessageSpec(actionChannelId, targetMessageId);
     }
 
     /**
@@ -258,7 +258,7 @@ public class ActionMessageManager {
 
                 MessagePlus unsentActionMessage = mMessageManager.createUnsentMessageAndAttemptSend(actionChannelId, m);
                 actionedMessages.put(targetMessageId, targetMessagePlus);
-                mDatabase.insertOrReplaceActionMessage(unsentActionMessage, targetMessageId, message.getChannelId());
+                mDatabase.insertOrReplaceActionMessageSpec(unsentActionMessage, targetMessageId, message.getChannelId());
             }
         }
     }
@@ -269,7 +269,7 @@ public class ActionMessageManager {
         List<ActionMessageSpec> actionMessageSpecs = mDatabase.getActionMessageSpecsForTargetMessages(actionChannelId, targetMessageIds);
 
         if(actionMessageSpecs.size() == 1) {
-            mDatabase.deleteActionMessage(actionChannelId, targetMessageId);
+            mDatabase.deleteActionMessageSpec(actionChannelId, targetMessageId);
             TreeMap<String, MessagePlus> actionedMessages = getOrCreateActionedMessagesMap(actionChannelId);
             actionedMessages.remove(targetMessageId);
 
@@ -312,7 +312,7 @@ public class ActionMessageManager {
                     List<ActionMessageSpec> sentTargetMessages = mDatabase.getActionMessageSpecsForTargetMessages(sentMessageIds);
                     for(ActionMessageSpec actionMessageSpec : sentTargetMessages) {
                         String actionChannelId = actionMessageSpec.getActionChannelId();
-                        mDatabase.deleteActionMessage(actionChannelId, actionMessageSpec.getTargetMessageId());
+                        mDatabase.deleteActionMessageSpec(actionChannelId, actionMessageSpec.getTargetMessageId());
                     }
                 } else {
                     //it's an action channel
@@ -325,11 +325,11 @@ public class ActionMessageManager {
                         @Override
                         public void onSuccess(List<MessagePlus> responseData, boolean appended) {
                             for(String sentMessageId : sentMessageIds) {
-                                mDatabase.deleteActionMessage(sentMessageId);
+                                mDatabase.deleteActionMessageSpec(sentMessageId);
                             }
                             for(MessagePlus mp : responseData) {
                                 String targetMessageId = AnnotationUtility.getTargetMessageId(mp.getMessage());
-                                mDatabase.insertOrReplaceActionMessage(mp, targetMessageId, targetChannelId);
+                                mDatabase.insertOrReplaceActionMessageSpec(mp, targetMessageId, targetChannelId);
                             }
                         }
 

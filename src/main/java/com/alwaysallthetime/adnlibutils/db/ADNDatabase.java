@@ -193,7 +193,7 @@ public class ADNDatabase {
             ") " +
             "VALUES(?, ?, ?)";
 
-    private static final String INSERT_OR_REPLACE_ACTION_MESSAGE = "INSERT OR REPLACE INTO " + TABLE_ACTION_MESSAGES +
+    private static final String INSERT_OR_REPLACE_ACTION_MESSAGE_SPEC = "INSERT OR REPLACE INTO " + TABLE_ACTION_MESSAGES +
             " (" +
             COL_ACTION_MESSAGE_ID + ", " +
             COL_ACTION_MESSAGE_CHANNEL_ID + ", " +
@@ -213,7 +213,7 @@ public class ADNDatabase {
     private SQLiteStatement mInsertOrReplacePendingFile;
     private SQLiteStatement mInsertOrReplacePendingMessageDeletion;
     private SQLiteStatement mInsertOrReplacePendingOEmbed;
-    private SQLiteStatement mInsertOrReplaceActionMessage;
+    private SQLiteStatement mInsertOrReplaceActionMessageSpec;
     private Gson mGson;
 
     public static synchronized ADNDatabase getInstance(Context context) {
@@ -496,30 +496,30 @@ public class ADNDatabase {
         }
     }
 
-    public void insertOrReplaceActionMessage(MessagePlus actionMessagePlus, String targetMessageId, String targetChannelId) {
-        if(mInsertOrReplaceActionMessage == null) {
-            mInsertOrReplaceActionMessage = mDatabase.compileStatement(INSERT_OR_REPLACE_ACTION_MESSAGE);
+    public void insertOrReplaceActionMessageSpec(MessagePlus actionMessagePlus, String targetMessageId, String targetChannelId) {
+        if(mInsertOrReplaceActionMessageSpec == null) {
+            mInsertOrReplaceActionMessageSpec = mDatabase.compileStatement(INSERT_OR_REPLACE_ACTION_MESSAGE_SPEC);
         }
         mDatabase.beginTransaction();
 
         try {
             Message actionMessage = actionMessagePlus.getMessage();
 
-            mInsertOrReplaceActionMessage.bindString(1, actionMessage.getId());
-            mInsertOrReplaceActionMessage.bindString(2, actionMessage.getChannelId());
-            mInsertOrReplaceActionMessage.bindString(3, targetMessageId);
-            mInsertOrReplaceActionMessage.bindString(4, targetChannelId);
-            mInsertOrReplaceActionMessage.execute();
+            mInsertOrReplaceActionMessageSpec.bindString(1, actionMessage.getId());
+            mInsertOrReplaceActionMessageSpec.bindString(2, actionMessage.getChannelId());
+            mInsertOrReplaceActionMessageSpec.bindString(3, targetMessageId);
+            mInsertOrReplaceActionMessageSpec.bindString(4, targetChannelId);
+            mInsertOrReplaceActionMessageSpec.execute();
             mDatabase.setTransactionSuccessful();
         } catch(Exception e) {
             Log.e(TAG, e.getMessage(), e);
         } finally {
             mDatabase.endTransaction();
-            mInsertOrReplaceActionMessage.clearBindings();
+            mInsertOrReplaceActionMessageSpec.clearBindings();
         }
     }
 
-    public boolean hasActionMessage(String actionChannelId, String targetMessageId) {
+    public boolean hasActionMessageSpec(String actionChannelId, String targetMessageId) {
         Cursor cursor = null;
         try {
             String where = COL_ACTION_MESSAGE_CHANNEL_ID + " = ? AND " + COL_ACTION_MESSAGE_TARGET_MESSAGE_ID + " = ?";
@@ -1207,12 +1207,12 @@ public class ADNDatabase {
         }
     }
 
-    public void deleteActionMessage(String actionChannelId, String targetMessageId) {
+    public void deleteActionMessageSpec(String actionChannelId, String targetMessageId) {
         String where = COL_ACTION_MESSAGE_CHANNEL_ID + " = " + "'" + actionChannelId + "' AND " + COL_ACTION_MESSAGE_TARGET_MESSAGE_ID + " = " + "'" + targetMessageId + "'";
         mDatabase.delete(TABLE_ACTION_MESSAGES, where, null);
     }
 
-    public void deleteActionMessage(String actionMessageId) {
+    public void deleteActionMessageSpec(String actionMessageId) {
         String where = COL_ACTION_MESSAGE_ID + " = '" + actionMessageId + "'";
         mDatabase.delete(TABLE_ACTION_MESSAGES, where, null);
     }
