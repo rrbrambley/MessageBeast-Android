@@ -456,7 +456,7 @@ public class MessageManager {
         channelUnsentMessages.put(newMessageIdString, messagePlus);
 
         LinkedHashMap<String, MessagePlus> newChannelMessages = new LinkedHashMap<String, MessagePlus>(channelMessages.size() + 1);
-        newChannelMessages.put(messagePlus.getMessage().getId(), messagePlus);
+        newChannelMessages.put(newMessageIdString, messagePlus);
         newChannelMessages.putAll(channelMessages);
         mMessages.put(channelId, newChannelMessages);
 
