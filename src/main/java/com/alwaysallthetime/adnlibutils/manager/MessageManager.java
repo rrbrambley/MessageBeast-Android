@@ -518,6 +518,8 @@ public class MessageManager {
         }
 
         if(messageId.equals(minMaxPair.minId)) {
+            //this looks weird, but this is basically the only way
+            //to get the last id in the keyset #java #holla
             Iterator<String> iterator = channelMessages.keySet().iterator();
             String lastId = null;
             while(iterator.hasNext()) {
