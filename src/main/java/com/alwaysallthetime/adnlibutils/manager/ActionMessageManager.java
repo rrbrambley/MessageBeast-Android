@@ -105,7 +105,6 @@ public class ActionMessageManager {
         mMessageManager.retrieveAndPersistAllMessages(actionChannelId, new MessageManager.MessageManagerSyncResponseHandler() {
             @Override
             public void onSuccess(List<MessagePlus> responseData, boolean appended) {
-                extractAndStoreTargetMessagesInMemory(responseData, actionChannelId, targetChannelId);
                 responseHandler.onSuccess(responseData, appended);
                 Log.d(TAG, "Synced " + getNumMessagesSynced() + " messages for action channel " + actionChannelId);
             }
@@ -191,19 +190,16 @@ public class ActionMessageManager {
             if(loadedMessagesFromActionChannel == null || loadedMessagesFromActionChannel.size() == 0) {
                 loadedMessagesFromActionChannel = mMessageManager.loadPersistedMessages(actionChannelId, MAX_BATCH_LOAD_FROM_DISK);
             }
-            return extractAndStoreTargetMessagesInMemory(loadedMessagesFromActionChannel.values(), actionChannelId, targetChannelId);
+            return getTargetMessages(loadedMessagesFromActionChannel.values(), actionChannelId, targetChannelId);
         } else {
             return new ArrayList<MessagePlus>(channelActionedMessages.values());
         }
     }
 
-    private synchronized List<MessagePlus> extractAndStoreTargetMessagesInMemory(Collection<MessagePlus> actionMessages, String actionChannelId, String targetChannelId) {
+    private synchronized List<MessagePlus> getTargetMessages(Collection<MessagePlus> actionMessages, String actionChannelId, String targetChannelId) {
         Set<String> newTargetMessageIds = getTargetMessageIds(actionMessages);
-        LinkedHashMap<String, MessagePlus> newTargetMessages = mMessageManager.loadAndConfigureTemporaryMessages(targetChannelId, newTargetMessageIds);
-        TreeMap<String, MessagePlus> newSortedTargetMessages = new TreeMap<String, MessagePlus>(sIdComparator);
-        newSortedTargetMessages.putAll(newTargetMessages);
-        mActionedMessages.put(actionChannelId, newSortedTargetMessages);
-        return new ArrayList<MessagePlus>(newSortedTargetMessages.values());
+        LinkedHashMap<String, MessagePlus> targetMessages = mMessageManager.loadAndConfigureTemporaryMessages(targetChannelId, newTargetMessageIds);
+        return new ArrayList<MessagePlus>(targetMessages.values());
     }
 
     public synchronized void getMoreActionedMessages(final String actionChannelId, final String targetChannelId, final MessageManager.MessageManagerResponseHandler responseHandler) {
