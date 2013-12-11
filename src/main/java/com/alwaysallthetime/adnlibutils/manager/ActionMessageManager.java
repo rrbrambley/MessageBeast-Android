@@ -259,34 +259,55 @@ public class ActionMessageManager {
         }
     }
 
-    public synchronized void removeChannelAction(String actionChannelId, final String targetMessageId) {
+    public synchronized void removeChannelAction(final String actionChannelId, final String targetMessageId) {
         ArrayList<String> targetMessageIds = new ArrayList<String>(1);
         targetMessageIds.add(targetMessageId);
-        List<ActionMessageSpec> actionMessageSpecs = mDatabase.getActionMessageSpecsForTargetMessages(actionChannelId, targetMessageIds);
+        final List<ActionMessageSpec> actionMessageSpecs = mDatabase.getActionMessageSpecsForTargetMessages(actionChannelId, targetMessageIds);
 
-        if(actionMessageSpecs.size() == 1) {
+        if(actionMessageSpecs.size() > 0) {
             mDatabase.deleteActionMessageSpec(actionChannelId, targetMessageId);
             TreeMap<String, MessagePlus> actionedMessages = getOrCreateActionedMessagesMap(actionChannelId);
             actionedMessages.remove(targetMessageId);
 
-            final ActionMessageSpec actionMessageSpec = actionMessageSpecs.get(0);
-            MessagePlus actionMessagePlus = mDatabase.getMessage(actionChannelId, actionMessageSpec.getActionMessageId());
-
-            //the success/failure of this should not matter - on failure, it will be a pending deletion
-            mMessageManager.deleteMessage(actionMessagePlus, new MessageManager.MessageDeletionResponseHandler() {
+            deleteActionMessages(actionMessageSpecs, 0, new Runnable() {
                 @Override
-                public void onSuccess() {
-                    Log.d(TAG, "Successfully deleted action message " + actionMessageSpec.getActionMessageId() + " for target message " + targetMessageId);
-                }
-
-                @Override
-                public void onError(Exception exception) {
-                    Log.d(TAG, "Failed to delete action message " + actionMessageSpec.getActionMessageId() + " for target message " + targetMessageId);
+                public void run() {
+                    Log.d(TAG, "Finished deleting " + actionMessageSpecs.size() + " action messages in channel " + actionChannelId);
                 }
             });
         } else {
             Log.e(TAG, "Calling removeChannelAction, but actionChannelId " + actionChannelId + " and targetMessageId " + targetMessageId + " yielded 0 db results. wtf.");
         }
+    }
+
+    private synchronized void deleteActionMessages(final List<ActionMessageSpec> actionMessageSpecs, final int currentIndex, final Runnable completionRunnable) {
+        final ActionMessageSpec actionMessageSpec = actionMessageSpecs.get(0);
+        final String actionChannelId = actionMessageSpec.getActionChannelId();
+        MessagePlus actionMessagePlus = mDatabase.getMessage(actionChannelId, actionMessageSpec.getActionMessageId());
+
+        //the success/failure of this should not matter - on failure, it will be a pending deletion
+        mMessageManager.deleteMessage(actionMessagePlus, new MessageManager.MessageDeletionResponseHandler() {
+            @Override
+            public void onSuccess() {
+                Log.d(TAG, "Successfully deleted action message " + actionMessageSpec.getActionMessageId() + " for target message " + actionMessageSpec.getTargetMessageId());
+                deleteNext();
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                Log.d(TAG, "Failed to delete action message " + actionMessageSpec.getActionMessageId() + " for target message " + actionMessageSpec.getTargetMessageId());
+                deleteNext();
+            }
+
+            private void deleteNext() {
+                int nextIndex = currentIndex + 1;
+                if(nextIndex < actionMessageSpecs.size()) {
+                    deleteActionMessages(actionMessageSpecs, nextIndex, completionRunnable);
+                } else {
+                    completionRunnable.run();
+                }
+            }
+        });
     }
 
     private final BroadcastReceiver sentMessageReceiver = new BroadcastReceiver() {
