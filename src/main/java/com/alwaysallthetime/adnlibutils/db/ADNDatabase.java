@@ -1175,6 +1175,16 @@ public class ADNDatabase {
             if(messagePlus.hasHtml5VideoOEmbed()) {
                 deleteOEmbedInstances(messagePlus.getHtml5VideoOEmbeds().get(0).getType(), message.getId());
             }
+            if(messagePlus.hasPendingOEmbeds()) {
+                Set<String> pendingOEmbeds = messagePlus.getPendingOEmbeds();
+                for(String pendingFileId : pendingOEmbeds) {
+                    deletePendingOEmbed(pendingFileId, message.getId(), message.getChannelId());
+
+                    //TODO: can multiple message plus objects use the same pending file Id?
+                    //if so, we shouldn't do this here - must make sure no other MPs need it.
+                    deletePendingFile(pendingFileId);
+                }
+            }
 
             mDatabase.setTransactionSuccessful();
         } catch(Exception e) {
