@@ -1002,7 +1002,7 @@ public class ADNDatabase {
         String[] args = null;
 
         if(beforeDate != null) {
-            where += " AND " + COL_MESSAGE_DATE + " < ?";
+            where += " AND " + "CAST(" + COL_MESSAGE_DATE + " AS INTEGER)" + " < ?";
             args = new String[] { channelId,  String.valueOf(beforeDate.getTime()) };
         } else {
             args = new String[] { channelId };
