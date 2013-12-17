@@ -999,11 +999,10 @@ public class ADNDatabase {
 
     public OrderedMessageBatch getMessages(String channelId, Date beforeDate, int limit) {
         String where = COL_MESSAGE_CHANNEL_ID + " =?";
+        String[] args = null;
+
         if(beforeDate != null) {
             where += " AND " + COL_MESSAGE_DATE + " < ?";
-        }
-        String[] args = null;
-        if(beforeDate != null) {
             args = new String[] { channelId,  String.valueOf(beforeDate.getTime()) };
         } else {
             args = new String[] { channelId };
