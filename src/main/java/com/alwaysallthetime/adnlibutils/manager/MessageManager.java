@@ -535,16 +535,12 @@ public class MessageManager {
             @Override
             public void onSuccess(Message responseData) {
                 MessagePlus mPlus = new MessagePlus(responseData);
-                mPlus.setDisplayDate(getAdjustedDate(responseData));
-
                 LinkedHashMap<String, MessagePlus> channelMessages = mMessages.get(channelId);
                 if(channelMessages != null) { //could be null of channel messages weren't loaded first, etc.
                     channelMessages.put(responseData.getId(), mPlus);
                 }
 
-                if(mConfiguration.isDatabaseInsertionEnabled) {
-                    mDatabase.insertOrReplaceMessage(mPlus);
-                }
+                adjustDateAndInsert(mPlus);
 
                 HashSet<MessagePlus> messagePlusses = new HashSet<MessagePlus>(1);
                 messagePlusses.add(mPlus);
