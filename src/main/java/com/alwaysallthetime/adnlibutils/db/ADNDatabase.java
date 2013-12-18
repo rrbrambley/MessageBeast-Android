@@ -881,11 +881,11 @@ public class ADNDatabase {
             args.add(channelId);
 
             if(sinceDate != null) {
-                where += " AND " + COL_HASHTAG_INSTANCE_DATE + " >= ?";
+                where += " AND " + "CAST(" + COL_HASHTAG_INSTANCE_DATE + " AS INTEGER) >= ?";
                 args.add(String.valueOf(sinceDate.getTime()));
             }
             if(beforeDate != null) {
-                where += " AND " + COL_HASHTAG_INSTANCE_DATE + " < ?";
+                where += " AND " + "CAST(" + COL_HASHTAG_INSTANCE_DATE + " AS INTEGER) < ?";
                 args.add(String.valueOf(beforeDate.getTime()));
             }
 
