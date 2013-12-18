@@ -545,6 +545,16 @@ public class MessageManager {
                 if(mConfiguration.isDatabaseInsertionEnabled) {
                     mDatabase.insertOrReplaceMessage(mPlus);
                 }
+
+                HashSet<MessagePlus> messagePlusses = new HashSet<MessagePlus>(1);
+                messagePlusses.add(mPlus);
+
+                if(mConfiguration.isLocationLookupEnabled) {
+                    lookupLocation(messagePlusses, true);
+                }
+                if(mConfiguration.isOEmbedLookupEnabled) {
+                    lookupOEmbed(messagePlusses, true);
+                }
                 handler.onSuccess(mPlus);
             }
 
