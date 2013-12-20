@@ -3,6 +3,7 @@ package com.alwaysallthetime.adnlibutils.manager;
 import android.util.Log;
 
 import com.alwaysallthetime.adnlib.data.Channel;
+import com.alwaysallthetime.adnlibutils.FullSyncState;
 import com.alwaysallthetime.adnlibutils.PrivateChannelUtility;
 import com.alwaysallthetime.adnlibutils.model.ChannelSpec;
 
@@ -27,6 +28,18 @@ public class ChannelSyncManager {
     public interface ChannelsInitializedHandler {
         public void onChannelsInitialized();
         public void onException();
+    }
+
+    public static abstract class ChannelSyncStatusHandler {
+        public abstract void onSyncComplete();
+        public abstract void onSyncStarted();
+        public abstract void onSyncException(Exception exception);
+
+        //override this in the case where you pass false value for
+        //automaticallyResumeSyncIfPreviouslyStarted to checkFullSyncStatus()
+        public void onSyncIncomplete() {
+
+        }
     }
 
     public ChannelSyncManager(ActionMessageManager actionMessageManager, ChannelSpec channelSpec) {
@@ -56,6 +69,42 @@ public class ChannelSyncManager {
                 } else {
                     initializedHandler.onException();
                 }
+            }
+        });
+    }
+
+    public void checkFullSyncStatus(ChannelSyncStatusHandler handler) {
+        checkFullSyncStatus(true, handler);
+    }
+
+    public void checkFullSyncStatus(boolean automaticallyResumeSyncIfPreviouslyStarted, ChannelSyncStatusHandler handler) {
+        FullSyncState state = mMessageManager.getFullSyncState(getChannelsArray());
+        if(state == FullSyncState.COMPLETE) {
+            handler.onSyncComplete();
+        } else if(state == FullSyncState.NOT_STARTED) {
+            startFullSync(handler);
+            handler.onSyncStarted();
+        } else {
+            if(automaticallyResumeSyncIfPreviouslyStarted) {
+                startFullSync(handler);
+                handler.onSyncStarted();
+            } else {
+                handler.onSyncIncomplete();
+            }
+        }
+    }
+
+    public void startFullSync(final ChannelSyncStatusHandler handler) {
+        mMessageManager.retrieveAndPersistAllMessages(getChannelsArray(), new MessageManager.MessageManagerMultiChannelSyncResponseHandler() {
+            @Override
+            public void onSuccess() {
+                handler.onSyncComplete();
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                Log.d(TAG, exception.getMessage(), exception);
+                handler.onSyncException(exception);
             }
         });
     }
@@ -117,5 +166,20 @@ public class ChannelSyncManager {
                 completionRunnable.run();
             }
         });
+    }
+
+    private Channel[] getChannelsArray() {
+        Channel[] channels = new Channel[(mTargetChannel != null ? 1 : 0) + mActionChannels.size()];
+        int i = 0;
+        if(mTargetChannel != null) {
+            channels[0] = mTargetChannel;
+            i++;
+        }
+        for(Channel c : mActionChannels.values()) {
+            channels[i] = c;
+            i++;
+        }
+
+        return channels;
     }
 }
