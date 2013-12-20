@@ -82,6 +82,10 @@ public class ActionMessageManager {
         context.registerReceiver(sentMessageReceiver, new IntentFilter(MessageManager.INTENT_ACTION_UNSENT_MESSAGES_SENT));
     }
 
+    public MessageManager getMessageManager() {
+        return mMessageManager;
+    }
+
     /**
      * Sync and persist all Action Messages in a Channel.
      *
