@@ -27,7 +27,6 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
-import java.util.TreeMap;
 
 /**
  * The ActionMessageManager is used to perform mutable actions on Messages.
@@ -59,9 +58,6 @@ public class ActionMessageManager {
     private MessageManager mMessageManager;
     private ADNDatabase mDatabase;
 
-    //action channel id : (target message id : target message plus)
-    private HashMap<String, TreeMap<String, MessagePlus>> mActionedMessages;
-
     private HashMap<String, Channel> mActionChannels;
 
     public interface ActionChannelInitializedHandler {
@@ -80,7 +76,6 @@ public class ActionMessageManager {
     private ActionMessageManager(MessageManager messageManager) {
         mMessageManager = messageManager;
         mActionChannels = new HashMap<String, Channel>(1);
-        mActionedMessages = new HashMap<String, TreeMap<String, MessagePlus>>(1);
 
         Context context = ADNApplication.getContext();
         mDatabase = ADNDatabase.getInstance(context);
@@ -137,8 +132,7 @@ public class ActionMessageManager {
      * @return true if the specified target Message has had an action performed on it.
      */
     public boolean isActioned(String actionChannelId, String targetMessageId) {
-        return getOrCreateActionedMessagesMap(actionChannelId).get(targetMessageId) != null ||
-                mDatabase.hasActionMessageSpec(actionChannelId, targetMessageId);
+        return mDatabase.hasActionMessageSpec(actionChannelId, targetMessageId);
     }
 
     /**
@@ -166,15 +160,6 @@ public class ActionMessageManager {
         });
     }
 
-    private TreeMap<String, MessagePlus> getOrCreateActionedMessagesMap(String channelId) {
-        TreeMap<String, MessagePlus> channelMap = mActionedMessages.get(channelId);
-        if(channelMap == null) {
-            channelMap = new TreeMap<String, MessagePlus>(sIdComparator);
-            mActionedMessages.put(channelId, channelMap);
-        }
-        return channelMap;
-    }
-
     private Set<String> getTargetMessageIds(Collection<MessagePlus> messagePlusses) {
         HashSet<String> newTargetMessageIds = new HashSet<String>(messagePlusses.size());
         for(MessagePlus mp : messagePlusses) {
@@ -184,16 +169,11 @@ public class ActionMessageManager {
     }
 
     public synchronized List<MessagePlus> getActionedMessages(String actionChannelId, String targetChannelId) {
-        TreeMap<String, MessagePlus> channelActionedMessages = mActionedMessages.get(actionChannelId);
-        if(channelActionedMessages == null || channelActionedMessages.size() == 0) {
-            LinkedHashMap<String, MessagePlus> loadedMessagesFromActionChannel = mMessageManager.getMessageMap(actionChannelId);
-            if(loadedMessagesFromActionChannel == null || loadedMessagesFromActionChannel.size() == 0) {
-                loadedMessagesFromActionChannel = mMessageManager.loadPersistedMessages(actionChannelId, MAX_BATCH_LOAD_FROM_DISK);
-            }
-            return getTargetMessages(loadedMessagesFromActionChannel.values(), actionChannelId, targetChannelId);
-        } else {
-            return new ArrayList<MessagePlus>(channelActionedMessages.values());
+        LinkedHashMap<String, MessagePlus> loadedMessagesFromActionChannel = mMessageManager.getMessageMap(actionChannelId);
+        if(loadedMessagesFromActionChannel == null || loadedMessagesFromActionChannel.size() == 0) {
+            loadedMessagesFromActionChannel = mMessageManager.loadPersistedMessages(actionChannelId, MAX_BATCH_LOAD_FROM_DISK);
         }
+        return getTargetMessages(loadedMessagesFromActionChannel.values(), actionChannelId, targetChannelId);
     }
 
     private synchronized List<MessagePlus> getTargetMessages(Collection<MessagePlus> actionMessages, String actionChannelId, String targetChannelId) {
@@ -208,10 +188,6 @@ public class ActionMessageManager {
             Set<String> newTargetMessageIds = getTargetMessageIds(more.values());
             LinkedHashMap<String, MessagePlus> moreTargetMessages = mMessageManager.loadAndConfigureTemporaryMessages(targetChannelId, newTargetMessageIds);
 
-            //save them to the in-memory map
-            TreeMap<String, MessagePlus> channelActionMessages = getOrCreateActionedMessagesMap(actionChannelId);
-            channelActionMessages.putAll(moreTargetMessages);
-
             responseHandler.setIsMore(more.size() == MAX_BATCH_LOAD_FROM_DISK);
             responseHandler.onSuccess(new ArrayList(moreTargetMessages.values()), true);
         } else {
@@ -223,10 +199,6 @@ public class ActionMessageManager {
                 public void onSuccess(List<MessagePlus> responseData, boolean appended) {
                     Set<String> newTargetMessageIds = getTargetMessageIds(responseData);
                     LinkedHashMap<String, MessagePlus> moreTargetMessages = mMessageManager.loadAndConfigureTemporaryMessages(targetChannelId, newTargetMessageIds);
-
-                    //save them to the in-memory map
-                    TreeMap<String, MessagePlus> channelActionMessages = getOrCreateActionedMessagesMap(actionChannelId);
-                    channelActionMessages.putAll(moreTargetMessages);
 
                     responseHandler.setIsMore(isMore());
                     responseHandler.onSuccess(new ArrayList(moreTargetMessages.values()), true);
@@ -243,19 +215,15 @@ public class ActionMessageManager {
 
     public synchronized void applyChannelAction(String actionChannelId, MessagePlus targetMessagePlus) {
         if(!isActioned(actionChannelId, targetMessagePlus.getMessage().getId())) {
-            TreeMap<String, MessagePlus> actionedMessages = getOrCreateActionedMessagesMap(actionChannelId);
             Message message = targetMessagePlus.getMessage();
             String targetMessageId = message.getId();
-            if(actionedMessages.get(targetMessageId) == null) {
-                //create machine only message in action channel that points to the target message id.
-                Message m = new Message(true);
-                Annotation a = AnnotationFactory.getSingleValueAnnotation(PrivateChannelUtility.MESSAGE_ANNOTATION_TARGET_MESSAGE, PrivateChannelUtility.TARGET_MESSAGE_KEY_ID, targetMessageId);
-                m.addAnnotation(a);
+            //create machine only message in action channel that points to the target message id.
+            Message m = new Message(true);
+            Annotation a = AnnotationFactory.getSingleValueAnnotation(PrivateChannelUtility.MESSAGE_ANNOTATION_TARGET_MESSAGE, PrivateChannelUtility.TARGET_MESSAGE_KEY_ID, targetMessageId);
+            m.addAnnotation(a);
 
-                MessagePlus unsentActionMessage = mMessageManager.createUnsentMessageAndAttemptSend(actionChannelId, m);
-                actionedMessages.put(targetMessageId, targetMessagePlus);
-                mDatabase.insertOrReplaceActionMessageSpec(unsentActionMessage, targetMessageId, message.getChannelId());
-            }
+            MessagePlus unsentActionMessage = mMessageManager.createUnsentMessageAndAttemptSend(actionChannelId, m);
+            mDatabase.insertOrReplaceActionMessageSpec(unsentActionMessage, targetMessageId, message.getChannelId());
         }
     }
 
@@ -266,8 +234,6 @@ public class ActionMessageManager {
 
         if(actionMessageSpecs.size() > 0) {
             mDatabase.deleteActionMessageSpec(actionChannelId, targetMessageId);
-            TreeMap<String, MessagePlus> actionedMessages = getOrCreateActionedMessagesMap(actionChannelId);
-            actionedMessages.remove(targetMessageId);
 
             deleteActionMessages(actionMessageSpecs, 0, new Runnable() {
                 @Override
@@ -320,11 +286,6 @@ public class ActionMessageManager {
                 //this is not an action channel.
                 //it might be a target channel of one of our action channels though.
                 if(mActionChannels.get(channelId) == null) {
-                    //some messages were sent, instead of just removing the faked messages,
-                    //just remove the whole channel's map. we will have to reload them later, but
-                    //this way we can assure that they'll be all in the right order, etc.
-                    mActionedMessages.remove(channelId);
-
                     //remove all action messages that point to this now nonexistent target message id
                     List<ActionMessageSpec> sentTargetMessages = mDatabase.getActionMessageSpecsForTargetMessages(sentMessageIds);
                     for(ActionMessageSpec actionMessageSpec : sentTargetMessages) {
