@@ -816,7 +816,7 @@ public class MessageManager {
         return false;
     }
 
-    public synchronized void sendPendingDeletions(final String channelId) {
+    public synchronized boolean sendPendingDeletions(final String channelId) {
         HashMap<String, PendingMessageDeletion> pendingMessageDeletions = mDatabase.getPendingMessageDeletions(channelId);
         if(pendingMessageDeletions.size() > 0) {
             for(String messageId : pendingMessageDeletions.keySet()) {
@@ -825,9 +825,16 @@ public class MessageManager {
                     public void onSuccess(Message responseData) {
                         mDatabase.deletePendingMessageDeletion(responseData.getId());
                     }
+
+                    @Override
+                    public void onError(Exception error) {
+                        super.onError(error);
+                    }
                 });
             }
+            return true;
         }
+        return false;
     }
 
     private synchronized boolean retrieveMessages(final QueryParameters queryParameters, final String channelId, final boolean keepInMemory, final MessageManagerResponseHandler handler) {
