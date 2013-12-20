@@ -1,11 +1,17 @@
 package com.alwaysallthetime.adnlibutils.manager;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.util.Log;
 
 import com.alwaysallthetime.adnlib.data.Channel;
+import com.alwaysallthetime.adnlibutils.ADNApplication;
 import com.alwaysallthetime.adnlibutils.FullSyncState;
 import com.alwaysallthetime.adnlibutils.PrivateChannelUtility;
 import com.alwaysallthetime.adnlibutils.model.ChannelSpec;
+import com.alwaysallthetime.adnlibutils.model.MessagePlus;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -58,6 +64,8 @@ public class ChannelSyncManager {
                 mActionChannelActionTypes.add(type);
             }
         }
+
+        ADNApplication.getContext().registerReceiver(sentMessageReceiver, new IntentFilter(MessageManager.INTENT_ACTION_UNSENT_MESSAGES_SENT));
     }
 
     public void initChannels(final ChannelsInitializedHandler initializedHandler) {
@@ -107,6 +115,47 @@ public class ChannelSyncManager {
                 handler.onSyncException(exception);
             }
         });
+    }
+
+    public boolean retrieveNewestMessages(final MessageManager.MessageManagerResponseHandler responseHandler) {
+        boolean canRetrieve = mMessageManager.retrieveNewestMessages(mTargetChannel.getId(), new MessageManager.MessageManagerResponseHandler() {
+            @Override
+            public void onSuccess(final List<MessagePlus> responseData, final boolean appended) {
+                retrieveNewestActionChannelMessages(0, new Runnable() {
+                    @Override
+                    public void run() {
+                        responseHandler.onSuccess(responseData, appended);
+                    }
+                });
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                Log.e(TAG, exception.getMessage(), exception);
+                responseHandler.onError(exception);
+            }
+        });
+        return canRetrieve;
+    }
+
+    private void retrieveNewestActionChannelMessages(final int index, final Runnable completionRunnable) {
+        if(index >= mActionChannelActionTypes.size()) {
+            completionRunnable.run();
+        } else {
+            Channel actionChannel = mActionChannels.get(mActionChannelActionTypes.get(index));
+            mActionMessageManager.retrieveNewestMessages(actionChannel.getId(), mTargetChannel.getId(), new MessageManager.MessageManagerResponseHandler() {
+                @Override
+                public void onSuccess(List<MessagePlus> responseData, boolean appended) {
+                    retrieveNewestActionChannelMessages(index + 1, completionRunnable);
+                }
+
+                @Override
+                public void onError(Exception exception) {
+                    Log.e(TAG, exception.getMessage(), exception);
+                    completionRunnable.run();
+                }
+            });
+        }
     }
 
     public Channel getTargetChannel() {
@@ -182,4 +231,14 @@ public class ChannelSyncManager {
 
         return channels;
     }
+
+    private final BroadcastReceiver sentMessageReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if(MessageManager.INTENT_ACTION_UNSENT_MESSAGES_SENT.equals(intent.getAction())) {
+                //TODO: presumably we need to send a new broadcast out after *all* channels are
+                //completely caught up.
+            }
+        }
+    };
 }
