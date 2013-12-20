@@ -219,6 +219,11 @@ public class ActionMessageManager {
     }
 
     public synchronized boolean retrieveNewestMessages(final String actionChannelId, final String targetChannelId, final MessageManager.MessageManagerResponseHandler responseHandler) {
+        LinkedHashMap<String, MessagePlus> channelMessages = mMessageManager.getMessageMap(actionChannelId);
+        if(channelMessages == null || channelMessages.size() == 0) {
+            //we do this so that the max id is known.
+            mMessageManager.loadPersistedMessages(actionChannelId, 1);
+        }
         boolean canRetrieve = mMessageManager.retrieveNewestMessages(actionChannelId, new MessageManager.MessageManagerResponseHandler() {
             @Override
             public void onSuccess(List<MessagePlus> responseData, boolean appended) {
@@ -235,6 +240,9 @@ public class ActionMessageManager {
                 responseHandler.onError(exception);
             }
         });
+        if(!canRetrieve) {
+            mMessageManager.sendAllUnsent(actionChannelId);
+        }
         return canRetrieve;
     }
 
