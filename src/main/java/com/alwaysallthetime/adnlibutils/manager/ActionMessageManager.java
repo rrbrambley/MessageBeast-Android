@@ -186,6 +186,7 @@ public class ActionMessageManager {
         return new ArrayList<MessagePlus>(targetMessages.values());
     }
 
+    //TODO: does this method even make sense?
     public synchronized void getMoreActionedMessages(final String actionChannelId, final String targetChannelId, final MessageManager.MessageManagerResponseHandler responseHandler) {
         LinkedHashMap<String, MessagePlus> more = mMessageManager.loadPersistedMessages(actionChannelId, MAX_BATCH_LOAD_FROM_DISK);
         if(more.size() > 0) {
@@ -215,6 +216,26 @@ public class ActionMessageManager {
                 }
             });
         }
+    }
+
+    public synchronized boolean retrieveNewestMessages(final String actionChannelId, final String targetChannelId, final MessageManager.MessageManagerResponseHandler responseHandler) {
+        boolean canRetrieve = mMessageManager.retrieveNewestMessages(actionChannelId, new MessageManager.MessageManagerResponseHandler() {
+            @Override
+            public void onSuccess(List<MessagePlus> responseData, boolean appended) {
+                for(MessagePlus actionMessage : responseData) {
+                    String targetMessageId = AnnotationUtility.getTargetMessageId(actionMessage.getMessage());
+                    mDatabase.insertOrReplaceActionMessageSpec(actionMessage, targetMessageId, targetChannelId);
+                }
+                responseHandler.onSuccess(responseData, appended);
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                Log.d(TAG, exception.getMessage(), exception);
+                responseHandler.onError(exception);
+            }
+        });
+        return canRetrieve;
     }
 
     public synchronized void applyChannelAction(String actionChannelId, MessagePlus targetMessagePlus) {
