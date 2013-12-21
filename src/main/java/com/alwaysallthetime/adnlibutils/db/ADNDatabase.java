@@ -663,11 +663,9 @@ public class ADNDatabase {
             String[] args = new String[] { channelId, type };
             cursor = mDatabase.query(TABLE_OEMBED_INSTANCES, new String[] { COL_OEMBED_INSTANCE_MESSAGE_ID }, where, args, null, null, null, null);
 
-            if(cursor.moveToNext()) {
-                do {
-                    String messageId = cursor.getString(0);
-                    instances.addInstance(messageId);
-                } while(cursor.moveToNext());
+            while(cursor.moveToNext()) {
+                String messageId = cursor.getString(0);
+                instances.addInstance(messageId);
             }
         } catch(Exception e) {
             Log.e(TAG, e.getMessage(), e);
@@ -696,27 +694,25 @@ public class ADNDatabase {
 
             String[] cols = new String[] { COL_LOCATION_INSTANCE_NAME, COL_LOCATION_INSTANCE_SHORT_NAME, COL_LOCATION_INSTANCE_MESSAGE_ID, COL_LOCATION_INSTANCE_LATITUDE, COL_LOCATION_INSTANCE_LONGITUDE };
             cursor = mDatabase.query(TABLE_LOCATION_INSTANCES, cols, where, args, null, null, orderBy, null);
-            if(cursor.moveToNext()) {
-                do {
-                    String name = cursor.getString(0);
-                    String shortName = cursor.getString(1);
-                    String messageId = cursor.getString(2);
-                    Double latitude = cursor.getDouble(3);
-                    Double longitude = cursor.getDouble(4);
+            while(cursor.moveToNext()) {
+                String name = cursor.getString(0);
+                String shortName = cursor.getString(1);
+                String messageId = cursor.getString(2);
+                Double latitude = cursor.getDouble(3);
+                Double longitude = cursor.getDouble(4);
 
-                    double roundedLat = getRoundedValue(latitude, 1);
-                    double roundedLong = getRoundedValue(longitude, 1);
+                double roundedLat = getRoundedValue(latitude, 1);
+                double roundedLong = getRoundedValue(longitude, 1);
 
-                    String key = String.format("%s %s %s", name, String.valueOf(roundedLat), String.valueOf(roundedLong));
-                    DisplayLocationInstances displayLocationInstances = allInstances.get(key);
-                    if(displayLocationInstances == null) {
-                        DisplayLocation loc = new DisplayLocation(name, latitude, longitude);
-                        loc.setShortName(shortName);
-                        displayLocationInstances = new DisplayLocationInstances(loc);
-                        allInstances.put(key, displayLocationInstances);
-                    }
-                    displayLocationInstances.addInstance(messageId);
-                } while(cursor.moveToNext());
+                String key = String.format("%s %s %s", name, String.valueOf(roundedLat), String.valueOf(roundedLong));
+                DisplayLocationInstances displayLocationInstances = allInstances.get(key);
+                if(displayLocationInstances == null) {
+                    DisplayLocation loc = new DisplayLocation(name, latitude, longitude);
+                    loc.setShortName(shortName);
+                    displayLocationInstances = new DisplayLocationInstances(loc);
+                    allInstances.put(key, displayLocationInstances);
+                }
+                displayLocationInstances.addInstance(messageId);
             }
         } catch(Exception e) {
             Log.e(TAG, e.getMessage(), e);
@@ -788,11 +784,9 @@ public class ADNDatabase {
             String[] args = new String[] { channelId, location.getName(), latArg, longArg };
             String[] cols = new String[] { COL_LOCATION_INSTANCE_MESSAGE_ID };
             cursor = mDatabase.query(TABLE_LOCATION_INSTANCES, cols, where, args, null, null, orderBy, null);
-            if(cursor.moveToNext()) {
-                do {
-                    String messageId = cursor.getString(0);
-                    instances.addInstance(messageId);
-                } while(cursor.moveToNext());
+            while(cursor.moveToNext()) {
+                String messageId = cursor.getString(0);
+                instances.addInstance(messageId);
             }
         } catch(Exception e) {
             Log.e(TAG, e.getMessage(), e);
@@ -892,18 +886,16 @@ public class ADNDatabase {
             String orderBy = COL_HASHTAG_INSTANCE_DATE + " DESC";
             cursor = mDatabase.query(TABLE_HASHTAG_INSTANCES, null, where, args.toArray(new String[0]), null, null, orderBy, null);
 
-            if(cursor.moveToNext()) {
-                do {
-                    String hashtag = cursor.getString(0);
-                    String messageId = cursor.getString(1);
-                    HashtagInstances c = instances.get(hashtag);
-                    if(c == null) {
-                        c = new HashtagInstances(hashtag, messageId);
-                        instances.put(hashtag, c);
-                    } else {
-                        c.addInstance(messageId);
-                    }
-                } while(cursor.moveToNext());
+            while(cursor.moveToNext()) {
+                String hashtag = cursor.getString(0);
+                String messageId = cursor.getString(1);
+                HashtagInstances c = instances.get(hashtag);
+                if(c == null) {
+                    c = new HashtagInstances(hashtag, messageId);
+                    instances.put(hashtag, c);
+                } else {
+                    c.addInstance(messageId);
+                }
             }
         } catch(Exception e) {
             Log.e(TAG, e.getMessage(), e);
@@ -932,11 +924,9 @@ public class ADNDatabase {
             String[] args = new String[] { channelId, hashtagName };
             cursor = mDatabase.query(TABLE_HASHTAG_INSTANCES, new String[] { COL_HASHTAG_INSTANCE_MESSAGE_ID }, where, args, null, null, null, null);
 
-            if(cursor.moveToNext()) {
-                do {
-                    String messageId = cursor.getString(0);
-                    instances.addInstance(messageId);
-                } while(cursor.moveToNext());
+            while(cursor.moveToNext()) {
+                String messageId = cursor.getString(0);
+                instances.addInstance(messageId);
             }
         } catch(Exception e) {
             Log.e(TAG, e.getMessage(), e);
@@ -1021,34 +1011,33 @@ public class ADNDatabase {
             cursor = mDatabase.query(TABLE_MESSAGES, null, where, args, null, null, orderBy, limit);
 
             Message message = null;
-            if(cursor.moveToNext()) {
-                do {
-                    String messageId = cursor.getString(0);
-                    long date = cursor.getLong(2);
-                    String messageJson = cursor.getString(3);
-                    String messageText = cursor.getString(4);
-                    boolean isUnsent = cursor.getInt(5) == 1;
-                    int numSendAttempts = cursor.getInt(6);
-                    message = mGson.fromJson(messageJson, Message.class);
-                    message.setText(messageText);
+            while(cursor.moveToNext()) {
+                String messageId = cursor.getString(0);
+                long date = cursor.getLong(2);
+                String messageJson = cursor.getString(3);
+                String messageText = cursor.getString(4);
+                boolean isUnsent = cursor.getInt(5) == 1;
+                int numSendAttempts = cursor.getInt(6);
+                message = mGson.fromJson(messageJson, Message.class);
+                message.setText(messageText);
+                Log.d(TAG, "message " + messageId + " with date " + date + " = " + messageText);
 
-                    MessagePlus messagePlus = new MessagePlus(message);
-                    messagePlus.setDisplayDate(new Date(date));
-                    messagePlus.setIsUnsent(isUnsent);
-                    messagePlus.setNumSendAttempts(numSendAttempts);
-                    messages.put(messageId, messagePlus);
+                MessagePlus messagePlus = new MessagePlus(message);
+                messagePlus.setDisplayDate(new Date(date));
+                messagePlus.setIsUnsent(isUnsent);
+                messagePlus.setNumSendAttempts(numSendAttempts);
+                messages.put(messageId, messagePlus);
 
-                    if(maxId == null) {
-                        maxId = messageId;
-                    }
-                    if(isUnsent) {
-                        unsentMessages.add(messagePlus);
-                    }
-                } while(cursor.moveToNext());
-
-                if(message != null) {
-                    minId = message.getId();
+                if(maxId == null) {
+                    maxId = messageId;
                 }
+                if(isUnsent) {
+                    unsentMessages.add(messagePlus);
+                }
+            }
+
+            if(message != null) {
+                minId = message.getId();
             }
         } catch(Exception e) {
             Log.e(TAG, e.getMessage(), e);
