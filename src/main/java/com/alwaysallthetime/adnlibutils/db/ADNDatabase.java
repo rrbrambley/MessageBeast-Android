@@ -33,7 +33,7 @@ import java.util.Set;
 
 public class ADNDatabase {
 
-    private static final String TAG = "ADNLibUtils_AADNDatabase";
+    private static final String TAG = "ADNLibUtils_ADNDatabase";
     private static final String DB_NAME = "aadndatabase.db";
     private static final int DB_VERSION = 1;
 
