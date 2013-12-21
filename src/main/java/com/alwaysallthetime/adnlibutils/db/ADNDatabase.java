@@ -1188,7 +1188,9 @@ public class ADNDatabase {
 
         try {
             Message message = messagePlus.getMessage();
-            mDatabase.delete(TABLE_MESSAGES, COL_MESSAGE_ID + " = '" + message.getId() + "'", null);
+            Long messageId = Long.valueOf(message.getId());
+            mDatabase.delete(TABLE_MESSAGES_SEARCH, "docid=" + messageId, null);
+            mDatabase.delete(TABLE_MESSAGES, COL_MESSAGE_ID + " = " + messageId, null);
 
             //this might be null in the case of unsent messages.
             Entities entities = message.getEntities();
