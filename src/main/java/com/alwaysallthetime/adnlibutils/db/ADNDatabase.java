@@ -1071,7 +1071,6 @@ public class ADNDatabase {
                 int numSendAttempts = cursor.getInt(6);
                 message = mGson.fromJson(messageJson, Message.class);
                 message.setText(messageText);
-                Log.d(TAG, "message " + messageId + " with date " + date + " = " + messageText);
 
                 MessagePlus messagePlus = new MessagePlus(message);
                 messagePlus.setDisplayDate(new Date(date));
