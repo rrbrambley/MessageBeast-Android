@@ -54,8 +54,11 @@ public class MessageManager {
     private static final int MAX_MESSAGES_RETURNED_ON_SYNC = 100;
 
     public static final String INTENT_ACTION_UNSENT_MESSAGES_SENT = "com.alwaysallthetime.adnlibutils.manager.MessageManager.intent.unsentMessagesSent";
+    public static final String INTENT_ACTION_UNSENT_MESSAGES_SEND_FAILURE = "com.alwaysallthetime.adnlibutils.manager.MessageManager.intent.unsentMessagesSendFailure";
     public static final String EXTRA_CHANNEL_ID = "com.alwaysallthetime.adnlibutils.manager.MessageManager.extras.channelId";
     public static final String EXTRA_SENT_MESSAGE_IDS = "com.alwaysallthetime.adnlibutils.manager.MessageManager.extras.sentMessageIds";
+    public static final String EXTRA_MESSAGE_ID = "com.alwaysallthetime.adnlibutils.manager.MessageManager.extras.messageId";
+    public static final String EXTRA_SEND_ATTEMPTS = "com.alwaysallthetime.adnlibutils.manager.MessageManager.extras.sendAttempts";
 
     /*
      * public data structures
@@ -786,8 +789,14 @@ public class MessageManager {
             @Override
             public void onError(Exception exception) {
                 super.onError(exception);
-                messagePlus.incrementSendAttempts();
+                int sendAttempts = messagePlus.incrementSendAttempts();
                 mDatabase.insertOrReplaceMessage(messagePlus);
+
+                Intent i = new Intent(INTENT_ACTION_UNSENT_MESSAGES_SEND_FAILURE);
+                i.putExtra(EXTRA_CHANNEL_ID, message.getChannelId());
+                i.putExtra(EXTRA_MESSAGE_ID, message.getId());
+                i.putExtra(EXTRA_SEND_ATTEMPTS, sendAttempts);
+                mContext.sendBroadcast(i);
             }
         });
     }
