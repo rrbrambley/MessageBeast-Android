@@ -240,9 +240,6 @@ public class ActionMessageManager {
                 responseHandler.onError(exception);
             }
         });
-        if(!canRetrieve) {
-            mMessageManager.sendAllUnsent(actionChannelId);
-        }
         return canRetrieve;
     }
 
