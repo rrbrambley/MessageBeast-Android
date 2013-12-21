@@ -3,7 +3,6 @@ package com.alwaysallthetime.adnlibutils.db;
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
-import android.os.Build;
 import android.util.Log;
 
 public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
@@ -111,9 +110,7 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
             db.execSQL(CREATE_PENDING_OEMBEDS_TABLE);
             db.execSQL(CREATE_ACTION_MESSAGES_TABLE);
 
-            //fts4 available in 11+
-            //http://stackoverflow.com/questions/2421189/version-of-sqlite-used-in-android/4377116#4377116
-            if(Build.VERSION.SDK_INT >= 11) {
+            if(ADNDatabase.isFullTextSearchAvailable()) {
                 db.execSQL(CREATE_MESSAGES_SEARCH_TABLE);
             }
             db.setTransactionSuccessful();

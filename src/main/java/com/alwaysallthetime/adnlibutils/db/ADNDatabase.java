@@ -231,6 +231,12 @@ public class ADNDatabase {
         return sInstance;
     }
 
+    //fts4 available in 11+
+    //http://stackoverflow.com/questions/2421189/version-of-sqlite-used-in-android/4377116#4377116
+    public static boolean isFullTextSearchAvailable() {
+        return Build.VERSION.SDK_INT >= 11;
+    }
+
     private ADNDatabase(Context context) {
         ADNDatabaseOpenHelper openHelper = new ADNDatabaseOpenHelper(context, DB_NAME, null, DB_VERSION);
         mDatabase = openHelper.getWritableDatabase();
@@ -303,7 +309,7 @@ public class ADNDatabase {
     }
 
     private void insertSearchableMessageText(long messageId, String channelId, String text) {
-        if(Build.VERSION.SDK_INT >= 11 && text != null) {
+        if(isFullTextSearchAvailable() && text != null) {
             mDatabase.beginTransaction();
             try {
                 mInsertMessageSearchText.bindLong(1, messageId);
