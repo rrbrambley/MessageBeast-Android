@@ -1,13 +1,8 @@
 package com.alwaysallthetime.adnlibutils.manager;
 
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
 import android.util.Log;
 
 import com.alwaysallthetime.adnlib.data.Channel;
-import com.alwaysallthetime.adnlibutils.ADNApplication;
 import com.alwaysallthetime.adnlibutils.FullSyncState;
 import com.alwaysallthetime.adnlibutils.PrivateChannelUtility;
 import com.alwaysallthetime.adnlibutils.model.ChannelSpec;
@@ -64,8 +59,6 @@ public class ChannelSyncManager {
                 mActionChannelActionTypes.add(type);
             }
         }
-
-        ADNApplication.getContext().registerReceiver(sentMessageReceiver, new IntentFilter(MessageManager.INTENT_ACTION_UNSENT_MESSAGES_SENT));
     }
 
     public void initChannels(final ChannelsInitializedHandler initializedHandler) {
@@ -143,7 +136,7 @@ public class ChannelSyncManager {
             completionRunnable.run();
         } else {
             Channel actionChannel = mActionChannels.get(mActionChannelActionTypes.get(index));
-            mActionMessageManager.retrieveNewestMessages(actionChannel.getId(), mTargetChannel.getId(), new MessageManager.MessageManagerResponseHandler() {
+            boolean canRetrieve = mActionMessageManager.retrieveNewestMessages(actionChannel.getId(), mTargetChannel.getId(), new MessageManager.MessageManagerResponseHandler() {
                 @Override
                 public void onSuccess(List<MessagePlus> responseData, boolean appended) {
                     retrieveNewestActionChannelMessages(index + 1, completionRunnable);
@@ -155,6 +148,9 @@ public class ChannelSyncManager {
                     completionRunnable.run();
                 }
             });
+            if(!canRetrieve) {
+                mMessageManager.sendAllUnsent(actionChannel.getId());
+            }
         }
     }
 
@@ -231,14 +227,4 @@ public class ChannelSyncManager {
 
         return channels;
     }
-
-    private final BroadcastReceiver sentMessageReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            if(MessageManager.INTENT_ACTION_UNSENT_MESSAGES_SENT.equals(intent.getAction())) {
-                //TODO: presumably we need to send a new broadcast out after *all* channels are
-                //completely caught up.
-            }
-        }
-    };
 }
