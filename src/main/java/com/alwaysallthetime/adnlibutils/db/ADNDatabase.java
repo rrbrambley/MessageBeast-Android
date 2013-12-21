@@ -6,6 +6,7 @@ import android.database.DatabaseUtils;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteStatement;
 import android.net.Uri;
+import android.os.Build;
 import android.util.Log;
 
 import com.alwaysallthetime.adnlib.data.Entities;
@@ -44,6 +45,8 @@ public class ADNDatabase {
     public static final String COL_MESSAGE_TEXT = "message_text";
     public static final String COL_MESSAGE_UNSENT = "message_unsent";
     public static final String COL_MESSAGE_SEND_ATTEMPTS = "message_send_attempts";
+
+    public static final String TABLE_MESSAGES_SEARCH = "messages_search";
 
     public static final String TABLE_HASHTAG_INSTANCES = "hashtags";
     public static final String COL_HASHTAG_INSTANCE_NAME = "hashtag_name";
@@ -122,6 +125,10 @@ public class ADNDatabase {
             COL_MESSAGE_SEND_ATTEMPTS +
             ") " +
             "VALUES(?, ?, ?, ?, ?, ?, ?)";
+
+    private static final String INSERT_MESSAGE_SEARCH_TEXT = "INSERT INTO " + TABLE_MESSAGES_SEARCH +
+            " (docid, " + COL_MESSAGE_CHANNEL_ID + ", " + COL_MESSAGE_TEXT + ") " +
+            "VALUES (?, ?, ?)";
 
     private static final String INSERT_OR_REPLACE_HASHTAG = "INSERT OR REPLACE INTO " + TABLE_HASHTAG_INSTANCES +
             " (" +
@@ -206,6 +213,7 @@ public class ADNDatabase {
 
     private SQLiteDatabase mDatabase;
     private SQLiteStatement mInsertOrReplaceMessage;
+    private SQLiteStatement mInsertMessageSearchText;
     private SQLiteStatement mInsertOrReplaceHashtag;
     private SQLiteStatement mInsertOrReplaceGeolocation;
     private SQLiteStatement mInsertOrReplaceLocationInstance;
@@ -252,6 +260,7 @@ public class ADNDatabase {
     public void insertOrReplaceMessage(MessagePlus messagePlus) {
         if(mInsertOrReplaceMessage == null) {
             mInsertOrReplaceMessage = mDatabase.compileStatement(INSERT_OR_REPLACE_MESSAGE);
+            mInsertMessageSearchText = mDatabase.compileStatement(INSERT_MESSAGE_SEARCH_TEXT);
         }
         mDatabase.beginTransaction();
 
@@ -259,9 +268,10 @@ public class ADNDatabase {
         Message message = messagePlus.getMessage();
         String text = message.getText();
         message.setText(null);
+        Long messageId = Long.valueOf(message.getId());
 
         try {
-            mInsertOrReplaceMessage.bindString(1, message.getId());
+            mInsertOrReplaceMessage.bindLong(1, messageId);
             mInsertOrReplaceMessage.bindString(2, message.getChannelId());
             mInsertOrReplaceMessage.bindLong(3, displayDate.getTime());
             mInsertOrReplaceMessage.bindString(4, mGson.toJson(message));
@@ -280,6 +290,8 @@ public class ADNDatabase {
                     insertOrReplacePendingOEmbed(pendingOEmbed, message.getId(), message.getChannelId());
                 }
             }
+
+            insertSearchableMessageText(messageId, message.getChannelId(), text);
             mDatabase.setTransactionSuccessful();
         } catch(Exception e) {
             Log.e(TAG, e.getMessage(), e);
@@ -287,6 +299,24 @@ public class ADNDatabase {
             mDatabase.endTransaction();
             mInsertOrReplaceMessage.clearBindings();
             message.setText(text);
+        }
+    }
+
+    private void insertSearchableMessageText(long messageId, String channelId, String text) {
+        if(Build.VERSION.SDK_INT >= 11 && text != null) {
+            mDatabase.beginTransaction();
+            try {
+                mInsertMessageSearchText.bindLong(1, messageId);
+                mInsertMessageSearchText.bindString(2, channelId);
+                mInsertMessageSearchText.bindString(3, text);
+                mInsertMessageSearchText.execute();
+                mDatabase.setTransactionSuccessful();
+            } catch(Exception e) {
+                Log.e(TAG, e.getMessage(), e);
+            } finally {
+                mDatabase.endTransaction();
+                mInsertMessageSearchText.clearBindings();
+            }
         }
     }
 
@@ -941,7 +971,22 @@ public class ADNDatabase {
     public OrderedMessageBatch searchForMessages(String channelId, String query) {
         String where = COL_MESSAGE_CHANNEL_ID + " = ? AND " + COL_MESSAGE_TEXT + " MATCH ?";
         String[] args = new String[] { channelId, query };
-        return getMessages(where, args, null, null);
+        Cursor cursor = null;
+        HashSet<String> messageIds = new HashSet<String>();
+        try {
+            cursor = mDatabase.query(TABLE_MESSAGES_SEARCH, new String[] { "docid" }, where, args, null, null, null, null);
+            while(cursor.moveToNext()) {
+                messageIds.add(cursor.getString(0));
+            }
+        } catch(Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+        } finally {
+            if(cursor != null) {
+                cursor.close();
+            }
+        }
+
+        return getMessages(channelId, messageIds);
     }
 
     public MessagePlus getMessage(String channelId, String messageId) {

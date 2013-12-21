@@ -3,20 +3,27 @@ package com.alwaysallthetime.adnlibutils.db;
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.os.Build;
 import android.util.Log;
 
 public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
 
     private static final String TAG = "ADNLibUtils_AADNDatabaseOpenHelper";
 
-    private static final String CREATE_MESSAGES_TABLE = "CREATE VIRTUAL TABLE " + ADNDatabase.TABLE_MESSAGES + " USING fts3 (" +
-            ADNDatabase.COL_MESSAGE_ID + " TEXT PRIMARY KEY, " +
+    private static final String CREATE_MESSAGES_TABLE = "CREATE TABLE IF NOT EXISTS " + ADNDatabase.TABLE_MESSAGES + "(" +
+            ADNDatabase.COL_MESSAGE_ID + " INTEGER PRIMARY KEY, " +
             ADNDatabase.COL_MESSAGE_CHANNEL_ID + " TEXT NOT NULL, " +
             ADNDatabase.COL_MESSAGE_DATE + " INTEGER NOT NULL, " +
             ADNDatabase.COL_MESSAGE_JSON + " TEXT NOT NULL, " +
             ADNDatabase.COL_MESSAGE_TEXT + " TEXT, " +
             ADNDatabase.COL_MESSAGE_UNSENT + " BOOLEAN, " +
             ADNDatabase.COL_MESSAGE_SEND_ATTEMPTS + " INTEGER " +
+            ")";
+
+    private static final String CREATE_MESSAGES_SEARCH_TABLE = "CREATE VIRTUAL TABLE " + ADNDatabase.TABLE_MESSAGES_SEARCH + " USING fts4(" +
+            "content=" + "\"" + ADNDatabase.TABLE_MESSAGES + "\"," +
+            ADNDatabase.COL_MESSAGE_CHANNEL_ID + " TEXT, " +
+            ADNDatabase.COL_MESSAGE_TEXT + " TEXT " +
             ")";
 
     private static final String CREATE_HASHTAG_INSTANCES_TABLE = "CREATE TABLE IF NOT EXISTS " + ADNDatabase.TABLE_HASHTAG_INSTANCES + "(" +
@@ -103,6 +110,12 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
             db.execSQL(CREATE_PENDING_MESSAGE_DELETIONS_TABLE);
             db.execSQL(CREATE_PENDING_OEMBEDS_TABLE);
             db.execSQL(CREATE_ACTION_MESSAGES_TABLE);
+
+            //fts4 available in 11+
+            //http://stackoverflow.com/questions/2421189/version-of-sqlite-used-in-android/4377116#4377116
+            if(Build.VERSION.SDK_INT >= 11) {
+                db.execSQL(CREATE_MESSAGES_SEARCH_TABLE);
+            }
             db.setTransactionSuccessful();
         } catch(Exception exception) {
             Log.e(TAG, exception.getMessage(), exception);
