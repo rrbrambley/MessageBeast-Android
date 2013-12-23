@@ -198,6 +198,11 @@ public class MessageManager {
         return messages;
     }
 
+    public LinkedHashMap<String, MessagePlus> loadPersistedMessagesTemporarily(String channelId, int limit) {
+        OrderedMessageBatch orderedMessageBatch = mDatabase.getMessages(channelId, limit);
+        return orderedMessageBatch.getMessages();
+    }
+
     public LinkedHashMap<String, MessagePlus> loadPersistedMessagesTemporarily(String channelId, DisplayLocation location, ADNDatabase.LocationPrecision precision) {
         DisplayLocationInstances locationInstances = mDatabase.getDisplayLocationInstances(channelId, location, precision);
         return loadAndConfigureTemporaryMessages(channelId, locationInstances.getMessageIds());
