@@ -139,6 +139,10 @@ public class ActionMessageManager {
         return mDatabase.hasActionMessageSpec(actionChannelId, targetMessageId);
     }
 
+    public boolean hasActionedMessages(String actionChannelId) {
+        return mDatabase.getActionMessageSpecCount(actionChannelId) > 0;
+    }
+
     /**
      * Initialize an Action Channel. This is typically done at app startup and must be done before
      * any other ActionMessageManager methods are used on the channel.
