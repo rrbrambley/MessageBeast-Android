@@ -1,8 +1,10 @@
 package com.alwaysallthetime.adnlibutils.manager;
 
+import android.content.Intent;
 import android.util.Log;
 
 import com.alwaysallthetime.adnlib.data.Channel;
+import com.alwaysallthetime.adnlibutils.ADNApplication;
 import com.alwaysallthetime.adnlibutils.FullSyncState;
 import com.alwaysallthetime.adnlibutils.PrivateChannelUtility;
 import com.alwaysallthetime.adnlibutils.model.ChannelSpec;
@@ -14,6 +16,8 @@ import java.util.List;
 import java.util.Map;
 
 public class ChannelSyncManager {
+
+    public static final String INTENT_ACTION_CHANNELS_INITIALIZED = "com.alwaysallthetime.adnlibutils.manager.ChannelSyncManager.intent.channelsInitialized";
 
     private static final String TAG = "ADNLibUtils_ChannelSyncManager";
 
@@ -165,6 +169,7 @@ public class ChannelSyncManager {
     private void initActionChannels(final int index, final ChannelsInitializedHandler initializedHandler) {
         if(index >= mActionChannelActionTypes.size()) {
             initializedHandler.onChannelsInitialized();
+            ADNApplication.getContext().sendBroadcast(new Intent(INTENT_ACTION_CHANNELS_INITIALIZED));
         } else {
             final String actionType = mActionChannelActionTypes.get(index);
             initActionChannel(actionType, mTargetChannel, new Runnable() {
