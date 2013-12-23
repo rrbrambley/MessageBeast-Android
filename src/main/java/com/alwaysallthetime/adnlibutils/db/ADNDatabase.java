@@ -575,6 +575,27 @@ public class ADNDatabase {
         return false;
     }
 
+    public int getActionMessageSpecCount(String actionChannelId) {
+        Cursor cursor = null;
+        try {
+            String where = COL_ACTION_MESSAGE_CHANNEL_ID + " = ? ";
+            String[] args = new String[] { actionChannelId };
+            cursor = mDatabase.query(TABLE_ACTION_MESSAGES, new String[] { COL_ACTION_MESSAGE_ID }, where, args, null, null, null, null);
+            if(cursor.moveToNext()) {
+                int count = cursor.getCount();
+                cursor.close();
+                return count;
+            }
+        } catch(Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+        } finally {
+            if(cursor != null) {
+                cursor.close();
+            }
+        }
+        return 0;
+    }
+
     public List<ActionMessageSpec> getActionMessageSpecsForTargetMessages(List<String> targetMessageIds) {
         return getActionMessageSpecsForTargetMessages(null, targetMessageIds);
     }
