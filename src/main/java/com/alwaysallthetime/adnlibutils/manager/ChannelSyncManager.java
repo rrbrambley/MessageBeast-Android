@@ -152,6 +152,8 @@ public class ChannelSyncManager {
                     completionRunnable.run();
                 }
             });
+
+            //TODO: fix this? is this right?
             if(!canRetrieve) {
                 mMessageManager.sendAllUnsent(actionChannel.getId());
             }
