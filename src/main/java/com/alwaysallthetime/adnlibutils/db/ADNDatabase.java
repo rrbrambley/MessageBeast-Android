@@ -737,6 +737,9 @@ public class ADNDatabase {
     /**
      * Get all DisplayLocationInstances in the specified channel.
      *
+     * This method uses a precision of LocationPrecision.TEN_THOUSAND_METERS (actually ~1.11 km) when
+     * determining if two locations with the same name are considered equal.
+     *
      * @param channelId the Channel id
      * @return a List of DisplaylocationInstances in descending order, from most to least recent
      */
