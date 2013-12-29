@@ -25,7 +25,6 @@ public class MessagePlus {
     private Message mMessage;
     private Date mDisplayDate;
     private DisplayLocation mDisplayLocation;
-    private boolean mHasSetDisplayLocation;
     private boolean mHasSetOEmbedValues;
     private List<PhotoOEmbed> mPhotoOEmbeds;
     private List<Html5VideoOEmbed> mHtml5VideoOEmbeds;
@@ -73,10 +72,6 @@ public class MessagePlus {
         mDisplayDate = displayDate;
     }
 
-    public boolean hasSetDisplayLocation() {
-        return mHasSetDisplayLocation;
-    }
-
     public boolean hasDisplayLocation() {
         return mDisplayLocation != null;
     }
@@ -87,7 +82,6 @@ public class MessagePlus {
 
     public void setDisplayLocation(DisplayLocation location) {
         mDisplayLocation = location;
-        mHasSetDisplayLocation = true;
     }
 
     public boolean hasSetOEmbedValues() {

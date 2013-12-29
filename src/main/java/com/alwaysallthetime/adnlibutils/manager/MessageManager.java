@@ -1080,7 +1080,6 @@ public class MessageManager {
          * @param isEnabled true if location lookup should be performed on all Messages
          *
          * @see com.alwaysallthetime.adnlibutils.model.MessagePlus#getDisplayLocation()
-         * @see com.alwaysallthetime.adnlibutils.model.MessagePlus#hasSetDisplayLocation()
          * @see com.alwaysallthetime.adnlibutils.model.MessagePlus#hasDisplayLocation()
          */
         public void setLocationLookupEnabled(boolean isEnabled) {
