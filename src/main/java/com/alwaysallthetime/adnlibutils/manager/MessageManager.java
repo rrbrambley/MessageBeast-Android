@@ -574,6 +574,13 @@ public class MessageManager {
         return messagePlus;
     }
 
+    /**
+     * Delete a Message. If the specified Message is unsent, it will simply be deleted from the local
+     * sqlite database and no server request is required.
+     *
+     * @param messagePlus The MessagePlus associated with the Message to be deleted
+     * @param handler The handler that will act as a callback upon deletion.
+     */
     public synchronized void deleteMessage(final MessagePlus messagePlus, final MessageDeletionResponseHandler handler) {
         if(messagePlus.isUnsent()) {
             Message message = messagePlus.getMessage();
