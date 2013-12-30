@@ -413,7 +413,8 @@ public class MessageManager {
      *
      * The since_id used in this request is based off the ids of the messages
      * currently loaded into memory for this channel. For this reason, if database persistence is enabled,
-     * you should probably be exhausting the results of loadPersistedMessages() before calling this method.
+     * you should probably be calling loadPersistedMessages() at least once so that the max message Id
+     * is known.
      *
      * If false is returned, there are unsent messages or pending deletions that must be sent before retrieving.
      *
