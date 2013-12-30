@@ -385,15 +385,69 @@ public class MessageManager {
         }
     }
 
+    /**
+     * Retrieve more messages in the specified channel.
+     *
+     * The since_id and before_id used in the request are based off the ids of the messages
+     * currently loaded into memory for this channel. For this reason, if database persistence is enabled,
+     * you should probably be exhausting the results of loadPersistedMessages() before calling this method.
+     *
+     * If false is returned, there are unsent messages or pending deletions that must be sent before retrieving.
+     *
+     * @param channelId The id of the channel for which more messages should be obtained
+     * @param handler The handler that will deliver the result of this request
+     * @return return false if unsent messages exist and we are unable to retrieve more, true otherwise.
+     *
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#loadPersistedMessages(String, int)
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendUnsentMessages(String)
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendPendingDeletions(String)
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendAllUnsent(String)
+     */
     public synchronized boolean retrieveMessages(final String channelId, final MessageManagerResponseHandler handler) {
         MinMaxPair minMaxPair = getMinMaxPair(channelId);
         return retrieveMessages(channelId, minMaxPair.maxId, minMaxPair.minId, handler);
     }
 
+    /**
+     * Retrieve the newest messages in the specified channel.
+     *
+     * The since_id used in this request is based off the ids of the messages
+     * currently loaded into memory for this channel. For this reason, if database persistence is enabled,
+     * you should probably be exhausting the results of loadPersistedMessages() before calling this method.
+     *
+     * If false is returned, there are unsent messages or pending deletions that must be sent before retrieving.
+     *
+     * @param channelId The id of the channel for which more messages should be obtained
+     * @param handler The handler that will deliver the result of this request
+     * @return return false if unsent messages exist and we are unable to retrieve more, true otherwise.
+     *
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#loadPersistedMessages(String, int)
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendUnsentMessages(String)
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendPendingDeletions(String)
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendAllUnsent(String)
+     */
     public synchronized boolean retrieveNewestMessages(final String channelId, final MessageManagerResponseHandler handler) {
         return retrieveMessages(channelId, getMinMaxPair(channelId).maxId, null, handler);
     }
 
+    /**
+     * Retrieve the more (older) messages in the specified channel.
+     *
+     * The before_id used in this request is based off the ids of the messages
+     * currently loaded into memory for this channel. For this reason, if database persistence is enabled,
+     * you should probably be exhausting the results of loadPersistedMessages() before calling this method.
+     *
+     * If false is returned, there are unsent messages or pending deletions that must be sent before retrieving.
+     *
+     * @param channelId The id of the channel for which more messages should be obtained
+     * @param handler The handler that will deliver the result of this request
+     * @return return false if unsent messages exist and we are unable to retrieve more, true otherwise.
+     *
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#loadPersistedMessages(String, int)
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendUnsentMessages(String)
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendPendingDeletions(String)
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendAllUnsent(String)
+     */
     public synchronized boolean retrieveMoreMessages(final String channelId, final MessageManagerResponseHandler handler) {
         return retrieveMessages(channelId, null, getMinMaxPair(channelId).minId, handler);
     }
