@@ -517,7 +517,7 @@ public class MessageManager {
      *
      * Upon completion of the send request, a broadcast will be sent with either the action
      * INTENT_ACTION_UNSENT_MESSAGES_SENT or INTENT_ACTION_UNSENT_MESSAGES_SEND_FAILURE.
-     * 
+     *
      * @param channelId the id of the Channel in which the Message should be created.
      * @param message The Message to be created.
      * @param pendingFileIds The ids of the pending files that need to be sent before this Message can
@@ -651,6 +651,14 @@ public class MessageManager {
         }
     }
 
+    /**
+     * Obtain fresh copy of the specified Message.
+     *
+     * This is most useful in cases where fields have expired (e.g. file urls).
+     *
+     * @param message the Message to refresh.
+     * @param handler The handler that will act as a callback upon refresh completion.
+     */
     public synchronized void refreshMessage(final Message message, final MessageRefreshResponseHandler handler) {
         final String channelId = message.getChannelId();
         mClient.retrieveMessage(channelId, message.getId(), mParameters.get(channelId), new MessageResponseHandler() {
@@ -684,10 +692,23 @@ public class MessageManager {
         });
     }
 
+    /**
+     * Get the FullSyncState for the Channel with the specified id.
+     *
+     * @param channelId the channel id
+     * @return a FullSyncState corresponding to the sync state of the Channel
+     *         with the specified id
+     */
     public FullSyncState getFullSyncState(String channelId) {
         return ADNSharedPreferences.getFullSyncState(channelId);
     }
 
+    /**
+     * Set the FullSyncState for the Channel with the specified id.
+     *
+     * @param channelId the channel id
+     * @param state the FullSyncState to associate with the Channel.
+     */
     public void setFullSyncState(String channelId, FullSyncState state) {
         ADNSharedPreferences.setFullSyncState(channelId, state);
     }
