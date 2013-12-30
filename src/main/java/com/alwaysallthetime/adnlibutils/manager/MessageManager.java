@@ -491,12 +491,17 @@ public class MessageManager {
      * Any number of unsent messages can exist, but no more messages can be retrieved until all
      * unsent messages have been successfully sent (or deleted).
      *
+     * Upon completion of the send request, a broadcast will be sent with either the action
+     * INTENT_ACTION_UNSENT_MESSAGES_SENT or INTENT_ACTION_UNSENT_MESSAGES_SEND_FAILURE.
+     *
      * @param channelId the id of the Channel in which the Message should be created.
      * @param message The Message to be created.
      *
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendUnsentMessages(String)
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendPendingDeletions(String)
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendAllUnsent(String)
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#INTENT_ACTION_UNSENT_MESSAGES_SENT
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#INTENT_ACTION_UNSENT_MESSAGES_SEND_FAILURE
      */
     public synchronized MessagePlus createUnsentMessageAndAttemptSend(final String channelId, Message message) {
         return createUnsentMessageAndAttemptSend(channelId, message, new HashSet<String>(0));
@@ -510,6 +515,9 @@ public class MessageManager {
      * Any number of unsent messages can exist, but no more messages can be retrieved until all
      * unsent messages have been successfully sent (or deleted).
      *
+     * Upon completion of the send request, a broadcast will be sent with either the action
+     * INTENT_ACTION_UNSENT_MESSAGES_SENT or INTENT_ACTION_UNSENT_MESSAGES_SEND_FAILURE.
+     * 
      * @param channelId the id of the Channel in which the Message should be created.
      * @param message The Message to be created.
      * @param pendingFileIds The ids of the pending files that need to be sent before this Message can
@@ -518,6 +526,8 @@ public class MessageManager {
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendUnsentMessages(String)
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendPendingDeletions(String)
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendAllUnsent(String)
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#INTENT_ACTION_UNSENT_MESSAGES_SENT
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#INTENT_ACTION_UNSENT_MESSAGES_SEND_FAILURE
      */
     public synchronized MessagePlus createUnsentMessageAndAttemptSend(final String channelId, Message message, Set<String> pendingFileIds) {
         if(!mConfiguration.isDatabaseInsertionEnabled) {
