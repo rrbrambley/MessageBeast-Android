@@ -453,6 +453,16 @@ public class MessageManager {
         return retrieveMessages(channelId, null, getMinMaxPair(channelId).minId, handler);
     }
 
+    /**
+     * Create a new Message in the Channel with the specified id.
+     *
+     * A runtime exception will be thrown if you have any unsent messages that need to be sent. If
+     * this is the case, you should probably be calling createUnsentMessageAndAttemptSend() anyway/instead.
+     *
+     * @param channelId the id of the Channel in which the Message should be created.
+     * @param message The Message to be created.
+     * @param handler The handler that will deliver the result of this request
+     */
     public synchronized void createMessage(final String channelId, final Message message, final MessageManagerResponseHandler handler) {
         if(getUnsentMessages(channelId).size() > 0) {
             throw new RuntimeException("This method should not be called when you have unsent messages.");
@@ -473,10 +483,42 @@ public class MessageManager {
         });
     }
 
+    /**
+     * Create a new unsent Message in the channel with the specified id and attempt to send.
+     *
+     * If the Message cannot be sent (e.g. no internet connection), it will still be stored in the
+     * sqlite database as if the Message exists in the Channel, but with an unsent flag set on it.
+     * Any number of unsent messages can exist, but no more messages can be retrieved until all
+     * unsent messages have been successfully sent (or deleted).
+     *
+     * @param channelId the id of the Channel in which the Message should be created.
+     * @param message The Message to be created.
+     *
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendUnsentMessages(String)
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendPendingDeletions(String)
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendAllUnsent(String)
+     */
     public synchronized MessagePlus createUnsentMessageAndAttemptSend(final String channelId, Message message) {
         return createUnsentMessageAndAttemptSend(channelId, message, new HashSet<String>(0));
     }
 
+    /**
+     * Create a new unsent Message that requires pending files to be uploaded prior to creation.
+     *
+     * If the Message cannot be sent (e.g. no internet connection), it will still be stored in the
+     * sqlite database as if the Message exists in the Channel, but with an unsent flag set on it.
+     * Any number of unsent messages can exist, but no more messages can be retrieved until all
+     * unsent messages have been successfully sent (or deleted).
+     *
+     * @param channelId the id of the Channel in which the Message should be created.
+     * @param message The Message to be created.
+     * @param pendingFileIds The ids of the pending files that need to be sent before this Message can
+     *                       be sent to the server.
+     *
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendUnsentMessages(String)
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendPendingDeletions(String)
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendAllUnsent(String)
+     */
     public synchronized MessagePlus createUnsentMessageAndAttemptSend(final String channelId, Message message, Set<String> pendingFileIds) {
         if(!mConfiguration.isDatabaseInsertionEnabled) {
             throw new RuntimeException("Database insertion must be enabled in order to use the unsent messages feature");
