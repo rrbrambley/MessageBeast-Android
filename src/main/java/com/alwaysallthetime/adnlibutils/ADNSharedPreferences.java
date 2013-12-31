@@ -30,11 +30,11 @@ public class ADNSharedPreferences {
         gson = AppDotNetGson.getPersistenceInstance();
     }
 
-    public static FullSyncState getFullSyncState(String channelId) {
-        return FullSyncState.fromOrdinal(sPrefs.getInt(FULL_SYNC_STATE + "_" + channelId, 0));
+    public static FullSyncstate getFullSyncState(String channelId) {
+        return FullSyncstate.fromOrdinal(sPrefs.getInt(FULL_SYNC_STATE + "_" + channelId, 0));
     }
 
-    public static void setFullSyncState(String channelId, FullSyncState state) {
+    public static void setFullSyncState(String channelId, FullSyncstate state) {
         SharedPreferences.Editor edit = sPrefs.edit();
         edit.putInt(FULL_SYNC_STATE + "_" + channelId, state.ordinal());
         edit.commit();

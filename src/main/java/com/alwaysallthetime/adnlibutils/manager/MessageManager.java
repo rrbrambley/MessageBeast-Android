@@ -21,7 +21,7 @@ import com.alwaysallthetime.adnlib.response.MessageListResponseHandler;
 import com.alwaysallthetime.adnlib.response.MessageResponseHandler;
 import com.alwaysallthetime.adnlibutils.ADNSharedPreferences;
 import com.alwaysallthetime.adnlibutils.AnnotationUtility;
-import com.alwaysallthetime.adnlibutils.FullSyncState;
+import com.alwaysallthetime.adnlibutils.FullSyncstate;
 import com.alwaysallthetime.adnlibutils.PrivateChannelUtility;
 import com.alwaysallthetime.adnlibutils.db.ADNDatabase;
 import com.alwaysallthetime.adnlibutils.db.DisplayLocationInstances;
@@ -725,28 +725,28 @@ public class MessageManager {
     }
 
     /**
-     * Get the FullSyncState for the Channel with the specified id.
+     * Get the FullSyncstate for the Channel with the specified id.
      *
      * @param channelId the channel id
-     * @return a FullSyncState corresponding to the sync state of the Channel
+     * @return a FullSyncstate corresponding to the sync state of the Channel
      *         with the specified id
      */
-    public FullSyncState getFullSyncState(String channelId) {
+    public FullSyncstate getFullSyncState(String channelId) {
         return ADNSharedPreferences.getFullSyncState(channelId);
     }
 
     /**
-     * Set the FullSyncState for the Channel with the specified id.
+     * Set the FullSyncstate for the Channel with the specified id.
      *
      * @param channelId the channel id
-     * @param state the FullSyncState to associate with the Channel.
+     * @param state the FullSyncstate to associate with the Channel.
      */
-    public void setFullSyncState(String channelId, FullSyncState state) {
+    public void setFullSyncState(String channelId, FullSyncstate state) {
         ADNSharedPreferences.setFullSyncState(channelId, state);
     }
 
     /**
-     * Get a FullSyncState representing the sync state of multiple channels.
+     * Get a FullSyncstate representing the sync state of multiple channels.
      * In some cases, we might need several channels to be synced, and one
      * or more of them may be in a NOT_STARTED or STARTED state. Since we typically
      * would not need to disclose granular details about the sync state of
@@ -755,15 +755,15 @@ public class MessageManager {
      * be returned if any of the channels is not COMPLETE.
      *
      * @param channels
-     * @return A FullSyncState representing the sync state of the provided group of Channels.
+     * @return A FullSyncstate representing the sync state of the provided group of Channels.
      */
-    public synchronized FullSyncState getFullSyncState(Channel[] channels) {
-        FullSyncState state = FullSyncState.COMPLETE;
+    public synchronized FullSyncstate getFullSyncState(Channel[] channels) {
+        FullSyncstate state = FullSyncstate.COMPLETE;
         for(Channel channel : channels) {
-            if(getFullSyncState(channel.getId()) == FullSyncState.STARTED) {
-                return FullSyncState.STARTED;
-            } else if(getFullSyncState(channel.getId()) == FullSyncState.NOT_STARTED) {
-                state = FullSyncState.NOT_STARTED;
+            if(getFullSyncState(channel.getId()) == FullSyncstate.STARTED) {
+                return FullSyncstate.STARTED;
+            } else if(getFullSyncState(channel.getId()) == FullSyncstate.NOT_STARTED) {
+                state = FullSyncstate.NOT_STARTED;
             }
         }
         return state;
@@ -776,14 +776,14 @@ public class MessageManager {
      * Each Channel is synced - one at a time. If an Action Channel is encountered, the
      * ActionMessageManager is used to sync the Messages in that Channel. Unlike the
      * other retrieveAndPersistAllMessages method that accepts a single Channel id, this
-     * method examines the FullSyncState for a Channel and skips it if it is marked COMPLETE.
+     * method examines the FullSyncstate for a Channel and skips it if it is marked COMPLETE.
      *
      * @param channels
      * @param responseHandler
      */
     public synchronized void retrieveAndPersistAllMessages(Channel[] channels, MessageManagerMultiChannelSyncResponseHandler responseHandler) {
         int i = 0;
-        while(i < channels.length && getFullSyncState(channels[i].getId()) == FullSyncState.COMPLETE) {
+        while(i < channels.length && getFullSyncState(channels[i].getId()) == FullSyncstate.COMPLETE) {
             i++;
         }
         if(i == channels.length) {
@@ -798,7 +798,7 @@ public class MessageManager {
             @Override
             public void onSuccess(List<MessagePlus> responseData, boolean appended) {
                 int i = currentChannelIndex + 1;
-                while(i < channels.length && getFullSyncState(channels[i].getId()) == FullSyncState.COMPLETE) {
+                while(i < channels.length && getFullSyncState(channels[i].getId()) == FullSyncstate.COMPLETE) {
                     i++;
                 }
                 if(i == channels.length) {
@@ -848,7 +848,7 @@ public class MessageManager {
         if(!mConfiguration.isDatabaseInsertionEnabled) {
             throw new RuntimeException("Database insertion must be enabled to use this functionality.");
         }
-        ADNSharedPreferences.setFullSyncState(channelId, FullSyncState.STARTED);
+        ADNSharedPreferences.setFullSyncState(channelId, FullSyncstate.STARTED);
         final ArrayList<MessagePlus> messages = new ArrayList<MessagePlus>(MAX_MESSAGES_RETURNED_ON_SYNC);
         String sinceId = null;
         String beforeId = null;
@@ -878,7 +878,7 @@ public class MessageManager {
                     MessagePlus minMessage = responseData.get(responseData.size() - 1);
                     retrieveAllMessages(messages, null, minMessage.getMessage().getId(), channelId, responseHandler);
                 } else {
-                    ADNSharedPreferences.setFullSyncState(channelId, FullSyncState.COMPLETE);
+                    ADNSharedPreferences.setFullSyncState(channelId, FullSyncstate.COMPLETE);
                     Log.d(TAG, "Num messages synced: " + responseHandler.getNumMessagesSynced());
                     responseHandler.onSuccess(messages, true);
                 }

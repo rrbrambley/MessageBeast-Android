@@ -1,11 +1,11 @@
 package com.alwaysallthetime.adnlibutils;
 
-public enum FullSyncState {
+public enum FullSyncstate {
     NOT_STARTED,
     STARTED,
     COMPLETE;
 
-    public static FullSyncState fromOrdinal(int ordinal) {
+    public static FullSyncstate fromOrdinal(int ordinal) {
         if(ordinal == 0) {
             return NOT_STARTED;
         } else if(ordinal == 1) {
