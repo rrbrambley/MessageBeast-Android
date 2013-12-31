@@ -21,4 +21,8 @@ public class ChannelSpecSet {
     public int getNumChannels() {
         return mChannelSpecs.size();
     }
+
+    public ChannelSpec getChannelSpecAtIndex(int index) {
+        return mChannelSpecs.get(index);
+    }
 }

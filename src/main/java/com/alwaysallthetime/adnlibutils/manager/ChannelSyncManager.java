@@ -7,8 +7,10 @@ import com.alwaysallthetime.adnlib.data.Channel;
 import com.alwaysallthetime.adnlibutils.ADNApplication;
 import com.alwaysallthetime.adnlibutils.PrivateChannelUtility;
 import com.alwaysallthetime.adnlibutils.model.ChannelSpec;
+import com.alwaysallthetime.adnlibutils.model.ChannelSpecSet;
 import com.alwaysallthetime.adnlibutils.model.FullSyncState;
 import com.alwaysallthetime.adnlibutils.model.MessagePlus;
+import com.alwaysallthetime.adnlibutils.model.TargetWithActionChannelsSpecSet;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -42,11 +44,17 @@ public class ChannelSyncManager {
     private MessageManager mMessageManager;
     private ActionMessageManager mActionMessageManager;
 
-    private ChannelSpec mTargetChannelSpec;
-    private List<String> mActionChannelActionTypes;
+    private TargetWithActionChannelsSpecSet mTargetWithActionChannelsSpecSet;
+    private Channel mTargetChannel;
     private Map<String, Channel> mActionChannels;
 
-    private Channel mTargetChannel;
+    private ChannelSpecSet mChannelSpecSet;
+    private List<Channel> mChannels;
+
+    private interface ChannelInitializedHandler {
+        public void onChannelInitialized(Channel channel);
+        public void onException();
+    }
 
     public interface ChannelsInitializedHandler {
         public void onChannelsInitialized();
@@ -65,35 +73,41 @@ public class ChannelSyncManager {
         }
     }
 
-    public ChannelSyncManager(ActionMessageManager actionMessageManager, ChannelSpec channelSpec) {
-        this(actionMessageManager, channelSpec, null);
+    public ChannelSyncManager(MessageManager messageManager, ChannelSpecSet channelSpecSet) {
+        mMessageManager = messageManager;
+        mChannelSpecSet = channelSpecSet;
     }
 
-    public ChannelSyncManager(ActionMessageManager actionMessageManager, ChannelSpec targetChannelSpec, String... actionChannelActionTypes) {
+    public ChannelSyncManager(ActionMessageManager actionMessageManager, TargetWithActionChannelsSpecSet channelSpecSet) {
         mActionMessageManager = actionMessageManager;
         mMessageManager = mActionMessageManager.getMessageManager();
-        mTargetChannelSpec = targetChannelSpec;
-
-        mActionChannelActionTypes = new ArrayList<String>(actionChannelActionTypes != null ? actionChannelActionTypes.length : 0);
-        mActionChannels = new HashMap<String, Channel>(mActionChannelActionTypes.size());
-        if(actionChannelActionTypes != null) {
-            for(String type : actionChannelActionTypes) {
-                mActionChannelActionTypes.add(type);
-            }
-        }
+        mTargetWithActionChannelsSpecSet = channelSpecSet;
     }
 
     public void initChannels(final ChannelsInitializedHandler initializedHandler) {
-        initChannel(mTargetChannelSpec, new Runnable() {
-            @Override
-            public void run() {
-                if(mTargetChannel != null) {
-                    initActionChannels(0, initializedHandler);
-                } else {
+        if(mTargetWithActionChannelsSpecSet != null) {
+            mActionChannels = new HashMap<String, Channel>(mTargetWithActionChannelsSpecSet.getNumActionChannels());
+            initChannel(mTargetWithActionChannelsSpecSet.getTargetChannelSpec(), new ChannelInitializedHandler() {
+                @Override
+                public void onChannelInitialized(Channel channel) {
+                    mTargetChannel = channel;
+                    if(mTargetChannel != null) {
+                        initActionChannels(0, initializedHandler);
+                    } else {
+                        initializedHandler.onException();
+                    }
+                }
+
+                @Override
+                public void onException() {
                     initializedHandler.onException();
                 }
-            }
-        });
+            });
+        } else {
+            //just multiple "regular" channels
+            mChannels = new ArrayList<Channel>(mChannelSpecSet.getNumChannels());
+            initChannels(0, initializedHandler);
+        }
     }
 
     public void checkFullSyncStatus(ChannelSyncStatusHandler handler) {
@@ -154,10 +168,10 @@ public class ChannelSyncManager {
     }
 
     private void retrieveNewestActionChannelMessages(final int index, final Runnable completionRunnable) {
-        if(index >= mActionChannelActionTypes.size()) {
+        if(index >= mTargetWithActionChannelsSpecSet.getNumActionChannels()) {
             completionRunnable.run();
         } else {
-            Channel actionChannel = mActionChannels.get(mActionChannelActionTypes.get(index));
+            Channel actionChannel = mActionChannels.get(mTargetWithActionChannelsSpecSet.getActionChannelActionTypeAtIndex(index));
             boolean canRetrieve = mActionMessageManager.retrieveNewestMessages(actionChannel.getId(), mTargetChannel.getId(), new MessageManager.MessageManagerResponseHandler() {
                 @Override
                 public void onSuccess(List<MessagePlus> responseData, boolean appended) {
@@ -186,12 +200,33 @@ public class ChannelSyncManager {
         return mActionChannels.get(actionType);
     }
 
-    private void initActionChannels(final int index, final ChannelsInitializedHandler initializedHandler) {
-        if(index >= mActionChannelActionTypes.size()) {
+    private void initChannels(final int index, final ChannelsInitializedHandler initializedHandler) {
+        if(index >= mChannelSpecSet.getNumChannels()) {
             initializedHandler.onChannelsInitialized();
             ADNApplication.getContext().sendBroadcast(new Intent(INTENT_ACTION_CHANNELS_INITIALIZED));
         } else {
-            final String actionType = mActionChannelActionTypes.get(index);
+            ChannelSpec spec = mChannelSpecSet.getChannelSpecAtIndex(index);
+            initChannel(spec, new ChannelInitializedHandler() {
+                @Override
+                public void onChannelInitialized(Channel channel) {
+                    mChannels.add(channel);
+                    initChannels(index+1, initializedHandler);
+                }
+
+                @Override
+                public void onException() {
+                    initializedHandler.onException();
+                }
+            });
+        }
+    }
+
+    private void initActionChannels(final int index, final ChannelsInitializedHandler initializedHandler) {
+        if(index >= mTargetWithActionChannelsSpecSet.getNumActionChannels()) {
+            initializedHandler.onChannelsInitialized();
+            ADNApplication.getContext().sendBroadcast(new Intent(INTENT_ACTION_CHANNELS_INITIALIZED));
+        } else {
+            final String actionType = mTargetWithActionChannelsSpecSet.getActionChannelActionTypeAtIndex(index);
             initActionChannel(actionType, mTargetChannel, new Runnable() {
                 @Override
                 public void run() {
@@ -205,19 +240,18 @@ public class ChannelSyncManager {
         }
     }
 
-    private void initChannel(final ChannelSpec channelSpec, final Runnable completionRunnable) {
+    private void initChannel(final ChannelSpec channelSpec, final ChannelInitializedHandler channelInitializedHandler) {
         PrivateChannelUtility.getOrCreateChannel(mMessageManager.getClient(), channelSpec.getType(), new PrivateChannelUtility.PrivateChannelGetOrCreateHandler() {
             @Override
             public void onResponse(Channel channel, boolean createdNewChannel) {
-                mTargetChannel = channel;
                 mMessageManager.setParameters(mTargetChannel.getId(), channelSpec.getQueryParameters());
-                completionRunnable.run();
+                channelInitializedHandler.onChannelInitialized(channel);
             }
 
             @Override
             public void onError(Exception error) {
                 Log.d(TAG, error.getMessage(), error);
-                completionRunnable.run();
+                channelInitializedHandler.onException();
             }
         });
     }
