@@ -17,4 +17,8 @@ public class ChannelSpecSet {
     public List<ChannelSpec> getChannelSpecs() {
         return mChannelSpecs;
     }
+
+    public int getNumChannels() {
+        return mChannelSpecs.size();
+    }
 }
