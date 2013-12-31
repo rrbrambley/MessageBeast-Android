@@ -29,18 +29,18 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * The ActionMessageManager is used to perform mutable actions on Messages.
+ * The ActionMessageManager is used to perform mutable actions on Messages..<br><br>
  *
  * Since Annotations are not mutable, user-invoked actions on individual Messages (e.g.
  * marking a Message as a favorite, as read/unread, etc.) are not manageable with the App.net API.
- * This Manager class is used to hack around this limitation.
+ * This Manager class is used to hack around this limitation..<br><br>
  *
  * We use Action Channels (Channels of type com.alwaysallthetime.action)
  * with machine-only Messages to perform Actions on another Channel's Messages. These Action Messages
  * have metadata annotations (type com.alwaysallthetime.action.metadata) that point to their associated
  * "target" message in another Channel. All Messages in an Action Channel correspond to the same
  * action (i.e. there is only one action per Action Channel). Since Messages can be deleted, deleting
- * an Action Message effectively undoes a performed Action on the target Message.
+ * an Action Message effectively undoes a performed Action on the target Message..<br><br>
  *
  * The ActionMessageManager abstracts away this hack by providing simple applyChannelAction()
  * and removeChannelAction() methods. Before performing either of these actions, you must call
