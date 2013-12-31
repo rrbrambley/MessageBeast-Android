@@ -1,11 +1,11 @@
-package com.alwaysallthetime.adnlibutils;
+package com.alwaysallthetime.adnlibutils.model;
 
-public enum FullSyncstate {
+public enum FullSyncState {
     NOT_STARTED,
     STARTED,
     COMPLETE;
 
-    public static FullSyncstate fromOrdinal(int ordinal) {
+    public static FullSyncState fromOrdinal(int ordinal) {
         if(ordinal == 0) {
             return NOT_STARTED;
         } else if(ordinal == 1) {

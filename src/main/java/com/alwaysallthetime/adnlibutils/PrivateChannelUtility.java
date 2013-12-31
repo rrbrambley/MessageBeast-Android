@@ -11,6 +11,7 @@ import com.alwaysallthetime.adnlib.data.ChannelList;
 import com.alwaysallthetime.adnlib.data.User;
 import com.alwaysallthetime.adnlib.response.ChannelListResponseHandler;
 import com.alwaysallthetime.adnlib.response.ChannelResponseHandler;
+import com.alwaysallthetime.adnlibutils.model.FullSyncState;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -251,7 +252,7 @@ public class PrivateChannelUtility {
                 client.subscribeChannel(responseData, params, new ChannelResponseHandler() {
                     @Override
                     public void onSuccess(Channel responseData) {
-                        ADNSharedPreferences.setFullSyncState(responseData.getId(), FullSyncstate.COMPLETE);
+                        ADNSharedPreferences.setFullSyncState(responseData.getId(), FullSyncState.COMPLETE);
                         handler.onResponse(responseData);
                     }
                 });

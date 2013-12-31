@@ -5,7 +5,7 @@ import android.util.Log;
 
 import com.alwaysallthetime.adnlib.data.Channel;
 import com.alwaysallthetime.adnlibutils.ADNApplication;
-import com.alwaysallthetime.adnlibutils.FullSyncstate;
+import com.alwaysallthetime.adnlibutils.model.FullSyncState;
 import com.alwaysallthetime.adnlibutils.PrivateChannelUtility;
 import com.alwaysallthetime.adnlibutils.model.ChannelSpec;
 import com.alwaysallthetime.adnlibutils.model.MessagePlus;
@@ -83,10 +83,10 @@ public class ChannelSyncManager {
     }
 
     public void checkFullSyncStatus(boolean automaticallyResumeSyncIfPreviouslyStarted, ChannelSyncStatusHandler handler) {
-        FullSyncstate state = mMessageManager.getFullSyncState(getChannelsArray());
-        if(state == FullSyncstate.COMPLETE) {
+        FullSyncState state = mMessageManager.getFullSyncState(getChannelsArray());
+        if(state == FullSyncState.COMPLETE) {
             handler.onSyncComplete();
-        } else if(state == FullSyncstate.NOT_STARTED) {
+        } else if(state == FullSyncState.NOT_STARTED) {
             startFullSync(handler);
             handler.onSyncStarted();
         } else {

@@ -8,6 +8,7 @@ import com.alwaysallthetime.adnlib.data.Configuration;
 import com.alwaysallthetime.adnlib.data.Token;
 import com.alwaysallthetime.adnlib.data.User;
 import com.alwaysallthetime.adnlib.gson.AppDotNetGson;
+import com.alwaysallthetime.adnlibutils.model.FullSyncState;
 import com.google.gson.Gson;
 
 import java.util.Date;
@@ -30,11 +31,11 @@ public class ADNSharedPreferences {
         gson = AppDotNetGson.getPersistenceInstance();
     }
 
-    public static FullSyncstate getFullSyncState(String channelId) {
-        return FullSyncstate.fromOrdinal(sPrefs.getInt(FULL_SYNC_STATE + "_" + channelId, 0));
+    public static FullSyncState getFullSyncState(String channelId) {
+        return FullSyncState.fromOrdinal(sPrefs.getInt(FULL_SYNC_STATE + "_" + channelId, 0));
     }
 
-    public static void setFullSyncState(String channelId, FullSyncstate state) {
+    public static void setFullSyncState(String channelId, FullSyncState state) {
         SharedPreferences.Editor edit = sPrefs.edit();
         edit.putInt(FULL_SYNC_STATE + "_" + channelId, state.ordinal());
         edit.commit();
