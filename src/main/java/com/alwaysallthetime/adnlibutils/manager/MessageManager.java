@@ -47,6 +47,38 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * MessageManager is used to retrieve, create, and delete Messages in any number of channels.<br><br>
+ *
+ * All Messages that are obtained via the MessageManager will use a wrapper class called MessagePlus,
+ * which contains extra metadata associated with the Message. A MessageManagerConfiguration is required
+ * in order to determine which of the following features are used to add metadata to the MessagePlus:<br><br>
+ *
+ * • DisplayLocation lookup. Geolocation, Checkin, and Ohai Location annotations are consolidated into a single
+ * DisplayLocation object. In the case of Geolocation, an asynchronous task is fired off to perform
+ * reverse geolocation (in order to find a human-readable name for the location).<br>
+ *
+ * • OEmbed lookup. For all OEmbed annotations found on a Message, PhotoOEmbed and Html5OEmbed
+ * objects are constructed and stored for easy access on the MessagePlus. Additionally, this data
+ * is stored in a sqlite database so lookups can be performed (e.g. give me all messages with videos).<br>
+ *
+ * • Association of an a display date that is different than the created_at date via a MessageDateAdapter.<br><br>
+ * 
+ * Some additional key features are are:<br><br>
+ *
+ * • Persistence of all Messages in a sqlite database. Messages can be loaded on subsequent launches
+ * by using the loadPersistedMessages methods, and several ADNDatabase methods are available for obtaining
+ * Messages or performing operations on them (e.g. full text search).<br>
+ *
+ * • Offline Message creation and deletion. The createUnsentMessageAndAttemptSend() methods can be used
+ * to create Messages that will be saved to the local sqlite database with an unsent flag set when there
+ * is no internet connection available. The MessageManager will return the associated MessagePlus objects
+ * as if they are "real" Messages and delete them after they are successfully sent (so that the "real"
+ * Message can be retrieved - with its server-assigned id).<br>
+ *
+ * • Perform a full sync on a specified channel, obtaining every Message in existence in that Channel.
+ * This is especially useful in cases where a Channel is used privately by a single user.
+ */
 public class MessageManager {
 
     private static final String TAG = "ADNLibUtils_MessageManager";
