@@ -63,7 +63,7 @@ import java.util.Set;
  * is stored in a sqlite database so lookups can be performed (e.g. give me all messages with videos).<br>
  *
  * • Association of an a display date that is different than the created_at date via a MessageDateAdapter.<br><br>
- * 
+ *
  * Some additional key features are are:<br><br>
  *
  * • Persistence of all Messages in a sqlite database. Messages can be loaded on subsequent launches
@@ -85,8 +85,27 @@ public class MessageManager {
 
     private static final int MAX_MESSAGES_RETURNED_ON_SYNC = 100;
 
+    /**
+     * An intent with this action is broadcasted when unsent messages are successfully sent.
+     *
+     * The EXTRA_CHANNEL_ID and EXTRA_SENT_MESSAGE_IDS extras contain relevant info.
+     *
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#EXTRA_CHANNEL_ID
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#EXTRA_SENT_MESSAGE_IDS
+     */
     public static final String INTENT_ACTION_UNSENT_MESSAGES_SENT = "com.alwaysallthetime.adnlibutils.manager.MessageManager.intent.unsentMessagesSent";
-    public static final String INTENT_ACTION_UNSENT_MESSAGES_SEND_FAILURE = "com.alwaysallthetime.adnlibutils.manager.MessageManager.intent.unsentMessagesSendFailure";
+
+    /**
+     * An intent with this action is broadcasted when an unsent message fails to send upon request.
+     *
+     * The EXTRA_CHANNEL_ID, EXTRA_MESSAGE_ID, and EXTRA_SEND_ATTEMPTS extras contain relevant info.
+     *
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#EXTRA_CHANNEL_ID
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#EXTRA_MESSAGE_ID
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#EXTRA_SEND_ATTEMPTS
+     */
+    public static final String INTENT_ACTION_UNSENT_MESSAGE_SEND_FAILURE = "com.alwaysallthetime.adnlibutils.manager.MessageManager.intent.unsentMessageSendFailure";
+
     public static final String EXTRA_CHANNEL_ID = "com.alwaysallthetime.adnlibutils.manager.MessageManager.extras.channelId";
     public static final String EXTRA_SENT_MESSAGE_IDS = "com.alwaysallthetime.adnlibutils.manager.MessageManager.extras.sentMessageIds";
     public static final String EXTRA_MESSAGE_ID = "com.alwaysallthetime.adnlibutils.manager.MessageManager.extras.messageId";
@@ -524,7 +543,7 @@ public class MessageManager {
      * unsent messages have been successfully sent (or deleted).
      *
      * Upon completion of the send request, a broadcast will be sent with either the action
-     * INTENT_ACTION_UNSENT_MESSAGES_SENT or INTENT_ACTION_UNSENT_MESSAGES_SEND_FAILURE.
+     * INTENT_ACTION_UNSENT_MESSAGES_SENT or INTENT_ACTION_UNSENT_MESSAGE_SEND_FAILURE.
      *
      * @param channelId the id of the Channel in which the Message should be created.
      * @param message The Message to be created.
@@ -533,7 +552,7 @@ public class MessageManager {
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendPendingDeletions(String)
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendAllUnsent(String)
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#INTENT_ACTION_UNSENT_MESSAGES_SENT
-     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#INTENT_ACTION_UNSENT_MESSAGES_SEND_FAILURE
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#INTENT_ACTION_UNSENT_MESSAGE_SEND_FAILURE
      */
     public synchronized MessagePlus createUnsentMessageAndAttemptSend(final String channelId, Message message) {
         return createUnsentMessageAndAttemptSend(channelId, message, new HashSet<String>(0));
@@ -548,7 +567,7 @@ public class MessageManager {
      * unsent messages have been successfully sent (or deleted).
      *
      * Upon completion of the send request, a broadcast will be sent with either the action
-     * INTENT_ACTION_UNSENT_MESSAGES_SENT or INTENT_ACTION_UNSENT_MESSAGES_SEND_FAILURE.
+     * INTENT_ACTION_UNSENT_MESSAGES_SENT or INTENT_ACTION_UNSENT_MESSAGE_SEND_FAILURE.
      *
      * @param channelId the id of the Channel in which the Message should be created.
      * @param message The Message to be created.
@@ -559,7 +578,7 @@ public class MessageManager {
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendPendingDeletions(String)
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendAllUnsent(String)
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#INTENT_ACTION_UNSENT_MESSAGES_SENT
-     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#INTENT_ACTION_UNSENT_MESSAGES_SEND_FAILURE
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#INTENT_ACTION_UNSENT_MESSAGE_SEND_FAILURE
      */
     public synchronized MessagePlus createUnsentMessageAndAttemptSend(final String channelId, Message message, Set<String> pendingFileIds) {
         if(!mConfiguration.isDatabaseInsertionEnabled) {
@@ -964,7 +983,7 @@ public class MessageManager {
                 int sendAttempts = messagePlus.incrementSendAttempts();
                 mDatabase.insertOrReplaceMessage(messagePlus);
 
-                Intent i = new Intent(INTENT_ACTION_UNSENT_MESSAGES_SEND_FAILURE);
+                Intent i = new Intent(INTENT_ACTION_UNSENT_MESSAGE_SEND_FAILURE);
                 i.putExtra(EXTRA_CHANNEL_ID, message.getChannelId());
                 i.putExtra(EXTRA_MESSAGE_ID, message.getId());
                 i.putExtra(EXTRA_SEND_ATTEMPTS, sendAttempts);
