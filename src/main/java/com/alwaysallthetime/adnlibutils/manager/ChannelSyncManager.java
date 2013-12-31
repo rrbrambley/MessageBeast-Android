@@ -5,9 +5,9 @@ import android.util.Log;
 
 import com.alwaysallthetime.adnlib.data.Channel;
 import com.alwaysallthetime.adnlibutils.ADNApplication;
-import com.alwaysallthetime.adnlibutils.model.FullSyncState;
 import com.alwaysallthetime.adnlibutils.PrivateChannelUtility;
 import com.alwaysallthetime.adnlibutils.model.ChannelSpec;
+import com.alwaysallthetime.adnlibutils.model.FullSyncState;
 import com.alwaysallthetime.adnlibutils.model.MessagePlus;
 
 import java.util.ArrayList;
@@ -15,6 +15,24 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * ChannelSyncManager simplifies the syncing of several channels simultaneously.<br><br>
+ *
+ * This manager is especially useful when one or more Action Channels are being synced
+ * for a "target" Channel. For example, a journaling app may choose to have a target Channel
+ * for journal entries that are accompanied by "favorite entries" and "locked entries" Action Channels –
+ * enabling users to mark entries as favorites, or locked entries, respectively. In this scenario,
+ * pulling the newest Messages from the server requires performing three requests; this class
+ * can be used to perform the three requests in one method call, with one callback.<br><br>
+ *
+ * ChannelSyncManager can also perform full syncs on multiple channels with one method call..<br><br>
+ *
+ * To use the functionality in ChannelSyncManager, it is important to first call initChannels() after
+ * instantiating it with your channel specs.<br><br>
+ *
+ * @see com.alwaysallthetime.adnlibutils.manager.ActionMessageManager
+ * @see com.alwaysallthetime.adnlibutils.manager.MessageManager
+ */
 public class ChannelSyncManager {
 
     public static final String INTENT_ACTION_CHANNELS_INITIALIZED = "com.alwaysallthetime.adnlibutils.manager.ChannelSyncManager.intent.channelsInitialized";
