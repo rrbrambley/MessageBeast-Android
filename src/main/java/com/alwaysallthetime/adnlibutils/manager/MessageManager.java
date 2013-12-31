@@ -111,9 +111,6 @@ public class MessageManager {
     public static final String EXTRA_MESSAGE_ID = "com.alwaysallthetime.adnlibutils.manager.MessageManager.extras.messageId";
     public static final String EXTRA_SEND_ATTEMPTS = "com.alwaysallthetime.adnlibutils.manager.MessageManager.extras.sendAttempts";
 
-    /*
-     * public data structures
-     */
     public static abstract class MessageManagerResponseHandler {
         private boolean isMore;
 
