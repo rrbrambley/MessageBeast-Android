@@ -44,10 +44,20 @@ public class ChannelSyncManager {
     private MessageManager mMessageManager;
     private ActionMessageManager mActionMessageManager;
 
+    //the constructor you use will determine which of the following fields are used:
+
+    //
+    //either these
+    //
     private TargetWithActionChannelsSpecSet mTargetWithActionChannelsSpecSet;
     private Channel mTargetChannel;
     private Map<String, Channel> mActionChannels;
 
+    //OR
+
+    //
+    //these
+    //
     private ChannelSpecSet mChannelSpecSet;
     private List<Channel> mChannels;
 
@@ -73,17 +83,40 @@ public class ChannelSyncManager {
         }
     }
 
+    /**
+     * Create a ChannelSyncManager for a set of Channels.
+     *
+     * Note that this constructor is not for use with Action Channels.
+     *
+     * @param messageManager An instance of MessageManager to be used for syncing the Channels.
+     * @param channelSpecSet The ChannelSpecSet describing the Channels to be used with ChannelSyncManager
+     *
+     * @see com.alwaysallthetime.adnlibutils.manager.ChannelSyncManager#ChannelSyncManager(ActionMessageManager, com.alwaysallthetime.adnlibutils.model.TargetWithActionChannelsSpecSet)
+     */
     public ChannelSyncManager(MessageManager messageManager, ChannelSpecSet channelSpecSet) {
         mMessageManager = messageManager;
         mChannelSpecSet = channelSpecSet;
     }
 
+    /**
+     * Create a ChannelSyncManager to be used with a Channel and a set of Action Channels
+     *
+     * @param actionMessageManager An instance of ActionMessageManager.
+     * @param channelSpecSet The TargetWithActionChannelsSpecSet describing the Channels to be used with ChannelSyncManager
+     */
     public ChannelSyncManager(ActionMessageManager actionMessageManager, TargetWithActionChannelsSpecSet channelSpecSet) {
         mActionMessageManager = actionMessageManager;
         mMessageManager = mActionMessageManager.getMessageManager();
         mTargetWithActionChannelsSpecSet = channelSpecSet;
     }
 
+    /**
+     * Initialize the Channels described by the spec(s) passed when constructing this class.
+     *
+     * This method must be called before any operations can be performed with a ChannelSyncManager.
+     *
+     * @param initializedHandler a ChannelsInitializedHandler
+     */
     public void initChannels(final ChannelsInitializedHandler initializedHandler) {
         if(mTargetWithActionChannelsSpecSet != null) {
             mActionChannels = new HashMap<String, Channel>(mTargetWithActionChannelsSpecSet.getNumActionChannels());
@@ -110,10 +143,36 @@ public class ChannelSyncManager {
         }
     }
 
+    /**
+     * Check the FullSyncStatus for the Channels associated with this manager and begin syncing
+     * if all Channels do not already have a FullSyncState of COMPLETE.
+     *
+     * The MessageManager.retrieveAndPersistAllMessages() method is used to perform the sync.
+     *
+     * @param handler ChannelSyncStatusHandler
+     *
+     * @see com.alwaysallthetime.adnlibutils.model.FullSyncState
+     * @see com.alwaysallthetime.adnlibutils.manager.ChannelSyncManager#checkFullSyncStatus(boolean, com.alwaysallthetime.adnlibutils.manager.ChannelSyncManager.ChannelSyncStatusHandler)
+     */
     public void checkFullSyncStatus(ChannelSyncStatusHandler handler) {
         checkFullSyncStatus(true, handler);
     }
 
+    /**
+     * Check the FullSyncStatus for the Channels associated with this manager.
+     *
+     * If the parameter automaticallyResumeSyncIfPreviouslyStarted is false, then you should override the
+     * ChannelSyncStatusHandler.onSyncIncomplete() method to handle a FullSyncState of STARTED
+     * (e.g. show a dialog "would you like to resume syncing these channels?").
+     *
+     * The MessageManager.retrieveAndPersistAllMessages() method is used to perform the sync.
+     *
+     * @param handler ChannelSyncStatusHandler
+     *
+     * @see com.alwaysallthetime.adnlibutils.model.FullSyncState
+     * @see com.alwaysallthetime.adnlibutils.manager.ChannelSyncManager#checkFullSyncStatus(boolean, com.alwaysallthetime.adnlibutils.manager.ChannelSyncManager.ChannelSyncStatusHandler)
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#retrieveAndPersistAllMessages(String, com.alwaysallthetime.adnlibutils.manager.MessageManager.MessageManagerSyncResponseHandler)
+     */
     public void checkFullSyncStatus(boolean automaticallyResumeSyncIfPreviouslyStarted, ChannelSyncStatusHandler handler) {
         FullSyncState state = mMessageManager.getFullSyncState(getChannelsArray());
         if(state == FullSyncState.COMPLETE) {
@@ -131,6 +190,15 @@ public class ChannelSyncManager {
         }
     }
 
+    /**
+     * Start a full sync on the channels associated with this manager.
+     *
+     * The MessageManager.retrieveAndPersistAllMessages() method is used to perform the sync.
+     *
+     * @param handler ChannelSyncStatusHandler
+     *
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#retrieveAndPersistAllMessages(String, com.alwaysallthetime.adnlibutils.manager.MessageManager.MessageManagerSyncResponseHandler)
+     */
     public void startFullSync(final ChannelSyncStatusHandler handler) {
         mMessageManager.retrieveAndPersistAllMessages(getChannelsArray(), new MessageManager.MessageManagerMultiChannelSyncResponseHandler() {
             @Override
@@ -146,6 +214,12 @@ public class ChannelSyncManager {
         });
     }
 
+    /**
+     * Retrieve the newest messages in all channels associated with this manager.
+     *
+     * @param responseHandler MessageManager.MessageManagerResponseHandler
+     * @return false if unsent messages are preventing retrieval to occur, true otherwise.
+     */
     public boolean retrieveNewestMessages(final MessageManager.MessageManagerResponseHandler responseHandler) {
         boolean canRetrieve = mMessageManager.retrieveNewestMessages(mTargetChannel.getId(), new MessageManager.MessageManagerResponseHandler() {
             @Override
