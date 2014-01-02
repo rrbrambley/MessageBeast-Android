@@ -132,11 +132,7 @@ public class ChannelSyncManager {
                 @Override
                 public void onChannelInitialized(Channel channel) {
                     mTargetChannel = channel;
-                    if(mTargetChannel != null) {
-                        initActionChannels(0, initializedHandler);
-                    } else {
-                        initializedHandler.onException();
-                    }
+                    initActionChannels(0, initializedHandler);
                 }
 
                 @Override
