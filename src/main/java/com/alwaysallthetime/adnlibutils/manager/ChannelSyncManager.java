@@ -53,7 +53,7 @@ public class ChannelSyncManager {
     //
     private TargetWithActionChannelsSpecSet mTargetWithActionChannelsSpecSet;
     private Channel mTargetChannel;
-    private Map<String, Channel> mActionChannels;
+    private Map<String, Channel> mActionChannels; //indexed by action type
 
     //
     //OR
@@ -63,7 +63,7 @@ public class ChannelSyncManager {
     //these
     //
     private ChannelSpecSet mChannelSpecSet;
-    private List<Channel> mChannels;
+    private Map<String, Channel> mChannels; //indexed by channel id
 
     private interface ChannelInitializedHandler {
         public void onChannelInitialized(Channel channel);
@@ -146,7 +146,7 @@ public class ChannelSyncManager {
             });
         } else {
             //just multiple "regular" channels
-            mChannels = new ArrayList<Channel>(mChannelSpecSet.getNumChannels());
+            mChannels = new HashMap<String, Channel>(mChannelSpecSet.getNumChannels());
             initChannels(0, initializedHandler);
         }
     }
@@ -254,14 +254,39 @@ public class ChannelSyncManager {
                 retrieveNewestActionChannelMessages(0, refreshHandler, refreshResultSet);
             }
         } else {
-            //TODO
-//            retrieveNewestMessagesInChannelsList(0, responseHandler);
+            retrieveNewestMessagesInChannelsList(0, refreshHandler, new ChannelRefreshResultSet());
         }
     }
 
-//    private void retrieveNewestMessagesInChannelsList(final int index, MessageManager.MessageManagerResponseHandler responseHandler) {
-//
-//    }
+    private void retrieveNewestMessagesInChannelsList(final int index, final ChannelRefreshHandler refreshHandler, final ChannelRefreshResultSet refreshResultSet) {
+        if(index >= mChannelSpecSet.getNumChannels()) {
+            refreshHandler.onComplete(refreshResultSet);
+        } else {
+            final Channel channel = mChannels.get(mChannelSpecSet.getChannelSpecAtIndex(index));
+            boolean canRetrieve = mMessageManager.retrieveNewestMessages(channel.getId(), new MessageManager.MessageManagerResponseHandler() {
+                @Override
+                public void onSuccess(List<MessagePlus> responseData, boolean appended) {
+                    ChannelRefreshResult refreshResult = new ChannelRefreshResult(channel, responseData, appended);
+                    refreshResultSet.addRefreshResult(refreshResult);
+                    retrieveNewestMessagesInChannelsList(index + 1, refreshHandler, refreshResultSet);
+                }
+
+                @Override
+                public void onError(Exception exception) {
+                    Log.e(TAG, exception.getMessage(), exception);
+
+                    ChannelRefreshResult refreshResult = new ChannelRefreshResult(channel, exception);
+                    refreshResultSet.addRefreshResult(refreshResult);
+                    retrieveNewestMessagesInChannelsList(index + 1, refreshHandler, refreshResultSet);
+                }
+            });
+
+            if(!canRetrieve) {
+                refreshResultSet.addRefreshResult(new ChannelRefreshResult(channel));
+                retrieveNewestMessagesInChannelsList(index + 1, refreshHandler, refreshResultSet);
+            }
+        }
+    }
 
     private void retrieveNewestActionChannelMessages(final int index, final ChannelRefreshHandler refreshHandler, final ChannelRefreshResultSet refreshResultSet) {
         if(index >= mTargetWithActionChannelsSpecSet.getNumActionChannels()) {
@@ -310,7 +335,7 @@ public class ChannelSyncManager {
             initChannel(spec, new ChannelInitializedHandler() {
                 @Override
                 public void onChannelInitialized(Channel channel) {
-                    mChannels.add(channel);
+                    mChannels.put(channel.getId(), channel);
                     initChannels(index+1, initializedHandler);
                 }
 
