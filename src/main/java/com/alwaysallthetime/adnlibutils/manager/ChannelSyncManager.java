@@ -6,6 +6,8 @@ import android.util.Log;
 import com.alwaysallthetime.adnlib.data.Channel;
 import com.alwaysallthetime.adnlibutils.ADNApplication;
 import com.alwaysallthetime.adnlibutils.PrivateChannelUtility;
+import com.alwaysallthetime.adnlibutils.model.ChannelRefreshResult;
+import com.alwaysallthetime.adnlibutils.model.ChannelRefreshResultSet;
 import com.alwaysallthetime.adnlibutils.model.ChannelSpec;
 import com.alwaysallthetime.adnlibutils.model.ChannelSpecSet;
 import com.alwaysallthetime.adnlibutils.model.FullSyncState;
@@ -83,6 +85,10 @@ public class ChannelSyncManager {
         public void onSyncIncomplete() {
 
         }
+    }
+
+    public static interface ChannelRefreshHandler {
+        public void onComplete(ChannelRefreshResultSet result);
     }
 
     /**
@@ -219,51 +225,70 @@ public class ChannelSyncManager {
     /**
      * Retrieve the newest messages in all channels associated with this manager.
      *
-     * @param responseHandler MessageManager.MessageManagerResponseHandler
-     * @return false if unsent messages are preventing retrieval to occur, true otherwise.
+     * @param refreshHandler ChannelRefreshHandler the handler that will be passed
+     *                       a ChannelRefreshResultSet upon completion of this operation.
      */
-    public boolean retrieveNewestMessages(final MessageManager.MessageManagerResponseHandler responseHandler) {
-        boolean canRetrieve = mMessageManager.retrieveNewestMessages(mTargetChannel.getId(), new MessageManager.MessageManagerResponseHandler() {
-            @Override
-            public void onSuccess(final List<MessagePlus> responseData, final boolean appended) {
-                retrieveNewestActionChannelMessages(0, new Runnable() {
-                    @Override
-                    public void run() {
-                        responseHandler.onSuccess(responseData, appended);
-                    }
-                });
-            }
-
-            @Override
-            public void onError(Exception exception) {
-                Log.e(TAG, exception.getMessage(), exception);
-                responseHandler.onError(exception);
-            }
-        });
-        return canRetrieve;
-    }
-
-    private void retrieveNewestActionChannelMessages(final int index, final Runnable completionRunnable) {
-        if(index >= mTargetWithActionChannelsSpecSet.getNumActionChannels()) {
-            completionRunnable.run();
-        } else {
-            Channel actionChannel = mActionChannels.get(mTargetWithActionChannelsSpecSet.getActionChannelActionTypeAtIndex(index));
-            boolean canRetrieve = mActionMessageManager.retrieveNewestMessages(actionChannel.getId(), mTargetChannel.getId(), new MessageManager.MessageManagerResponseHandler() {
+    public void retrieveNewestMessages(final ChannelRefreshHandler refreshHandler) {
+        if(mTargetWithActionChannelsSpecSet != null) {
+            final ChannelRefreshResultSet refreshResultSet = new ChannelRefreshResultSet();
+            boolean canRetrieve = mMessageManager.retrieveNewestMessages(mTargetChannel.getId(), new MessageManager.MessageManagerResponseHandler() {
                 @Override
-                public void onSuccess(List<MessagePlus> responseData, boolean appended) {
-                    retrieveNewestActionChannelMessages(index + 1, completionRunnable);
+                public void onSuccess(final List<MessagePlus> responseData, final boolean appended) {
+                    ChannelRefreshResult refreshResult = new ChannelRefreshResult(mTargetChannel, responseData, appended);
+                    refreshResultSet.addRefreshResult(refreshResult);
+                    retrieveNewestActionChannelMessages(0, refreshHandler, refreshResultSet);
                 }
 
                 @Override
                 public void onError(Exception exception) {
                     Log.e(TAG, exception.getMessage(), exception);
-                    completionRunnable.run();
+
+                    ChannelRefreshResult refreshResult = new ChannelRefreshResult(mTargetChannel, exception);
+                    refreshResultSet.addRefreshResult(refreshResult);
+                    retrieveNewestActionChannelMessages(0, refreshHandler, refreshResultSet);
                 }
             });
 
-            //TODO: fix this? is this right?
             if(!canRetrieve) {
-                mMessageManager.sendAllUnsent(actionChannel.getId());
+                refreshResultSet.addRefreshResult(new ChannelRefreshResult(mTargetChannel));
+                retrieveNewestActionChannelMessages(0, refreshHandler, refreshResultSet);
+            }
+        } else {
+            //TODO
+//            retrieveNewestMessagesInChannelsList(0, responseHandler);
+        }
+    }
+
+//    private void retrieveNewestMessagesInChannelsList(final int index, MessageManager.MessageManagerResponseHandler responseHandler) {
+//
+//    }
+
+    private void retrieveNewestActionChannelMessages(final int index, final ChannelRefreshHandler refreshHandler, final ChannelRefreshResultSet refreshResultSet) {
+        if(index >= mTargetWithActionChannelsSpecSet.getNumActionChannels()) {
+            refreshHandler.onComplete(refreshResultSet);
+        } else {
+            final Channel actionChannel = mActionChannels.get(mTargetWithActionChannelsSpecSet.getActionChannelActionTypeAtIndex(index));
+            boolean canRetrieve = mActionMessageManager.retrieveNewestMessages(actionChannel.getId(), mTargetChannel.getId(), new MessageManager.MessageManagerResponseHandler() {
+                @Override
+                public void onSuccess(List<MessagePlus> responseData, boolean appended) {
+                    ChannelRefreshResult refreshResult = new ChannelRefreshResult(actionChannel, responseData, appended);
+                    refreshResultSet.addRefreshResult(refreshResult);
+                    retrieveNewestActionChannelMessages(index + 1, refreshHandler, refreshResultSet);
+                }
+
+                @Override
+                public void onError(Exception exception) {
+                    Log.e(TAG, exception.getMessage(), exception);
+
+                    ChannelRefreshResult refreshResult = new ChannelRefreshResult(actionChannel, exception);
+                    refreshResultSet.addRefreshResult(refreshResult);
+                    retrieveNewestActionChannelMessages(index + 1, refreshHandler, refreshResultSet);
+                }
+            });
+
+            if(!canRetrieve) {
+                refreshResultSet.addRefreshResult(new ChannelRefreshResult(actionChannel));
+                retrieveNewestActionChannelMessages(index + 1, refreshHandler, refreshResultSet);
             }
         }
     }
@@ -320,7 +345,7 @@ public class ChannelSyncManager {
         PrivateChannelUtility.getOrCreateChannel(mMessageManager.getClient(), channelSpec.getType(), new PrivateChannelUtility.PrivateChannelGetOrCreateHandler() {
             @Override
             public void onResponse(Channel channel, boolean createdNewChannel) {
-                mMessageManager.setParameters(mTargetChannel.getId(), channelSpec.getQueryParameters());
+                mMessageManager.setParameters(channel.getId(), channelSpec.getQueryParameters());
                 channelInitializedHandler.onChannelInitialized(channel);
             }
 
