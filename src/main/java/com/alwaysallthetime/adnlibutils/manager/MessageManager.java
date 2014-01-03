@@ -1030,6 +1030,8 @@ public class MessageManager {
         if(pendingMessageDeletions.size() > 0) {
             ArrayList<PendingMessageDeletion> deletions = new ArrayList<PendingMessageDeletion>(pendingMessageDeletions.values());
             sendPendingDeletion(0, deletions, responseHandler);
+        } else if(responseHandler != null) {
+            responseHandler.onSuccess();
         }
     }
 
