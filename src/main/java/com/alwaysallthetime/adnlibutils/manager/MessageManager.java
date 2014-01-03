@@ -1013,7 +1013,7 @@ public class MessageManager {
         return false;
     }
 
-    public synchronized boolean sendPendingDeletions(final String channelId) {
+    public synchronized void sendPendingDeletions(final String channelId) {
         HashMap<String, PendingMessageDeletion> pendingMessageDeletions = mDatabase.getPendingMessageDeletions(channelId);
         if(pendingMessageDeletions.size() > 0) {
             for(String messageId : pendingMessageDeletions.keySet()) {
@@ -1029,9 +1029,7 @@ public class MessageManager {
                     }
                 });
             }
-            return true;
         }
-        return false;
     }
 
     private synchronized boolean retrieveMessages(final QueryParameters queryParameters, final String channelId, final boolean keepInMemory, final MessageManagerResponseHandler handler) {
