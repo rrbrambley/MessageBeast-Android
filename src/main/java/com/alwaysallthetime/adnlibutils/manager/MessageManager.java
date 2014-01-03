@@ -448,7 +448,7 @@ public class MessageManager {
      *
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#loadPersistedMessages(String, int)
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendUnsentMessages(String)
-     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendPendingDeletions(String)
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendPendingDeletions(String, com.alwaysallthetime.adnlibutils.manager.MessageManager.MessageDeletionResponseHandler)
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendAllUnsent(String)
      */
     public synchronized boolean retrieveMessages(final String channelId, final MessageManagerResponseHandler handler) {
@@ -472,7 +472,7 @@ public class MessageManager {
      *
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#loadPersistedMessages(String, int)
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendUnsentMessages(String)
-     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendPendingDeletions(String)
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendPendingDeletions(String, com.alwaysallthetime.adnlibutils.manager.MessageManager.MessageDeletionResponseHandler)
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendAllUnsent(String)
      */
     public synchronized boolean retrieveNewestMessages(final String channelId, final MessageManagerResponseHandler handler) {
@@ -494,7 +494,7 @@ public class MessageManager {
      *
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#loadPersistedMessages(String, int)
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendUnsentMessages(String)
-     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendPendingDeletions(String)
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendPendingDeletions(String, com.alwaysallthetime.adnlibutils.manager.MessageManager.MessageDeletionResponseHandler)
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendAllUnsent(String)
      */
     public synchronized boolean retrieveMoreMessages(final String channelId, final MessageManagerResponseHandler handler) {
@@ -546,7 +546,7 @@ public class MessageManager {
      * @param message The Message to be created.
      *
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendUnsentMessages(String)
-     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendPendingDeletions(String)
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendPendingDeletions(String, com.alwaysallthetime.adnlibutils.manager.MessageManager.MessageDeletionResponseHandler)
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendAllUnsent(String)
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#INTENT_ACTION_UNSENT_MESSAGES_SENT
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#INTENT_ACTION_UNSENT_MESSAGE_SEND_FAILURE
@@ -572,7 +572,7 @@ public class MessageManager {
      *                       be sent to the server.
      *
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendUnsentMessages(String)
-     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendPendingDeletions(String)
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendPendingDeletions(String, com.alwaysallthetime.adnlibutils.manager.MessageManager.MessageDeletionResponseHandler)
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendAllUnsent(String)
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#INTENT_ACTION_UNSENT_MESSAGES_SENT
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#INTENT_ACTION_UNSENT_MESSAGE_SEND_FAILURE
@@ -994,8 +994,20 @@ public class MessageManager {
     }
 
     public synchronized void sendAllUnsent(final String channelId) {
-        sendUnsentMessages(channelId);
-        sendPendingDeletions(channelId);
+        sendPendingDeletions(channelId, new MessageDeletionResponseHandler() {
+            @Override
+            public void onSuccess() {
+                sendUnsentMessages(channelId);
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                Log.e(TAG, exception.getMessage(), exception);
+
+                //try this anyway.
+                sendUnsentMessages(channelId);
+            }
+        });
     }
 
     public synchronized boolean sendUnsentMessages(final String channelId) {
@@ -1013,22 +1025,36 @@ public class MessageManager {
         return false;
     }
 
-    public synchronized void sendPendingDeletions(final String channelId) {
+    public synchronized void sendPendingDeletions(final String channelId, MessageDeletionResponseHandler responseHandler) {
         HashMap<String, PendingMessageDeletion> pendingMessageDeletions = mDatabase.getPendingMessageDeletions(channelId);
         if(pendingMessageDeletions.size() > 0) {
-            for(String messageId : pendingMessageDeletions.keySet()) {
-                mClient.deleteMessage(channelId, messageId, new MessageResponseHandler() {
-                    @Override
-                    public void onSuccess(Message responseData) {
-                        mDatabase.deletePendingMessageDeletion(responseData.getId());
-                    }
+            ArrayList<PendingMessageDeletion> deletions = new ArrayList<PendingMessageDeletion>(pendingMessageDeletions.values());
+            sendPendingDeletion(0, deletions, responseHandler);
+        }
+    }
 
-                    @Override
-                    public void onError(Exception error) {
-                        super.onError(error);
-                    }
-                });
+    private synchronized void sendPendingDeletion(final int index, final List<PendingMessageDeletion> pendingMessageDeletions, final MessageDeletionResponseHandler responseHandler) {
+        if(index >= pendingMessageDeletions.size()) {
+            if(responseHandler != null) {
+                responseHandler.onSuccess();
             }
+        } else {
+            PendingMessageDeletion deletion = pendingMessageDeletions.get(index);
+            mClient.deleteMessage(deletion.getChannelId(), deletion.getMessageId(), new MessageResponseHandler() {
+                @Override
+                public void onSuccess(Message responseData) {
+                    mDatabase.deletePendingMessageDeletion(responseData.getId());
+                    sendPendingDeletion(index + 1, pendingMessageDeletions, responseHandler);
+                }
+
+                @Override
+                public void onError(Exception error) {
+                    super.onError(error);
+                    if(responseHandler != null) {
+                        responseHandler.onError(error);
+                    }
+                }
+            });
         }
     }
 
