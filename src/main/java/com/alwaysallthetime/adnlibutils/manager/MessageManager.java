@@ -637,6 +637,16 @@ public class MessageManager {
      * sqlite database and no server request is required.
      *
      * @param messagePlus The MessagePlus associated with the Message to be deleted
+     */
+    public synchronized void deleteMessage(final MessagePlus messagePlus) {
+        deleteMessage(messagePlus, null);
+    }
+
+    /**
+     * Delete a Message. If the specified Message is unsent, it will simply be deleted from the local
+     * sqlite database and no server request is required.
+     *
+     * @param messagePlus The MessagePlus associated with the Message to be deleted
      * @param handler The handler that will act as a callback upon deletion.
      */
     public synchronized void deleteMessage(final MessagePlus messagePlus, final MessageDeletionResponseHandler handler) {
@@ -650,20 +660,26 @@ public class MessageManager {
 
             onMessageDeleted(messageId, channelId);
 
-            handler.onSuccess();
+            if(handler != null) {
+                handler.onSuccess();
+            }
         } else {
             mClient.deleteMessage(messagePlus.getMessage(), new MessageResponseHandler() {
                 @Override
                 public void onSuccess(Message responseData) {
                     delete();
-                    handler.onSuccess();
+                    if(handler != null) {
+                        handler.onSuccess();
+                    }
                     mDatabase.deletePendingMessageDeletion(responseData.getId());
                 }
 
                 @Override
                 public void onError(Exception error) {
                     super.onError(error);
-                    handler.onError(error);
+                    if(handler != null) {
+                        handler.onError(error);
+                    }
                     delete();
                     mDatabase.insertOrReplacePendingDeletion(messagePlus, false);
                 }
