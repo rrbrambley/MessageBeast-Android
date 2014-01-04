@@ -24,6 +24,7 @@ import com.alwaysallthetime.adnlibutils.AnnotationUtility;
 import com.alwaysallthetime.adnlibutils.PrivateChannelUtility;
 import com.alwaysallthetime.adnlibutils.db.ADNDatabase;
 import com.alwaysallthetime.adnlibutils.db.DisplayLocationInstances;
+import com.alwaysallthetime.adnlibutils.db.FilteredMessageBatch;
 import com.alwaysallthetime.adnlibutils.db.HashtagInstances;
 import com.alwaysallthetime.adnlibutils.db.OrderedMessageBatch;
 import com.alwaysallthetime.adnlibutils.db.PendingFile;
@@ -31,6 +32,7 @@ import com.alwaysallthetime.adnlibutils.db.PendingMessageDeletion;
 import com.alwaysallthetime.adnlibutils.model.DisplayLocation;
 import com.alwaysallthetime.adnlibutils.model.FullSyncState;
 import com.alwaysallthetime.adnlibutils.model.Geolocation;
+import com.alwaysallthetime.adnlibutils.model.MessageFilter;
 import com.alwaysallthetime.adnlibutils.model.MessagePlus;
 import com.alwaysallthetime.asyncgeocoder.AsyncGeocoder;
 import com.alwaysallthetime.asyncgeocoder.response.AsyncGeocoderResponseHandler;
@@ -204,17 +206,7 @@ public class MessageManager {
         context.registerReceiver(fileUploadReceiver, intentFilter);
     }
 
-    /**
-     * Load persisted messages that were previously stored in the sqlite database.
-     *
-     * @param channelId the id of the channel for which messages should be loaded.
-     * @param limit the maximum number of messages to load from the database.
-     * @return a LinkedHashMap containing the newly loaded messages, mapped from message id
-     * to Message Object. If no messages were loaded, then an empty Map is returned.
-     *
-     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager.MessageManagerConfiguration#setDatabaseInsertionEnabled(boolean)
-     */
-    public synchronized LinkedHashMap<String, MessagePlus> loadPersistedMessages(String channelId, int limit) {
+    private synchronized OrderedMessageBatch loadPersistedMessageBatch(String channelId, int limit, boolean performLookups) {
         Date beforeDate = null;
         MinMaxPair minMaxPair = getMinMaxPair(channelId);
         if(minMaxPair.minId != null) {
@@ -235,15 +227,60 @@ public class MessageManager {
 
         mMinMaxPairs.put(channelId, minMaxPair);
 
-        if(mConfiguration.isLocationLookupEnabled) {
-            lookupLocation(messages.values(), false);
-        }
-        if(mConfiguration.isOEmbedLookupEnabled) {
-            lookupOEmbed(messages.values(), false);
+        if(performLookups) {
+            performLookups(messages.values(), false);
         }
 
-        //this should always return only the newly loaded messages.
-        return messages;
+        return orderedMessageBatch;
+    }
+
+    /**
+     * Load persisted messages that were previously stored in the sqlite database.
+     *
+     * @param channelId the id of the channel for which messages should be loaded.
+     * @param limit the maximum number of messages to load from the database.
+     * @return a LinkedHashMap containing the newly loaded messages, mapped from message id
+     * to Message Object. If no messages were loaded, then an empty Map is returned.
+     *
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager.MessageManagerConfiguration#setDatabaseInsertionEnabled(boolean)
+     */
+    public synchronized LinkedHashMap<String, MessagePlus> loadPersistedMessages(String channelId, int limit) {
+        OrderedMessageBatch batch = loadPersistedMessageBatch(channelId, limit, true);
+        return batch.getMessages();
+    }
+
+    /**
+     * Load persisted messages that were previously stored in the sqlite database, using a filter
+     * to exclude any number of messages.
+     *
+     * @param channelId the id of the channel for which messages should be loaded.
+     * @param limit the maximum number of messages to load from the database.
+     * @param filter the MessageFilter to use to exclude messages.
+     *
+     * @return A FilteredMessageBatch containing the messages after a filter was applied, and additionally
+     * a Map of messages containing the excluded Messages.
+     *
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager.MessageManagerConfiguration#setDatabaseInsertionEnabled(boolean)
+     * @see com.alwaysallthetime.adnlibutils.model.MessageFilter
+     * @see com.alwaysallthetime.adnlibutils.db.FilteredMessageBatch
+     */
+    public synchronized FilteredMessageBatch loadPersistedMessages(String channelId, int limit, MessageFilter filter) {
+        OrderedMessageBatch batch = loadPersistedMessageBatch(channelId, limit, false);
+        FilteredMessageBatch filteredBatch = FilteredMessageBatch.getFilteredMessageBatch(batch, filter);
+        LinkedHashMap<String, MessagePlus> filteredMessages = filteredBatch.getFilteredMessages();
+
+        //remove the filtered messages from the main channel message map.
+        LinkedHashMap<String, MessagePlus> channelMessages = mMessages.get(channelId);
+        Iterator<String> filteredIdIterator = filteredMessages.keySet().iterator();
+        while(filteredIdIterator.hasNext()) {
+            channelMessages.remove(filteredIdIterator.next());
+        }
+
+        //do this after we have successfully filtered out stuff,
+        //as to not perform lookups on things we didn't keep.
+        performLookups(filteredBatch.getMessages().values(), false);
+
+        return filteredBatch;
     }
 
     public LinkedHashMap<String, MessagePlus> loadPersistedMessagesTemporarily(String channelId, int limit) {
@@ -264,14 +301,7 @@ public class MessageManager {
     public LinkedHashMap<String, MessagePlus> loadAndConfigureTemporaryMessages(String channelId, Collection<String> messageIds) {
         OrderedMessageBatch orderedMessageBatch = mDatabase.getMessages(channelId, messageIds);
         LinkedHashMap<String, MessagePlus> messages = orderedMessageBatch.getMessages();
-
-        if(mConfiguration.isLocationLookupEnabled) {
-            lookupLocation(messages.values(), false);
-        }
-        if(mConfiguration.isOEmbedLookupEnabled) {
-            lookupOEmbed(messages.values(), false);
-        }
-
+        performLookups(messages.values(), false);
         return messages;
     }
 
@@ -739,12 +769,8 @@ public class MessageManager {
                 HashSet<MessagePlus> messagePlusses = new HashSet<MessagePlus>(1);
                 messagePlusses.add(mPlus);
 
-                if(mConfiguration.isLocationLookupEnabled) {
-                    lookupLocation(messagePlusses, true);
-                }
-                if(mConfiguration.isOEmbedLookupEnabled) {
-                    lookupOEmbed(messagePlusses, true);
-                }
+                performLookups(messagePlusses, true);
+
                 handler.onSuccess(mPlus);
             }
 
@@ -1131,12 +1157,7 @@ public class MessageManager {
                     mMessages.put(channelId, newFullChannelMessagesMap);
                 }
 
-                if(mConfiguration.isLocationLookupEnabled) {
-                    lookupLocation(newestMessages, true);
-                }
-                if(mConfiguration.isOEmbedLookupEnabled) {
-                    lookupOEmbed(newestMessages, true);
-                }
+                performLookups(newestMessages, true);
 
                 if(handler != null) {
                     handler.setIsMore(isMore());
@@ -1191,6 +1212,15 @@ public class MessageManager {
         }
 
         return null;
+    }
+
+    private void performLookups(Collection<MessagePlus> messages, boolean persistIfEnabled) {
+        if(mConfiguration.isLocationLookupEnabled) {
+            lookupLocation(messages, persistIfEnabled);
+        }
+        if(mConfiguration.isOEmbedLookupEnabled) {
+            lookupOEmbed(messages, persistIfEnabled);
+        }
     }
 
     private final BroadcastReceiver fileUploadReceiver = new BroadcastReceiver() {
