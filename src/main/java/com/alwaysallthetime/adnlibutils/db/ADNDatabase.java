@@ -555,6 +555,41 @@ public class ADNDatabase {
         }
     }
 
+    public Set<String> getTargetMessageIdsWithSpecs(String actionChannelId, Collection<String> targetMessageIds) {
+        Cursor cursor = null;
+        HashSet<String> thoseWithSpecs = new HashSet<String>(targetMessageIds.size());
+        try {
+            String[] args = new String[targetMessageIds.size() + 1];
+            args[0] = actionChannelId;
+            String where = COL_ACTION_MESSAGE_CHANNEL_ID + " = ? AND " + COL_ACTION_MESSAGE_TARGET_MESSAGE_ID + " IN (";
+
+            int index = 1;
+            Iterator<String> iterator = targetMessageIds.iterator();
+            while(iterator.hasNext()) {
+                args[index] = iterator.next();
+                if(index > 1) {
+                    where += ", ?";
+                } else {
+                    where += " ?";
+                }
+                index++;
+            }
+            where += ")";
+            cursor = mDatabase.query(TABLE_ACTION_MESSAGES, new String[] { COL_ACTION_MESSAGE_TARGET_MESSAGE_ID }, where, args, null, null, null, null);
+
+            while(cursor.moveToNext()) {
+                thoseWithSpecs.add(cursor.getString(0));
+            }
+        } catch(Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+        } finally {
+            if(cursor != null) {
+                cursor.close();
+            }
+        }
+        return thoseWithSpecs;
+    }
+
     public boolean hasActionMessageSpec(String actionChannelId, String targetMessageId) {
         Cursor cursor = null;
         try {

@@ -139,6 +139,10 @@ public class ActionMessageManager {
         return mDatabase.hasActionMessageSpec(actionChannelId, targetMessageId);
     }
 
+    public Set<String> getActionedMessageIds(String actionChannelId, Collection<String> messageIds) {
+        return mDatabase.getTargetMessageIdsWithSpecs(actionChannelId, messageIds);
+    }
+
     public boolean hasActionedMessages(String actionChannelId) {
         return mDatabase.getActionMessageSpecCount(actionChannelId) > 0;
     }
