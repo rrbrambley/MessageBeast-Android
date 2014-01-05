@@ -15,7 +15,7 @@ public class FilteredMessageBatch extends OrderedMessageBatch {
     }
 
     public static FilteredMessageBatch getFilteredMessageBatch(OrderedMessageBatch batch, MessageFilter filter) {
-        LinkedHashMap<String, MessagePlus> excludedResults = filter.getExcludedResults(batch);
+        LinkedHashMap<String, MessagePlus> excludedResults = filter.getExcludedResults(batch.getMessages());
 
         LinkedHashMap<String, MessagePlus> results = batch.getMessages();
         Iterator<String> iterator = excludedResults.keySet().iterator();
