@@ -10,6 +10,7 @@ import android.util.Log;
 
 import com.alwaysallthetime.adnlib.Annotations;
 import com.alwaysallthetime.adnlib.AppDotNetClient;
+import com.alwaysallthetime.adnlib.AppDotNetObjectCloner;
 import com.alwaysallthetime.adnlib.QueryParameters;
 import com.alwaysallthetime.adnlib.data.Annotation;
 import com.alwaysallthetime.adnlib.data.Channel;
@@ -968,7 +969,8 @@ public class MessageManager {
             FileManager.getInstance().startPendingFileUpload(pendingFileId);
             return;
         }
-        final Message message = messagePlus.getMessage();
+        Message theMessage = messagePlus.getMessage();
+        final Message message = (Message) AppDotNetObjectCloner.getClone(theMessage);
 
         //we had them set for display locally, but we should
         //let the server generate the "real" entities.
