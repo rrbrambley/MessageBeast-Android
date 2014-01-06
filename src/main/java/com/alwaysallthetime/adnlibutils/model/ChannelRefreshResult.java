@@ -2,6 +2,7 @@ package com.alwaysallthetime.adnlibutils.model;
 
 import com.alwaysallthetime.adnlib.data.Channel;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 
 public class ChannelRefreshResult {
@@ -11,6 +12,7 @@ public class ChannelRefreshResult {
     private Channel mChannel;
     private List<MessagePlus> mResponseData;
     private boolean mAppended;
+    private LinkedHashMap<String, MessagePlus> mExcludedResults;
 
     private Exception mException;
 
@@ -19,6 +21,11 @@ public class ChannelRefreshResult {
         mResponseData = responseData;
         mAppended = appended;
         mSuccess = true;
+    }
+
+    public ChannelRefreshResult(Channel channel, List<MessagePlus> responseData, boolean appended, LinkedHashMap<String, MessagePlus> excludedResults) {
+        this(channel, responseData, appended);
+        mExcludedResults = excludedResults;
     }
 
     public ChannelRefreshResult(Channel channel, Exception exception) {
@@ -46,6 +53,10 @@ public class ChannelRefreshResult {
 
     public List<MessagePlus> getMessages() {
         return mResponseData;
+    }
+
+    public LinkedHashMap<String, MessagePlus> getExcludedResults() {
+        return mExcludedResults;
     }
 
     public boolean appended() {

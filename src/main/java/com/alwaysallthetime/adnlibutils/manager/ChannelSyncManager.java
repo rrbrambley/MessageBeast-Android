@@ -11,10 +11,10 @@ import com.alwaysallthetime.adnlibutils.model.ChannelRefreshResultSet;
 import com.alwaysallthetime.adnlibutils.model.ChannelSpec;
 import com.alwaysallthetime.adnlibutils.model.ChannelSpecSet;
 import com.alwaysallthetime.adnlibutils.model.FullSyncState;
+import com.alwaysallthetime.adnlibutils.model.MessageFilter;
 import com.alwaysallthetime.adnlibutils.model.MessagePlus;
 import com.alwaysallthetime.adnlibutils.model.TargetWithActionChannelsSpecSet;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -230,10 +230,11 @@ public class ChannelSyncManager {
             retrieveNewestActionChannelMessages(0, refreshResultSet, new ChannelRefreshHandler() {
                 @Override
                 public void onComplete(ChannelRefreshResultSet result) {
-                    boolean canRetrieve = mMessageManager.retrieveNewestMessages(mTargetChannel.getId(), new MessageManager.MessageManagerResponseHandler() {
+                    MessageFilter messageFilter = mTargetWithActionChannelsSpecSet.getTargetChannelSpec().getMessageFilter();
+                    boolean canRetrieve = mMessageManager.retrieveNewestMessages(mTargetChannel.getId(), messageFilter, new MessageManager.MessageManagerResponseHandler() {
                         @Override
                         public void onSuccess(List<MessagePlus> responseData, boolean appended) {
-                            ChannelRefreshResult refreshResult = new ChannelRefreshResult(mTargetChannel, responseData, appended);
+                            ChannelRefreshResult refreshResult = new ChannelRefreshResult(mTargetChannel, responseData, appended, getExcludedResults());
                             refreshResultSet.addRefreshResult(refreshResult);
                             if(refreshHandler != null) {
                                 refreshHandler.onComplete(refreshResultSet);
@@ -268,8 +269,9 @@ public class ChannelSyncManager {
         if(index >= mChannelSpecSet.getNumChannels()) {
             refreshHandler.onComplete(refreshResultSet);
         } else {
-            final Channel channel = mChannels.get(mChannelSpecSet.getChannelSpecAtIndex(index));
-            boolean canRetrieve = mMessageManager.retrieveNewestMessages(channel.getId(), new MessageManager.MessageManagerResponseHandler() {
+            final ChannelSpec spec = mChannelSpecSet.getChannelSpecAtIndex(index);
+            final Channel channel = mChannels.get(spec);
+            boolean canRetrieve = mMessageManager.retrieveNewestMessages(channel.getId(), spec.getMessageFilter(), new MessageManager.MessageManagerResponseHandler() {
                 @Override
                 public void onSuccess(List<MessagePlus> responseData, boolean appended) {
                     ChannelRefreshResult refreshResult = new ChannelRefreshResult(channel, responseData, appended);
