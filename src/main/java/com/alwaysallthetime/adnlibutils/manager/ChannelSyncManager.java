@@ -232,7 +232,7 @@ public class ChannelSyncManager {
                 public void onSuccess(final List<MessagePlus> responseData, final boolean appended) {
                     ChannelRefreshResult refreshResult = new ChannelRefreshResult(mTargetChannel, responseData, appended);
                     refreshResultSet.addRefreshResult(refreshResult);
-                    retrieveNewestActionChannelMessages(0, refreshHandler, refreshResultSet);
+                    retrieveNewestActionChannelMessages(0, refreshResultSet, refreshHandler);
                 }
 
                 @Override
@@ -241,20 +241,20 @@ public class ChannelSyncManager {
 
                     ChannelRefreshResult refreshResult = new ChannelRefreshResult(mTargetChannel, exception);
                     refreshResultSet.addRefreshResult(refreshResult);
-                    retrieveNewestActionChannelMessages(0, refreshHandler, refreshResultSet);
+                    retrieveNewestActionChannelMessages(0, refreshResultSet, refreshHandler);
                 }
             });
 
             if(!canRetrieve) {
                 refreshResultSet.addRefreshResult(new ChannelRefreshResult(mTargetChannel));
-                retrieveNewestActionChannelMessages(0, refreshHandler, refreshResultSet);
+                retrieveNewestActionChannelMessages(0, refreshResultSet, refreshHandler);
             }
         } else {
-            retrieveNewestMessagesInChannelsList(0, refreshHandler, new ChannelRefreshResultSet());
+            retrieveNewestMessagesInChannelsList(0, new ChannelRefreshResultSet(), refreshHandler);
         }
     }
 
-    private void retrieveNewestMessagesInChannelsList(final int index, final ChannelRefreshHandler refreshHandler, final ChannelRefreshResultSet refreshResultSet) {
+    private void retrieveNewestMessagesInChannelsList(final int index, final ChannelRefreshResultSet refreshResultSet, final ChannelRefreshHandler refreshHandler) {
         if(index >= mChannelSpecSet.getNumChannels()) {
             refreshHandler.onComplete(refreshResultSet);
         } else {
@@ -264,7 +264,7 @@ public class ChannelSyncManager {
                 public void onSuccess(List<MessagePlus> responseData, boolean appended) {
                     ChannelRefreshResult refreshResult = new ChannelRefreshResult(channel, responseData, appended);
                     refreshResultSet.addRefreshResult(refreshResult);
-                    retrieveNewestMessagesInChannelsList(index + 1, refreshHandler, refreshResultSet);
+                    retrieveNewestMessagesInChannelsList(index + 1, refreshResultSet, refreshHandler);
                 }
 
                 @Override
@@ -273,18 +273,18 @@ public class ChannelSyncManager {
 
                     ChannelRefreshResult refreshResult = new ChannelRefreshResult(channel, exception);
                     refreshResultSet.addRefreshResult(refreshResult);
-                    retrieveNewestMessagesInChannelsList(index + 1, refreshHandler, refreshResultSet);
+                    retrieveNewestMessagesInChannelsList(index + 1, refreshResultSet, refreshHandler);
                 }
             });
 
             if(!canRetrieve) {
                 refreshResultSet.addRefreshResult(new ChannelRefreshResult(channel));
-                retrieveNewestMessagesInChannelsList(index + 1, refreshHandler, refreshResultSet);
+                retrieveNewestMessagesInChannelsList(index + 1, refreshResultSet, refreshHandler);
             }
         }
     }
 
-    private void retrieveNewestActionChannelMessages(final int index, final ChannelRefreshHandler refreshHandler, final ChannelRefreshResultSet refreshResultSet) {
+    private void retrieveNewestActionChannelMessages(final int index, final ChannelRefreshResultSet refreshResultSet, final ChannelRefreshHandler refreshHandler) {
         if(index >= mTargetWithActionChannelsSpecSet.getNumActionChannels()) {
             refreshHandler.onComplete(refreshResultSet);
         } else {
@@ -294,7 +294,7 @@ public class ChannelSyncManager {
                 public void onSuccess(List<MessagePlus> responseData, boolean appended) {
                     ChannelRefreshResult refreshResult = new ChannelRefreshResult(actionChannel, responseData, appended);
                     refreshResultSet.addRefreshResult(refreshResult);
-                    retrieveNewestActionChannelMessages(index + 1, refreshHandler, refreshResultSet);
+                    retrieveNewestActionChannelMessages(index + 1, refreshResultSet, refreshHandler);
                 }
 
                 @Override
@@ -303,13 +303,13 @@ public class ChannelSyncManager {
 
                     ChannelRefreshResult refreshResult = new ChannelRefreshResult(actionChannel, exception);
                     refreshResultSet.addRefreshResult(refreshResult);
-                    retrieveNewestActionChannelMessages(index + 1, refreshHandler, refreshResultSet);
+                    retrieveNewestActionChannelMessages(index + 1, refreshResultSet, refreshHandler);
                 }
             });
 
             if(!canRetrieve) {
                 refreshResultSet.addRefreshResult(new ChannelRefreshResult(actionChannel));
-                retrieveNewestActionChannelMessages(index + 1, refreshHandler, refreshResultSet);
+                retrieveNewestActionChannelMessages(index + 1, refreshResultSet, refreshHandler);
             }
         }
     }
