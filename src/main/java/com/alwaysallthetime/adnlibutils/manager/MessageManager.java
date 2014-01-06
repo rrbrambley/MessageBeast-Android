@@ -272,10 +272,7 @@ public class MessageManager {
 
         //remove the filtered messages from the main channel message map.
         LinkedHashMap<String, MessagePlus> channelMessages = mMessages.get(channelId);
-        Iterator<String> filteredIdIterator = filteredMessages.keySet().iterator();
-        while(filteredIdIterator.hasNext()) {
-            channelMessages.remove(filteredIdIterator.next());
-        }
+        removeFilteredMessages(channelMessages, filteredMessages);
 
         //do this after we have successfully filtered out stuff,
         //as to not perform lookups on things we didn't keep.
@@ -465,7 +462,7 @@ public class MessageManager {
     }
 
     /**
-     * Retrieve more messages in the specified channel.
+     * Retrieve messages in the specified channel.
      *
      * The since_id and before_id used in the request are based off the ids of the messages
      * currently loaded into memory for this channel. For this reason, if database persistence is enabled,
@@ -482,9 +479,60 @@ public class MessageManager {
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendPendingDeletions(String, com.alwaysallthetime.adnlibutils.manager.MessageManager.MessageDeletionResponseHandler)
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendAllUnsent(String)
      */
-    public synchronized boolean retrieveMessages(final String channelId, final MessageManagerResponseHandler handler) {
+    public synchronized boolean retrieveMessages(String channelId, MessageManagerResponseHandler handler) {
+        return retrieveMessages(channelId, null, handler);
+    }
+
+    /**
+     * Retrieve messages in the specified channel, using a MessageFilter to exclude messages
+     * in the response. Excluded Messages will not be persisted and will not be returned by the
+     * provided response handler.
+     *
+     * The since_id and before_id used in the request are based off the ids of the messages
+     * currently loaded into memory for this channel. For this reason, if database persistence is enabled,
+     * you should probably be exhausting the results of loadPersistedMessages() before calling this method.
+     *
+     * If false is returned, there are unsent messages or pending deletions that must be sent before retrieving.
+     *
+     * @param channelId The id of the channel for which more messages should be obtained
+     * @param filter The MessageFilter to be used when retrieving messages.
+     * @param handler The handler that will deliver the result of this request
+     * @return return false if unsent messages exist and we are unable to retrieve more, true otherwise.
+     *
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#loadPersistedMessages(String, int)
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendUnsentMessages(String)
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendPendingDeletions(String, com.alwaysallthetime.adnlibutils.manager.MessageManager.MessageDeletionResponseHandler)
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendAllUnsent(String)
+     */
+    public synchronized boolean retrieveMessages(String channelId, MessageFilter filter, MessageManagerResponseHandler handler) {
         MinMaxPair minMaxPair = getMinMaxPair(channelId);
-        return retrieveMessages(channelId, minMaxPair.maxId, minMaxPair.minId, handler);
+        return retrieveMessages(channelId, minMaxPair.maxId, minMaxPair.minId, filter, handler);
+    }
+
+    /**
+     * Retrieve more messages in the specified channel, using a MessageFilter to exclude messages
+     * in the response. Excluded Messages will not be persisted and will not be returned by the
+     * provided response handler.
+     *
+     * The since_id used in this request is based off the ids of the messages
+     * currently loaded into memory for this channel. For this reason, if database persistence is enabled,
+     * you should probably be calling loadPersistedMessages() at least once so that the max message Id
+     * is known.
+     *
+     * If false is returned, there are unsent messages or pending deletions that must be sent before retrieving.
+     *
+     * @param channelId The id of the channel for which more messages should be obtained
+     * @param messageFilter The MessageFilter to be used when retrieving messages.
+     * @param handler The handler that will deliver the result of this request
+     * @return return false if unsent messages exist and we are unable to retrieve more, true otherwise.
+     *
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#loadPersistedMessages(String, int)
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendUnsentMessages(String)
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendPendingDeletions(String, com.alwaysallthetime.adnlibutils.manager.MessageManager.MessageDeletionResponseHandler)
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendAllUnsent(String)
+     */
+    public synchronized boolean retrieveNewestMessages(String channelId, MessageFilter messageFilter, MessageManagerResponseHandler handler) {
+        return retrieveMessages(channelId, getMinMaxPair(channelId).maxId, null, messageFilter, handler);
     }
 
     /**
@@ -506,8 +554,33 @@ public class MessageManager {
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendPendingDeletions(String, com.alwaysallthetime.adnlibutils.manager.MessageManager.MessageDeletionResponseHandler)
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendAllUnsent(String)
      */
-    public synchronized boolean retrieveNewestMessages(final String channelId, final MessageManagerResponseHandler handler) {
-        return retrieveMessages(channelId, getMinMaxPair(channelId).maxId, null, handler);
+    public synchronized boolean retrieveNewestMessages(String channelId, MessageManagerResponseHandler handler) {
+        return retrieveNewestMessages(channelId, null, handler);
+    }
+
+    /**
+     * Retrieve the more (older) messages in the specified channel, using a MessageFilter to exclude messages
+     * in the response. Excluded Messages will not be persisted and will not be returned by the
+     * provided response handler.
+     *
+     * The before_id used in this request is based off the ids of the messages
+     * currently loaded into memory for this channel. For this reason, if database persistence is enabled,
+     * you should probably be exhausting the results of loadPersistedMessages() before calling this method.
+     *
+     * If false is returned, there are unsent messages or pending deletions that must be sent before retrieving.
+     *
+     * @param channelId The id of the channel for which more messages should be obtained
+     * @param filter The MessageFilter to be used when retrieving messages.
+     * @param handler The handler that will deliver the result of this request
+     * @return return false if unsent messages exist and we are unable to retrieve more, true otherwise.
+     *
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#loadPersistedMessages(String, int)
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendUnsentMessages(String)
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendPendingDeletions(String, com.alwaysallthetime.adnlibutils.manager.MessageManager.MessageDeletionResponseHandler)
+     * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendAllUnsent(String)
+     */
+    public synchronized boolean retrieveMoreMessages(String channelId, MessageFilter filter, MessageManagerResponseHandler handler) {
+        return retrieveMessages(channelId, null, getMinMaxPair(channelId).minId, filter, handler);
     }
 
     /**
@@ -528,8 +601,8 @@ public class MessageManager {
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendPendingDeletions(String, com.alwaysallthetime.adnlibutils.manager.MessageManager.MessageDeletionResponseHandler)
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendAllUnsent(String)
      */
-    public synchronized boolean retrieveMoreMessages(final String channelId, final MessageManagerResponseHandler handler) {
-        return retrieveMessages(channelId, null, getMinMaxPair(channelId).minId, handler);
+    public synchronized boolean retrieveMoreMessages(String channelId, MessageManagerResponseHandler handler) {
+        return retrieveMoreMessages(channelId, null, handler);
     }
 
     /**
@@ -921,7 +994,7 @@ public class MessageManager {
         params.put("count", String.valueOf(MAX_MESSAGES_RETURNED_ON_SYNC));
 
         boolean keepInMemory = messages.size() == 0;
-        retrieveMessages(params, channelId, keepInMemory, new MessageManagerResponseHandler() {
+        retrieveMessages(params, null, channelId, keepInMemory, new MessageManagerResponseHandler() {
             @Override
             public void onSuccess(List<MessagePlus> responseData, boolean appended) {
                 if(messages.size() == 0) {
@@ -951,11 +1024,11 @@ public class MessageManager {
         });
     }
 
-    private synchronized boolean retrieveMessages(final String channelId, final String sinceId, final String beforeId, final MessageManagerResponseHandler handler) {
+    private synchronized boolean retrieveMessages(final String channelId, final String sinceId, final String beforeId, final MessageFilter messageFilter, final MessageManagerResponseHandler handler) {
         QueryParameters params = (QueryParameters) mParameters.get(channelId).clone();
         params.put("since_id", sinceId);
         params.put("before_id", beforeId);
-        return retrieveMessages(params, channelId, true, handler);
+        return retrieveMessages(params, messageFilter, channelId, true, handler);
     }
 
     private synchronized void sendUnsentMessages(final LinkedHashMap<String, MessagePlus> unsentMessages, final ArrayList<String> sentMessageIds) {
@@ -1104,7 +1177,11 @@ public class MessageManager {
         }
     }
 
-    private synchronized boolean retrieveMessages(final QueryParameters queryParameters, final String channelId, final boolean keepInMemory, final MessageManagerResponseHandler handler) {
+    private synchronized boolean retrieveMessages(final QueryParameters queryParameters,
+                                                  final MessageFilter filter,
+                                                  final String channelId,
+                                                  final boolean keepInMemory,
+                                                  final MessageManagerResponseHandler handler) {
         LinkedHashMap<String, MessagePlus> unsentMessages = getUnsentMessages(channelId);
         HashMap<String, PendingMessageDeletion> pendingMessageDeletions = mDatabase.getPendingMessageDeletions(channelId);
         if(unsentMessages.size() > 0 || pendingMessageDeletions.size() > 0) {
@@ -1138,27 +1215,38 @@ public class MessageManager {
 
                 LinkedHashMap<String, MessagePlus> channelMessages = getChannelMessages(channelId);
 
-                ArrayList<MessagePlus> newestMessages = new ArrayList<MessagePlus>(responseData.size());
+                LinkedHashMap<String, MessagePlus> newestMessagesMap = new LinkedHashMap<String, MessagePlus>(responseData.size());
                 LinkedHashMap<String, MessagePlus> newFullChannelMessagesMap = new LinkedHashMap<String, MessagePlus>(channelMessages.size() + responseData.size());
 
                 if(appended) {
                     newFullChannelMessagesMap.putAll(channelMessages);
                 }
                 for(Message m : responseData) {
-                    MessagePlus mPlus = new MessagePlus(m);
-                    newestMessages.add(mPlus);
-                    adjustDateAndInsert(mPlus);
-
-                    newFullChannelMessagesMap.put(m.getId(), mPlus);
+                    MessagePlus messagePlus = new MessagePlus(m);
+                    newestMessagesMap.put(m.getId(), messagePlus);
+                    newFullChannelMessagesMap.put(m.getId(), messagePlus);
                 }
                 if(!appended) {
                     newFullChannelMessagesMap.putAll(channelMessages);
+                }
+
+                if(filter != null) {
+                    LinkedHashMap<String, MessagePlus> excludedResults = filter.getExcludedResults(newestMessagesMap);
+                    removeFilteredMessages(newFullChannelMessagesMap, excludedResults);
+                }
+
+                //this needs to happen after filtering.
+                //damn. not as efficient as doing it in the loop above.
+                for(MessagePlus messagePlus : newestMessagesMap.values()) {
+                    adjustDateAndInsert(messagePlus);
                 }
 
                 if(keepInMemory) {
                     mMessages.put(channelId, newFullChannelMessagesMap);
                 }
 
+                ArrayList<MessagePlus> newestMessages = new ArrayList<MessagePlus>(responseData.size());
+                newestMessages.addAll(newestMessagesMap.values());
                 performLookups(newestMessages, true);
 
                 if(handler != null) {
@@ -1179,12 +1267,12 @@ public class MessageManager {
         return true;
     }
 
-    private void adjustDateAndInsert(MessagePlus mPlus) {
-        Date adjustedDate = getAdjustedDate(mPlus.getMessage());
-        mPlus.setDisplayDate(adjustedDate);
+    private void adjustDateAndInsert(MessagePlus messagePlus) {
+        Date adjustedDate = getAdjustedDate(messagePlus.getMessage());
+        messagePlus.setDisplayDate(adjustedDate);
         if(mConfiguration.isDatabaseInsertionEnabled) {
-            mDatabase.insertOrReplaceMessage(mPlus);
-            mDatabase.insertOrReplaceHashtagInstances(mPlus);
+            mDatabase.insertOrReplaceMessage(messagePlus);
+            mDatabase.insertOrReplaceHashtagInstances(messagePlus);
         }
     }
 
@@ -1222,6 +1310,13 @@ public class MessageManager {
         }
         if(mConfiguration.isOEmbedLookupEnabled) {
             lookupOEmbed(messages, persistIfEnabled);
+        }
+    }
+
+    private void removeFilteredMessages(LinkedHashMap<String, MessagePlus> fromMap, LinkedHashMap<String, MessagePlus> removedEntries) {
+        Iterator<String> filteredIdIterator = removedEntries.keySet().iterator();
+        while(filteredIdIterator.hasNext()) {
+            fromMap.remove(filteredIdIterator.next());
         }
     }
 
