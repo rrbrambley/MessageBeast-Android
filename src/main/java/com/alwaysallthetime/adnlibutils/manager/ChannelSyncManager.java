@@ -88,7 +88,7 @@ public class ChannelSyncManager {
     }
 
     public static interface ChannelRefreshHandler {
-        public void onComplete(ChannelRefreshResultSet result);
+        public void onComplete(ChannelRefreshResultSet resultSet);
     }
 
     /**
@@ -227,28 +227,38 @@ public class ChannelSyncManager {
     public void retrieveNewestMessages(final ChannelRefreshHandler refreshHandler) {
         if(mTargetWithActionChannelsSpecSet != null) {
             final ChannelRefreshResultSet refreshResultSet = new ChannelRefreshResultSet();
-            boolean canRetrieve = mMessageManager.retrieveNewestMessages(mTargetChannel.getId(), new MessageManager.MessageManagerResponseHandler() {
+            retrieveNewestActionChannelMessages(0, refreshResultSet, new ChannelRefreshHandler() {
                 @Override
-                public void onSuccess(final List<MessagePlus> responseData, final boolean appended) {
-                    ChannelRefreshResult refreshResult = new ChannelRefreshResult(mTargetChannel, responseData, appended);
-                    refreshResultSet.addRefreshResult(refreshResult);
-                    retrieveNewestActionChannelMessages(0, refreshResultSet, refreshHandler);
-                }
+                public void onComplete(ChannelRefreshResultSet result) {
+                    boolean canRetrieve = mMessageManager.retrieveNewestMessages(mTargetChannel.getId(), new MessageManager.MessageManagerResponseHandler() {
+                        @Override
+                        public void onSuccess(List<MessagePlus> responseData, boolean appended) {
+                            ChannelRefreshResult refreshResult = new ChannelRefreshResult(mTargetChannel, responseData, appended);
+                            refreshResultSet.addRefreshResult(refreshResult);
+                            if(refreshHandler != null) {
+                                refreshHandler.onComplete(refreshResultSet);
+                            }
+                        }
 
-                @Override
-                public void onError(Exception exception) {
-                    Log.e(TAG, exception.getMessage(), exception);
+                        @Override
+                        public void onError(Exception exception) {
+                            Log.e(TAG, exception.getMessage(), exception);
 
-                    ChannelRefreshResult refreshResult = new ChannelRefreshResult(mTargetChannel, exception);
-                    refreshResultSet.addRefreshResult(refreshResult);
-                    retrieveNewestActionChannelMessages(0, refreshResultSet, refreshHandler);
+                            ChannelRefreshResult refreshResult = new ChannelRefreshResult(mTargetChannel, exception);
+                            refreshResultSet.addRefreshResult(refreshResult);
+                            if(refreshHandler != null) {
+                                refreshHandler.onComplete(refreshResultSet);
+                            }
+                        }
+                    });
+                    if(!canRetrieve) {
+                        refreshResultSet.addRefreshResult(new ChannelRefreshResult(mTargetChannel));
+                        if(refreshHandler != null) {
+                            refreshHandler.onComplete(refreshResultSet);
+                        }
+                    }
                 }
             });
-
-            if(!canRetrieve) {
-                refreshResultSet.addRefreshResult(new ChannelRefreshResult(mTargetChannel));
-                retrieveNewestActionChannelMessages(0, refreshResultSet, refreshHandler);
-            }
         } else {
             retrieveNewestMessagesInChannelsList(0, new ChannelRefreshResultSet(), refreshHandler);
         }
