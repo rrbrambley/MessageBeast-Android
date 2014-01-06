@@ -116,6 +116,7 @@ public class MessageManager {
 
     public static abstract class MessageManagerResponseHandler {
         private boolean isMore;
+        private LinkedHashMap<String, MessagePlus> excludedResults;
 
         public abstract void onSuccess(final List<MessagePlus> responseData, final boolean appended);
         public abstract void onError(Exception exception);
@@ -123,9 +124,16 @@ public class MessageManager {
         public void setIsMore(boolean isMore) {
             this.isMore = isMore;
         }
-
         public boolean isMore() {
             return this.isMore;
+        }
+
+        public void setExcludedResults(LinkedHashMap<String, MessagePlus> excludedResults) {
+            this.excludedResults = excludedResults;
+        }
+
+        public LinkedHashMap<String, MessagePlus> getExcludedResults() {
+            return excludedResults;
         }
     }
 
@@ -1233,6 +1241,9 @@ public class MessageManager {
                 if(filter != null) {
                     LinkedHashMap<String, MessagePlus> excludedResults = filter.getExcludedResults(newestMessagesMap);
                     removeFilteredMessages(newFullChannelMessagesMap, excludedResults);
+                    if(handler != null) {
+                        handler.setExcludedResults(excludedResults);
+                    }
                 }
 
                 //this needs to happen after filtering.
