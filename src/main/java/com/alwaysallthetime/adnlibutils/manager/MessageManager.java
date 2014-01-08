@@ -21,7 +21,6 @@ import com.alwaysallthetime.adnlib.gson.AppDotNetGson;
 import com.alwaysallthetime.adnlib.response.MessageListResponseHandler;
 import com.alwaysallthetime.adnlib.response.MessageResponseHandler;
 import com.alwaysallthetime.adnlibutils.ADNSharedPreferences;
-import com.alwaysallthetime.adnlibutils.AnnotationUtility;
 import com.alwaysallthetime.adnlibutils.PrivateChannelUtility;
 import com.alwaysallthetime.adnlibutils.db.ADNDatabase;
 import com.alwaysallthetime.adnlibutils.db.DisplayLocationInstances;
@@ -958,8 +957,7 @@ public class MessageManager {
         Channel nextChannel = channels[currentChannelIndex];
         String type = nextChannel.getType();
         if(PrivateChannelUtility.CHANNEL_TYPE_ACTION.equals(type)) {
-            String targetChannelId = AnnotationUtility.getTargetChannelId(nextChannel);
-            ActionMessageManager.getInstance(MessageManager.this).retrieveAndPersistAllActionMessages(nextChannel.getId(), targetChannelId, currentChannelSyncHandler);
+            ActionMessageManager.getInstance(MessageManager.this).retrieveAndPersistAllActionMessages(nextChannel.getId(), currentChannelSyncHandler);
         } else {
             retrieveAndPersistAllMessages(channels[currentChannelIndex].getId(), currentChannelSyncHandler);
         }

@@ -301,7 +301,7 @@ public class ChannelSyncManager {
             refreshHandler.onComplete(refreshResultSet);
         } else {
             final Channel actionChannel = mActionChannels.get(mTargetWithActionChannelsSpecSet.getActionChannelActionTypeAtIndex(index));
-            boolean canRetrieve = mActionMessageManager.retrieveNewestMessages(actionChannel.getId(), mTargetChannel.getId(), new MessageManager.MessageManagerResponseHandler() {
+            boolean canRetrieve = mActionMessageManager.retrieveNewestMessages(actionChannel.getId(), new MessageManager.MessageManagerResponseHandler() {
                 @Override
                 public void onSuccess(List<MessagePlus> responseData, boolean appended) {
                     ChannelRefreshResult refreshResult = new ChannelRefreshResult(actionChannel, responseData, appended);

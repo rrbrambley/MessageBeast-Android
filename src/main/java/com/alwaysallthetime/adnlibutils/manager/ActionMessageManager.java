@@ -100,12 +100,12 @@ public class ActionMessageManager {
      * for lookup at a later time.
      *
      * @param actionChannelId The id of the Action Channel for which messages will be synced.
-     * @param targetChannelId The id of the Target Channel
      * @param responseHandler MessageManagerSyncResponseHandler
      *
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#retrieveAndPersistAllMessages(String, com.alwaysallthetime.adnlibutils.manager.MessageManager.MessageManagerSyncResponseHandler)  
      */
-    public void retrieveAndPersistAllActionMessages(final String actionChannelId, final String targetChannelId, final MessageManager.MessageManagerSyncResponseHandler responseHandler) {
+    public void retrieveAndPersistAllActionMessages(final String actionChannelId, final MessageManager.MessageManagerSyncResponseHandler responseHandler) {
+        final String targetChannelId = getTargetChannelId(actionChannelId);
         mMessageManager.retrieveAndPersistAllMessages(actionChannelId, new MessageManager.MessageManagerSyncResponseHandler() {
             @Override
             public void onSuccess(List<MessagePlus> responseData, boolean appended) {
@@ -205,26 +205,27 @@ public class ActionMessageManager {
     }
 
     /**
-     * Given a target Channel, get all Messages that have an action applied.
+     * Get all target Messages that have an action applied.
      *
      * @param actionChannelId the the id of the Action Channel associated with the action of interest
-     * @param targetChannelId the target Channel id.
      * @return a List consisting of MessagePlus Objects corresponding to Messages in the target Channel
      * that have had the action applied.
      */
-    public synchronized List<MessagePlus> getActionedMessages(String actionChannelId, String targetChannelId) {
+    public synchronized List<MessagePlus> getActionedMessages(String actionChannelId) {
+        String targetChannelId = getTargetChannelId(actionChannelId);
         LinkedHashMap<String, MessagePlus> loadedMessagesFromActionChannel =  mMessageManager.loadPersistedMessagesTemporarily(actionChannelId, MAX_BATCH_LOAD_FROM_DISK);
-        return getTargetMessages(loadedMessagesFromActionChannel.values(), actionChannelId, targetChannelId);
+        return getTargetMessages(loadedMessagesFromActionChannel.values(), targetChannelId);
     }
 
-    private synchronized List<MessagePlus> getTargetMessages(Collection<MessagePlus> actionMessages, String actionChannelId, String targetChannelId) {
+    private synchronized List<MessagePlus> getTargetMessages(Collection<MessagePlus> actionMessages, String targetChannelId) {
         Set<String> newTargetMessageIds = getTargetMessageIds(actionMessages);
         LinkedHashMap<String, MessagePlus> targetMessages = mMessageManager.loadAndConfigureTemporaryMessages(targetChannelId, newTargetMessageIds);
         return new ArrayList<MessagePlus>(targetMessages.values());
     }
 
     //TODO: does this method even make sense?
-    public synchronized void getMoreActionedMessages(final String actionChannelId, final String targetChannelId, final MessageManager.MessageManagerResponseHandler responseHandler) {
+    public synchronized void getMoreActionedMessages(final String actionChannelId, final MessageManager.MessageManagerResponseHandler responseHandler) {
+        final String targetChannelId = getTargetChannelId(actionChannelId);
         LinkedHashMap<String, MessagePlus> more = mMessageManager.loadPersistedMessages(actionChannelId, MAX_BATCH_LOAD_FROM_DISK);
         if(more.size() > 0) {
             Set<String> newTargetMessageIds = getTargetMessageIds(more.values());
@@ -259,11 +260,11 @@ public class ActionMessageManager {
      * Retrieve the newest Messages in an Action Channel.
      *
      * @param actionChannelId the id of the Action Channel
-     * @param targetChannelId the id of the target Channel associated with the Action Channel
      * @param responseHandler MessageManagerResponseHandler
      * @return false if unsent Messages are preventing more Messages from being retrieved, true otherwise.
      */
-    public synchronized boolean retrieveNewestMessages(final String actionChannelId, final String targetChannelId, final MessageManager.MessageManagerResponseHandler responseHandler) {
+    public synchronized boolean retrieveNewestMessages(final String actionChannelId, final MessageManager.MessageManagerResponseHandler responseHandler) {
+        final String targetChannelId = getTargetChannelId(actionChannelId);
         LinkedHashMap<String, MessagePlus> channelMessages = mMessageManager.getMessageMap(actionChannelId);
         if(channelMessages == null || channelMessages.size() == 0) {
             //we do this so that the max id is known.
@@ -335,6 +336,17 @@ public class ActionMessageManager {
         } else {
             Log.e(TAG, "Calling removeChannelAction, but actionChannelId " + actionChannelId + " and targetMessageId " + targetMessageId + " yielded 0 db results. wtf.");
         }
+    }
+
+    private String getTargetChannelId(String actionChannelId) {
+        Channel actionChannel = mActionChannels.get(actionChannelId);
+        String targetChannelId = null;
+        if(actionChannel == null) {
+            throw new RuntimeException("The specified Action Channel is unknown. Make sure you have called initActionChannel() before trying to use an Action Channel");
+        } else if((targetChannelId = AnnotationUtility.getTargetChannelId(actionChannel)) == null) {
+            throw new RuntimeException("The specified Channel does not have the proper Action Channel metadata Annotation; no target Channel is known.");
+        }
+        return targetChannelId;
     }
 
     private synchronized void deleteActionMessages(final List<ActionMessageSpec> actionMessageSpecs, final int currentIndex, final Runnable completionRunnable) {
