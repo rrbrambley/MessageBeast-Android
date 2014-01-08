@@ -82,6 +82,11 @@ public class ActionMessageManager {
         context.registerReceiver(sentMessageReceiver, new IntentFilter(MessageManager.INTENT_ACTION_UNSENT_MESSAGES_SENT));
     }
 
+    /**
+     * Get the MessageManager used by this ActionMessageManager
+     *
+     * @return MessageManager
+     */
     public MessageManager getMessageManager() {
         return mMessageManager;
     }
@@ -139,10 +144,29 @@ public class ActionMessageManager {
         return mDatabase.hasActionMessageSpec(actionChannelId, targetMessageId);
     }
 
+    /**
+     * Given a Collection of message Ids, return those which are associated with Messages that
+     * have had an action performed on them (the action associated with the provided Action Channel id).
+     *
+     * This is more efficient than looping through message ids and calling isActioned() on them one
+     * at a time because a single database query is used in this case.
+     *
+     * @param actionChannelId the id of the Action Channel
+     * @param messageIds the ids of the target messages
+     * @return a subset of the messageIds Collection, containing the ids associated with messages to
+     * which the action has been applied.
+     */
     public Set<String> getActionedMessageIds(String actionChannelId, Collection<String> messageIds) {
         return mDatabase.getTargetMessageIdsWithSpecs(actionChannelId, messageIds);
     }
 
+    /**
+     * Return true if there are any ActionMessageSpecs persisted for the provided Action Channel id.
+     *
+     * @param actionChannelId the id of the Action Channel
+     * @return true if there are any ActionMessageSpecs persisted for the provided Action Channel id,
+     * false otherwise.
+     */
     public boolean hasActionedMessages(String actionChannelId) {
         return mDatabase.getActionMessageSpecCount(actionChannelId) > 0;
     }
@@ -180,6 +204,14 @@ public class ActionMessageManager {
         return newTargetMessageIds;
     }
 
+    /**
+     * Given a target Channel, get all Messages that have an action applied.
+     *
+     * @param actionChannelId the the id of the Action Channel associated with the action of interest
+     * @param targetChannelId the target Channel id.
+     * @return a List consisting of MessagePlus Objects corresponding to Messages in the target Channel
+     * that have had the action applied.
+     */
     public synchronized List<MessagePlus> getActionedMessages(String actionChannelId, String targetChannelId) {
         LinkedHashMap<String, MessagePlus> loadedMessagesFromActionChannel =  mMessageManager.loadPersistedMessagesTemporarily(actionChannelId, MAX_BATCH_LOAD_FROM_DISK);
         return getTargetMessages(loadedMessagesFromActionChannel.values(), actionChannelId, targetChannelId);
@@ -223,6 +255,14 @@ public class ActionMessageManager {
         }
     }
 
+    /**
+     * Retrieve the newest Messages in an Action Channel.
+     *
+     * @param actionChannelId the id of the Action Channel
+     * @param targetChannelId the id of the target Channel associated with the Action Channel
+     * @param responseHandler MessageManagerResponseHandler
+     * @return false if unsent Messages are preventing more Messages from being retrieved, true otherwise.
+     */
     public synchronized boolean retrieveNewestMessages(final String actionChannelId, final String targetChannelId, final MessageManager.MessageManagerResponseHandler responseHandler) {
         LinkedHashMap<String, MessagePlus> channelMessages = mMessageManager.getMessageMap(actionChannelId);
         if(channelMessages == null || channelMessages.size() == 0) {
@@ -248,6 +288,14 @@ public class ActionMessageManager {
         return canRetrieve;
     }
 
+    /**
+     * Apply an Action Channel action to a target Message.
+     *
+     * Nothing happens if the provided target Message already has the action applied.
+     *
+     * @param actionChannelId the id of the Action Channel
+     * @param targetMessagePlus the Message to have the action applied.
+     */
     public synchronized void applyChannelAction(String actionChannelId, MessagePlus targetMessagePlus) {
         if(!isActioned(actionChannelId, targetMessagePlus.getMessage().getId())) {
             Message message = targetMessagePlus.getMessage();
@@ -262,6 +310,14 @@ public class ActionMessageManager {
         }
     }
 
+    /**
+     * Remove an Action Channel action from a target Message.
+     *
+     * Nothing happens if the provided target Message does not already have the action applied.
+     *
+     * @param actionChannelId the id of the Action Channel
+     * @param targetMessageId the id of the target Message
+     */
     public synchronized void removeChannelAction(final String actionChannelId, final String targetMessageId) {
         ArrayList<String> targetMessageIds = new ArrayList<String>(1);
         targetMessageIds.add(targetMessageId);
