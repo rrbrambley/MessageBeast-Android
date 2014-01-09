@@ -288,21 +288,64 @@ public class MessageManager {
         return filteredBatch;
     }
 
+    /**
+     * Load persisted Messages without keeping them in MessageManager memory.
+     *
+     * No DisplayLocation or OEmbed lookup will be performed on these Messages.
+     *
+     * @param channelId the Channel id
+     * @param limit the maximum number of Messages to load from the database.
+     * @return a LinkedHashMap mapping Message ids to MessagePlus objects
+     */
     public LinkedHashMap<String, MessagePlus> loadPersistedMessagesTemporarily(String channelId, int limit) {
         OrderedMessageBatch orderedMessageBatch = mDatabase.getMessages(channelId, limit);
         return orderedMessageBatch.getMessages();
     }
 
+    /**
+     * Load all persisted Messages with an associated DisplayLocation without keeping them in
+     * MessageManager memory.
+     *
+     * Messages will be returned after performing DisplayLocation and OEmbed lookup, provided those
+     * features are enabled in the MessageManagerConfiguration.
+     *
+     * @param channelId the Channel id
+     * @param location the DisplayLocation
+     * @param precision the precision to use when obtaining location instances.
+     * @return a LinkedHashMap mapping Message ids to MessagePlus objects
+     *
+     * @see com.alwaysallthetime.adnlibutils.db.ADNDatabase#getDisplayLocationInstances(String, com.alwaysallthetime.adnlibutils.model.DisplayLocation, com.alwaysallthetime.adnlibutils.db.ADNDatabase.LocationPrecision)
+     */
     public LinkedHashMap<String, MessagePlus> loadPersistedMessagesTemporarily(String channelId, DisplayLocation location, ADNDatabase.LocationPrecision precision) {
         DisplayLocationInstances locationInstances = mDatabase.getDisplayLocationInstances(channelId, location, precision);
         return loadAndConfigureTemporaryMessages(channelId, locationInstances.getMessageIds());
     }
 
+    /**
+     * Load all persisted Messages with a hashtag entity matching the provided hashtag.
+     *
+     * Messages will be returned after performing DisplayLocation and OEmbed lookup, provided those
+     * features are enabled in the MessageManagerConfiguration.
+     *
+     * @param channelId the Channel id
+     * @param hashtagName the hashtag with which the lookup will be done
+     * @return a LinkedHashMap mapping Message ids to MessagePlus objects
+     */
     public LinkedHashMap<String, MessagePlus> loadPersistedMessagesTemporarily(String channelId, String hashtagName) {
         HashtagInstances hashtagInstances = mDatabase.getHashtagInstances(channelId, hashtagName);
         return loadAndConfigureTemporaryMessages(channelId, hashtagInstances.getMessageIds());
     }
 
+    /**
+     * Load persisted Messages.
+     *
+     * Messages will be returned after performing DisplayLocation and OEmbed lookup, provided those
+     * features are enabled in the MessageManagerConfiguration.
+     *
+     * @param channelId the Channel id
+     * @param messageIds the Message ids
+     * @return a LinkedHashMap mapping Message ids to MessagePlus objects
+     */
     public LinkedHashMap<String, MessagePlus> loadAndConfigureTemporaryMessages(String channelId, Collection<String> messageIds) {
         OrderedMessageBatch orderedMessageBatch = mDatabase.getMessages(channelId, messageIds);
         LinkedHashMap<String, MessagePlus> messages = orderedMessageBatch.getMessages();
@@ -402,14 +445,21 @@ public class MessageManager {
         }
     }
 
-    public LinkedHashMap<String, MessagePlus> getMessageMap(String channelId) {
-        return mMessages.get(channelId);
-    }
-
+    /**
+     * Get the AppDotNetClient used by this MessageManager
+     *
+     * @return AppDotNetClient
+     */
     public AppDotNetClient getClient() {
         return mClient;
     }
 
+    /**
+     * Get a List of all MessagePlus objects currently loaded into memory for a specific Channel
+     *
+     * @param channelId the Channel id
+     * @return a List of MessagePlus objects
+     */
     public List<MessagePlus> getMessageList(String channelId) {
         Map<String, MessagePlus> messageMap = mMessages.get(channelId);
         if(messageMap == null) {
@@ -419,6 +469,27 @@ public class MessageManager {
         return Arrays.asList(messages);
     }
 
+    /**
+     * Get a LinkedHashMap that maps Message ids to MessagePlus objects, containing
+     * entries for all Messages currently loaded into memory in a specific Channel.
+     *
+     * Note that modifications to this Map can alter the functionality of the MessageManager,
+     * so in most cases you probably should be using getMessageList()
+     *
+     * @param channelId the Channel id
+     * @return the LinkedHashMap of MessagePlus objects currently loaded into memory for the
+     * specified channel
+     */
+    public LinkedHashMap<String, MessagePlus> getMessageMap(String channelId) {
+        return mMessages.get(channelId);
+    }
+
+    /**
+     * Set the QueryParameters to be used with a specific Channel
+     *
+     * @param channelId the id of the Channel
+     * @param parameters QueryParameters
+     */
     public void setParameters(String channelId, QueryParameters parameters) {
         mParameters.put(channelId, parameters);
     }
@@ -1103,10 +1174,23 @@ public class MessageManager {
         });
     }
 
+    /**
+     * Return true if the Channel with the specified id has unsent Messages.
+     *
+     * @param channelId the Channel id
+     * @return true if the Channel has unsent Messages, false otherwise
+     */
     public synchronized boolean hasUnsentMessages(String channelId) {
         return getUnsentMessages(channelId).size() > 0;
     }
 
+    /**
+     * Send all pending deletions and unsent Messages in a Channel.
+     *
+     * The pending deletions will be sent first.
+     *
+     * @param channelId the Channel id
+     */
     public synchronized void sendAllUnsent(final String channelId) {
         sendPendingDeletions(channelId, new MessageDeletionResponseHandler() {
             @Override
@@ -1124,6 +1208,12 @@ public class MessageManager {
         });
     }
 
+    /**
+     * Send all unsent Messages in a Channel.
+     *
+     * @param channelId the the Channel id
+     * @return true if unsent Messages are being sent, false if none exist
+     */
     public synchronized boolean sendUnsentMessages(final String channelId) {
         LinkedHashMap<String, MessagePlus> unsentMessages = getUnsentMessages(channelId);
         if(unsentMessages.size() > 0) {
@@ -1139,6 +1229,12 @@ public class MessageManager {
         return false;
     }
 
+    /**
+     * Send all pending Message deletions in a Channel.
+     *
+     * @param channelId the Channel id
+     * @param responseHandler MessageDeletionResponseHandler
+     */
     public synchronized void sendPendingDeletions(final String channelId, MessageDeletionResponseHandler responseHandler) {
         HashMap<String, PendingMessageDeletion> pendingMessageDeletions = mDatabase.getPendingMessageDeletions(channelId);
         if(pendingMessageDeletions.size() > 0) {
