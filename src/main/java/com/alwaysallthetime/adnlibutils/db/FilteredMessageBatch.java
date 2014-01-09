@@ -7,11 +7,11 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 
 public class FilteredMessageBatch extends OrderedMessageBatch {
-    private LinkedHashMap<String, MessagePlus> mFilteredMessages;
+    private LinkedHashMap<String, MessagePlus> mExcludedMessages;
 
     private FilteredMessageBatch(OrderedMessageBatch batch, LinkedHashMap<String, MessagePlus> filteredMessages) {
         super(batch.getMessages(), batch.getMinMaxPair());
-        mFilteredMessages = filteredMessages;
+        mExcludedMessages = filteredMessages;
     }
 
     public static FilteredMessageBatch getFilteredMessageBatch(OrderedMessageBatch batch, MessageFilter filter) {
@@ -25,7 +25,7 @@ public class FilteredMessageBatch extends OrderedMessageBatch {
         return new FilteredMessageBatch(batch, excludedResults);
     }
 
-    public LinkedHashMap<String, MessagePlus> getFilteredMessages() {
-        return mFilteredMessages;
+    public LinkedHashMap<String, MessagePlus> getExcludedMessages() {
+        return mExcludedMessages;
     }
 }

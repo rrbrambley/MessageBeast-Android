@@ -275,11 +275,11 @@ public class MessageManager {
     public synchronized FilteredMessageBatch loadPersistedMessages(String channelId, int limit, MessageFilter filter) {
         OrderedMessageBatch batch = loadPersistedMessageBatch(channelId, limit, false);
         FilteredMessageBatch filteredBatch = FilteredMessageBatch.getFilteredMessageBatch(batch, filter);
-        LinkedHashMap<String, MessagePlus> filteredMessages = filteredBatch.getFilteredMessages();
+        LinkedHashMap<String, MessagePlus> excludedMessages = filteredBatch.getExcludedMessages();
 
         //remove the filtered messages from the main channel message map.
         LinkedHashMap<String, MessagePlus> channelMessages = mMessages.get(channelId);
-        removeFilteredMessages(channelMessages, filteredMessages);
+        removeExcludedMessages(channelMessages, excludedMessages);
 
         //do this after we have successfully filtered out stuff,
         //as to not perform lookups on things we didn't keep.
@@ -1325,7 +1325,7 @@ public class MessageManager {
 
                 if(filter != null) {
                     LinkedHashMap<String, MessagePlus> excludedResults = filter.getExcludedResults(newestMessagesMap);
-                    removeFilteredMessages(newFullChannelMessagesMap, excludedResults);
+                    removeExcludedMessages(newFullChannelMessagesMap, excludedResults);
                     if(handler != null) {
                         handler.setExcludedResults(excludedResults);
                     }
@@ -1409,7 +1409,7 @@ public class MessageManager {
         }
     }
 
-    private void removeFilteredMessages(LinkedHashMap<String, MessagePlus> fromMap, LinkedHashMap<String, MessagePlus> removedEntries) {
+    private void removeExcludedMessages(LinkedHashMap<String, MessagePlus> fromMap, LinkedHashMap<String, MessagePlus> removedEntries) {
         Iterator<String> filteredIdIterator = removedEntries.keySet().iterator();
         while(filteredIdIterator.hasNext()) {
             fromMap.remove(filteredIdIterator.next());
