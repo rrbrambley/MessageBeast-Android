@@ -459,15 +459,6 @@ public class MessageManager {
         return messagePlusses;
     }
 
-    public synchronized void clearMessages(String channelId) {
-        mMinMaxPairs.put(channelId, null);
-        LinkedHashMap<String, MessagePlus> channelMessages = mMessages.get(channelId);
-        if(channelMessages != null) {
-            channelMessages.clear();
-            mDatabase.deleteMessages(channelId);
-        }
-    }
-
     /**
      * Retrieve messages in the specified channel.
      *
