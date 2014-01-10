@@ -18,6 +18,10 @@ public abstract class MessageEntityInstances {
         mMessageIds.addAll(messageIds);
     }
 
+    public boolean removeAll(Set<String> messageIds) {
+        return mMessageIds.removeAll(messageIds);
+    }
+
     public int getNumInstances() {
         return mMessageIds.size();
     }
