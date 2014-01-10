@@ -29,10 +29,11 @@ import com.alwaysallthetime.adnlibutils.db.HashtagInstances;
 import com.alwaysallthetime.adnlibutils.db.OrderedMessageBatch;
 import com.alwaysallthetime.adnlibutils.db.PendingFile;
 import com.alwaysallthetime.adnlibutils.db.PendingMessageDeletion;
+import com.alwaysallthetime.adnlibutils.filter.MessageEntityInstancesFilter;
+import com.alwaysallthetime.adnlibutils.filter.MessageFilter;
 import com.alwaysallthetime.adnlibutils.model.DisplayLocation;
 import com.alwaysallthetime.adnlibutils.model.FullSyncState;
 import com.alwaysallthetime.adnlibutils.model.Geolocation;
-import com.alwaysallthetime.adnlibutils.filter.MessageFilter;
 import com.alwaysallthetime.adnlibutils.model.MessagePlus;
 import com.alwaysallthetime.asyncgeocoder.AsyncGeocoder;
 import com.alwaysallthetime.asyncgeocoder.response.AsyncGeocoderResponseHandler;
@@ -351,6 +352,16 @@ public class MessageManager {
         LinkedHashMap<String, MessagePlus> messages = orderedMessageBatch.getMessages();
         performLookups(messages.values(), false);
         return messages;
+    }
+
+    public LinkedHashMap<String, HashtagInstances> getHashtagInstances(String channelId) {
+        return mDatabase.getHashtagInstances(channelId);
+    }
+
+    public LinkedHashMap<String, HashtagInstances> getHashtagInstances(String channelId, MessageEntityInstancesFilter messageFilter) {
+        LinkedHashMap<String, HashtagInstances> hashtagInstances = mDatabase.getHashtagInstances(channelId);
+        messageFilter.filterInstances(hashtagInstances);
+        return hashtagInstances;
     }
 
     private void lookupOEmbed(Collection<MessagePlus> messages, boolean persistIfEnabled) {
