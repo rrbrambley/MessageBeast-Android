@@ -779,6 +779,24 @@ public class ADNDatabase {
      * @return a List of DisplaylocationInstances in descending order, from most to least recent
      */
     public List<DisplayLocationInstances> getDisplayLocationInstances(String channelId) {
+        LinkedHashMap<String, DisplayLocationInstances> allInstances = getDisplayLocationInstancesMap(channelId);
+        return Arrays.asList(allInstances.values().toArray(new DisplayLocationInstances[0]));
+    }
+
+    /**
+     * Get all DisplayLocationInstances in the specified channel.
+     *
+     * This method uses a precision of LocationPrecision.TEN_THOUSAND_METERS (actually ~1.11 km) when
+     * determining if two locations with the same name are considered equal.
+     *
+     * @param channelId the Channel id
+     * @return a LinkedHashMap of DisplaylocationInstances in descending order, from most to least recent.
+     *         The keys of this map are in the format: "name lat long" where lat and long are rounded to
+     *         a single decimal point.
+     *
+     * @see com.alwaysallthetime.adnlibutils.db.ADNDatabase#getDisplayLocationInstances(String)
+     */
+    public LinkedHashMap<String, DisplayLocationInstances> getDisplayLocationInstancesMap(String channelId) {
         LinkedHashMap<String, DisplayLocationInstances> allInstances = new LinkedHashMap<String, DisplayLocationInstances>();
 
         Cursor cursor = null;
@@ -816,7 +834,7 @@ public class ADNDatabase {
                 cursor.close();
             }
         }
-        return Arrays.asList(allInstances.values().toArray(new DisplayLocationInstances[0]));
+        return allInstances;
     }
 
     /**

@@ -358,7 +358,8 @@ public class MessageManager {
      * Get all HashtagInstances in a Channel.
      *
      * @param channelId the id of the Channel
-     * @return a LinkedHashMap, mapping hashtag name to a HashtagInstances object
+     * @return a LinkedHashMap, mapping hashtag name to a HashtagInstances object. This is
+     *         in descending order, from most to least recent.
      */
     public LinkedHashMap<String, HashtagInstances> getHashtagInstances(String channelId) {
         return mDatabase.getHashtagInstances(channelId);
@@ -369,12 +370,36 @@ public class MessageManager {
      *
      * @param channelId the id of the Channel
      * @param messageFilter the filter to use to excluded unwanted results.
-     * @return a LinkedHashMap, mapping hashtag name to a HashtagInstances object
+     * @return a LinkedHashMap, mapping hashtag name to a HashtagInstances object. This is
+     *         in descending order, from most to least recent.
      */
     public LinkedHashMap<String, HashtagInstances> getHashtagInstances(String channelId, MessageEntityInstancesFilter messageFilter) {
         LinkedHashMap<String, HashtagInstances> hashtagInstances = mDatabase.getHashtagInstances(channelId);
         messageFilter.filterInstances(hashtagInstances);
         return hashtagInstances;
+    }
+
+    /**
+     * Get all DisplayLocationInstances in a Channel.
+     *
+     * @param channelId the id of the Channel
+     * @return a List of DisplayLocationInstances in descending order, from most to least recent
+     */
+    public List<DisplayLocationInstances> getDisplayLocationInstances(String channelId) {
+        return mDatabase.getDisplayLocationInstances(channelId);
+    }
+
+    /**
+     * Get all DisplayLocationInstances in a Channel, using a filter to remove unwanted results.
+     *
+     * @param channelId the id of the Channel
+     * @param messageFilter the filter to use to excluded unwanted results.
+     * @return a List of DisplayLocationInstances in descending order, from most to least recent
+     */
+    public List<DisplayLocationInstances> getDisplayLocationInstances(String channelId, MessageEntityInstancesFilter messageFilter) {
+        LinkedHashMap<String, DisplayLocationInstances> displayLocationInstancesMap = mDatabase.getDisplayLocationInstancesMap(channelId);
+        messageFilter.filterInstances(displayLocationInstancesMap);
+        return new ArrayList<DisplayLocationInstances>(displayLocationInstancesMap.values());
     }
 
     private void lookupOEmbed(Collection<MessagePlus> messages, boolean persistIfEnabled) {
