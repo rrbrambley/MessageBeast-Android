@@ -1,6 +1,7 @@
 package com.alwaysallthetime.adnlibutils.model;
 
 import com.alwaysallthetime.adnlib.QueryParameters;
+import com.alwaysallthetime.adnlibutils.filter.MessageFilter;
 
 public class ChannelSpec {
     private MessageFilter mFilter;

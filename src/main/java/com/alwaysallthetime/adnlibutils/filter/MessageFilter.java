@@ -1,4 +1,6 @@
-package com.alwaysallthetime.adnlibutils.model;
+package com.alwaysallthetime.adnlibutils.filter;
+
+import com.alwaysallthetime.adnlibutils.model.MessagePlus;
 
 import java.util.LinkedHashMap;
 

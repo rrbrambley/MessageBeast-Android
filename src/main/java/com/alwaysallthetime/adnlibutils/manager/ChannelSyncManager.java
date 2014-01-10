@@ -11,7 +11,7 @@ import com.alwaysallthetime.adnlibutils.model.ChannelRefreshResultSet;
 import com.alwaysallthetime.adnlibutils.model.ChannelSpec;
 import com.alwaysallthetime.adnlibutils.model.ChannelSpecSet;
 import com.alwaysallthetime.adnlibutils.model.FullSyncState;
-import com.alwaysallthetime.adnlibutils.model.MessageFilter;
+import com.alwaysallthetime.adnlibutils.filter.MessageFilter;
 import com.alwaysallthetime.adnlibutils.model.MessagePlus;
 import com.alwaysallthetime.adnlibutils.model.TargetWithActionChannelsSpecSet;
 

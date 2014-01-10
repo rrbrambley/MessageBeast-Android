@@ -32,7 +32,7 @@ import com.alwaysallthetime.adnlibutils.db.PendingMessageDeletion;
 import com.alwaysallthetime.adnlibutils.model.DisplayLocation;
 import com.alwaysallthetime.adnlibutils.model.FullSyncState;
 import com.alwaysallthetime.adnlibutils.model.Geolocation;
-import com.alwaysallthetime.adnlibutils.model.MessageFilter;
+import com.alwaysallthetime.adnlibutils.filter.MessageFilter;
 import com.alwaysallthetime.adnlibutils.model.MessagePlus;
 import com.alwaysallthetime.asyncgeocoder.AsyncGeocoder;
 import com.alwaysallthetime.asyncgeocoder.response.AsyncGeocoderResponseHandler;
@@ -269,7 +269,7 @@ public class MessageManager {
      * a Map of messages containing the excluded Messages.
      *
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager.MessageManagerConfiguration#setDatabaseInsertionEnabled(boolean)
-     * @see com.alwaysallthetime.adnlibutils.model.MessageFilter
+     * @see com.alwaysallthetime.adnlibutils.filter.MessageFilter
      * @see com.alwaysallthetime.adnlibutils.db.FilteredMessageBatch
      */
     public synchronized FilteredMessageBatch loadPersistedMessages(String channelId, int limit, MessageFilter filter) {

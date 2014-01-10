@@ -1,6 +1,6 @@
 package com.alwaysallthetime.adnlibutils.db;
 
-import com.alwaysallthetime.adnlibutils.model.MessageFilter;
+import com.alwaysallthetime.adnlibutils.filter.MessageFilter;
 import com.alwaysallthetime.adnlibutils.model.MessagePlus;
 
 import java.util.Iterator;
