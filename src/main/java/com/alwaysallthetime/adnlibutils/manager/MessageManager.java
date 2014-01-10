@@ -354,10 +354,23 @@ public class MessageManager {
         return messages;
     }
 
+    /**
+     * Get all HashtagInstances in a Channel.
+     *
+     * @param channelId the id of the Channel
+     * @return a LinkedHashMap, mapping hashtag name to a HashtagInstances object
+     */
     public LinkedHashMap<String, HashtagInstances> getHashtagInstances(String channelId) {
         return mDatabase.getHashtagInstances(channelId);
     }
 
+    /**
+     * Get all HashtagInstances in a Channel, using a filter to remove unwanted results.
+     *
+     * @param channelId the id of the Channel
+     * @param messageFilter the filter to use to excluded unwanted results.
+     * @return a LinkedHashMap, mapping hashtag name to a HashtagInstances object
+     */
     public LinkedHashMap<String, HashtagInstances> getHashtagInstances(String channelId, MessageEntityInstancesFilter messageFilter) {
         LinkedHashMap<String, HashtagInstances> hashtagInstances = mDatabase.getHashtagInstances(channelId);
         messageFilter.filterInstances(hashtagInstances);
