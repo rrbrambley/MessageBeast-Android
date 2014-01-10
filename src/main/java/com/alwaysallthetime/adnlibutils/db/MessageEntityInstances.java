@@ -3,10 +3,10 @@ package com.alwaysallthetime.adnlibutils.db;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-public abstract class AbstractMessageAttachmentInstance {
+public abstract class MessageEntityInstances {
     protected LinkedHashSet<String> mMessageIds;
 
-    public AbstractMessageAttachmentInstance() {
+    public MessageEntityInstances() {
         mMessageIds = new LinkedHashSet<String>();
     }
 
