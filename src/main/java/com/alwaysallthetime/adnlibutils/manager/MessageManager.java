@@ -402,6 +402,63 @@ public class MessageManager {
         return new ArrayList<DisplayLocationInstances>(displayLocationInstancesMap.values());
     }
 
+    /**
+     * Search persisted Message text with a query.
+     *
+     * @param channelId the id of the Channel from which Messages will be retrieved
+     * @param query the search query
+     * @return OrderedMessageBatch
+     */
+    public OrderedMessageBatch searchMessagesWithQuery(String channelId, String query) {
+        return searchMessagesWithQuery(channelId, query, null);
+    }
+
+    /**
+     * Search persisted Message text with a query, using a MessageFilter to excluded some results.
+     *
+     * @param channelId the id of the Channel from which Messages will be retrieved
+     * @param query the search query
+     * @param messageFilter the MessageFilter to use to exclude results
+     * @return OrderedMessageBatch
+     */
+    public OrderedMessageBatch searchMessagesWithQuery(String channelId, String query, MessageFilter messageFilter) {
+        OrderedMessageBatch orderedMessageBatch = mDatabase.searchForMessages(channelId, query);
+        if(messageFilter != null) {
+            orderedMessageBatch = FilteredMessageBatch.getFilteredMessageBatch(orderedMessageBatch, messageFilter);
+        }
+        performLookups(orderedMessageBatch.getMessages().values(), false);
+        return orderedMessageBatch;
+    }
+
+    /**
+     * Search for persisted Messages, using a query that matches against their associated DisplayLocations.
+     *
+     * @param channelId the id of the Channel from which Messages will be retrieved
+     * @param query the search query
+     * @return OrderedMessageBatch
+     */
+    public OrderedMessageBatch searchMessagesWithDisplayLocationQuery(String channelId, String query) {
+        return searchMessagesWithDisplayLocationQuery(channelId, query, null);
+    }
+
+    /**
+     * Search for persisted Messages, using a query that matches against their associated DisplayLocations.
+     * The provided filter will exclude unwanted results.
+     *
+     * @param channelId the id of the Channel from which Messages will be retrieved
+     * @param query the search query
+     * @param messageFilter the MessageFilter to use to exclude results.
+     * @return OrderedMessageBatch
+     */
+    public OrderedMessageBatch searchMessagesWithDisplayLocationQuery(String channelId, String query, MessageFilter messageFilter) {
+        OrderedMessageBatch orderedMessageBatch = mDatabase.searchForMessagesByDisplayLocation(channelId, query);
+        if(messageFilter != null) {
+            orderedMessageBatch = FilteredMessageBatch.getFilteredMessageBatch(orderedMessageBatch, messageFilter);
+        }
+        performLookups(orderedMessageBatch.getMessages().values(), false);
+        return orderedMessageBatch;
+    }
+
     private void lookupOEmbed(Collection<MessagePlus> messages, boolean persistIfEnabled) {
         for(MessagePlus messagePlus : messages) {
             Message message = messagePlus.getMessage();
