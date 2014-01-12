@@ -399,14 +399,11 @@ public class ADNDatabase {
     }
 
     /**
-     * Insert an instance of a DisplayLocation for the provided Message.
+     * Insert an instance of a DisplayLocation for the provided MessagePlus.
      *
-     * Note that this is not an insertOrReplace operation like most of the other methods,
-     * so repeated calls to this with the same MessagePlus may result in duplicate entries.
-     *
-     * @param messagePlus
+     * @param messagePlus The MessagePlus objects whose DisplayLocation should be inserted
      */
-    public void insertDisplayLocationInstance(MessagePlus messagePlus) {
+    public void insertOrReplaceDisplayLocationInstance(MessagePlus messagePlus) {
         if(mInsertOrReplaceLocationInstance == null) {
             mInsertOrReplaceLocationInstance = mDatabase.compileStatement(INSERT_OR_REPLACE_LOCATION_INSTANCE);
             mInsertLocationInstanceSearchText = mDatabase.compileStatement(INSERT_LOCATION_INSTANCES_SEARCH_TEXT);
