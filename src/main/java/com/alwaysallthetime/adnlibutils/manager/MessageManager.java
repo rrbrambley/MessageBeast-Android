@@ -424,7 +424,7 @@ public class MessageManager {
             if(DisplayLocation.isDisplayableCheckinAnnotation(checkin)) {
                 messagePlus.setDisplayLocation(DisplayLocation.fromCheckinAnnotation(checkin));
                 if(persistIfEnabled && mConfiguration.isDatabaseInsertionEnabled) {
-                    mDatabase.insertOrReplaceDisplayLocationInstance(messagePlus);
+                    mDatabase.insertDisplayLocationInstance(messagePlus);
                 }
                 continue;
             }
@@ -433,7 +433,7 @@ public class MessageManager {
             if(ohaiLocation != null) {
                 messagePlus.setDisplayLocation(DisplayLocation.fromOhaiLocation(ohaiLocation));
                 if(persistIfEnabled && mConfiguration.isDatabaseInsertionEnabled) {
-                    mDatabase.insertOrReplaceDisplayLocationInstance(messagePlus);
+                    mDatabase.insertDisplayLocationInstance(messagePlus);
                 }
                 continue;
             }
@@ -454,7 +454,7 @@ public class MessageManager {
                     //(this database lookup is merely an optimization to avoid having to fire off
                     // the async task in reverseGeocode().)
                     if(persistIfEnabled && mConfiguration.isDatabaseInsertionEnabled) {
-                        mDatabase.insertOrReplaceDisplayLocationInstance(messagePlus);
+                        mDatabase.insertDisplayLocationInstance(messagePlus);
                     }
                     continue;
                 } else {
@@ -475,7 +475,7 @@ public class MessageManager {
 
                         if(persistIfEnabled && mConfiguration.isDatabaseInsertionEnabled) {
                             mDatabase.insertOrReplaceGeolocation(geolocation);
-                            mDatabase.insertOrReplaceDisplayLocationInstance(messagePlus);
+                            mDatabase.insertDisplayLocationInstance(messagePlus);
                         }
                     }
                     if(mConfiguration.locationLookupHandler != null) {

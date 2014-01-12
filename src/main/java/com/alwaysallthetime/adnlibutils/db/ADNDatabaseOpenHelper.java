@@ -40,16 +40,21 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
             "PRIMARY KEY (" + ADNDatabase.COL_GEOLOCATION_LATITUDE + ", " + ADNDatabase.COL_GEOLOCATION_LONGITUDE + " ))";
 
     private static final String CREATE_LOCATION_INSTANCES_TABLE = "CREATE TABLE IF NOT EXISTS " + ADNDatabase.TABLE_LOCATION_INSTANCES + "(" +
+            ADNDatabase.COL_LOCATION_INSTANCE_MESSAGE_ID + " INTEGER PRIMARY KEY, " +
             ADNDatabase.COL_LOCATION_INSTANCE_NAME + " TEXT NOT NULL, " +
             ADNDatabase.COL_LOCATION_INSTANCE_SHORT_NAME + " TEXT, " +
-            ADNDatabase.COL_LOCATION_INSTANCE_MESSAGE_ID + " TEXT NOT NULL, " +
             ADNDatabase.COL_LOCATION_INSTANCE_CHANNEL_ID + " TEXT NOT NULL, " +
             ADNDatabase.COL_LOCATION_INSTANCE_LATITUDE + " REAL NOT NULL, " +
             ADNDatabase.COL_LOCATION_INSTANCE_LONGITUDE + " REAL NOT NULL, " +
             ADNDatabase.COL_LOCATION_INSTANCE_FACTUAL_ID + " TEXT, " +
-            ADNDatabase.COL_LOCATION_INSTANCE_DATE + " INTEGER NOT NULL, " +
-            "PRIMARY KEY (" + ADNDatabase.COL_LOCATION_INSTANCE_NAME + ", " + ADNDatabase.COL_LOCATION_INSTANCE_MESSAGE_ID + ", " +
-                              ADNDatabase.COL_LOCATION_INSTANCE_LATITUDE + ", " + ADNDatabase.COL_LOCATION_INSTANCE_LONGITUDE + " ))";
+            ADNDatabase.COL_LOCATION_INSTANCE_DATE + " INTEGER NOT NULL " +
+            ")";
+
+    private static final String CREATE_LOCATION_INSTANCES_SEARCH_TABLE = "CREATE VIRTUAL TABLE " + ADNDatabase.TABLE_LOCATION_INSTANCES_SEARCH + " USING fts4(" +
+            "content=" + "\"" + ADNDatabase.TABLE_LOCATION_INSTANCES + "\"," +
+            ADNDatabase.COL_LOCATION_INSTANCE_CHANNEL_ID + " TEXT, " +
+            ADNDatabase.COL_LOCATION_INSTANCE_NAME + " TEXT " +
+            ")";
 
     private static final String CREATE_OEMBED_INSTANCES_TABLE = "CREATE TABLE IF NOT EXISTS " + ADNDatabase.TABLE_OEMBED_INSTANCES + "(" +
             ADNDatabase.COL_OEMBED_INSTANCE_TYPE + " TEXT NOT NULL, " +
@@ -112,6 +117,9 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
 
             if(ADNDatabase.isFullTextSearchAvailable()) {
                 db.execSQL(CREATE_MESSAGES_SEARCH_TABLE);
+            }
+            if(ADNDatabase.isFullTextSearchAvailable()) {
+                db.execSQL(CREATE_LOCATION_INSTANCES_SEARCH_TABLE);
             }
             db.setTransactionSuccessful();
         } catch(Exception exception) {

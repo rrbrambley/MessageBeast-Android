@@ -70,6 +70,8 @@ public class ADNDatabase {
     public static final String COL_LOCATION_INSTANCE_LONGITUDE = "location_longitude";
     public static final String COL_LOCATION_INSTANCE_DATE = "location_date";
 
+    public static final String TABLE_LOCATION_INSTANCES_SEARCH = "locations_search";
+
     public static final String TABLE_OEMBED_INSTANCES = "oembeds";
     public static final String COL_OEMBED_INSTANCE_TYPE = "oembed_type";
     public static final String COL_OEMBED_INSTANCE_MESSAGE_ID = "oembed_instance_message_id";
@@ -150,9 +152,9 @@ public class ADNDatabase {
 
     private static final String INSERT_OR_REPLACE_LOCATION_INSTANCE = "INSERT OR REPLACE INTO " + TABLE_LOCATION_INSTANCES +
             " (" +
+            COL_LOCATION_INSTANCE_MESSAGE_ID + ", " +
             COL_LOCATION_INSTANCE_NAME + ", " +
             COL_LOCATION_INSTANCE_SHORT_NAME + ", " +
-            COL_LOCATION_INSTANCE_MESSAGE_ID + ", " +
             COL_LOCATION_INSTANCE_CHANNEL_ID + ", " +
             COL_LOCATION_INSTANCE_LATITUDE + ", " +
             COL_LOCATION_INSTANCE_LONGITUDE + ", " +
@@ -160,6 +162,10 @@ public class ADNDatabase {
             COL_LOCATION_INSTANCE_DATE +
             ") " +
             "VALUES(?, ?, ?, ?, ?, ?, ?, ?)";
+
+    private static final String INSERT_LOCATION_INSTANCES_SEARCH_TEXT = "INSERT INTO " + TABLE_LOCATION_INSTANCES_SEARCH +
+            " (docid, " + COL_LOCATION_INSTANCE_CHANNEL_ID + ", " + COL_LOCATION_INSTANCE_NAME + ") " +
+            "VALUES (?, ?, ?)";
 
     private static final String INSERT_OR_REPLACE_OEMBED_INSTANCE = "INSERT OR REPLACE INTO " + TABLE_OEMBED_INSTANCES +
             " (" +
@@ -217,6 +223,7 @@ public class ADNDatabase {
     private SQLiteStatement mInsertOrReplaceHashtag;
     private SQLiteStatement mInsertOrReplaceGeolocation;
     private SQLiteStatement mInsertOrReplaceLocationInstance;
+    private SQLiteStatement mInsertLocationInstanceSearchText;
     private SQLiteStatement mInsertOrReplaceOEmbedInstance;
     private SQLiteStatement mInsertOrReplacePendingFile;
     private SQLiteStatement mInsertOrReplacePendingMessageDeletion;
@@ -391,27 +398,36 @@ public class ADNDatabase {
         }
     }
 
-    public void insertOrReplaceDisplayLocationInstance(MessagePlus messagePlus) {
+    /**
+     * Insert an instance of a DisplayLocation for the provided Message.
+     *
+     * Note that this is not an insertOrReplace operation like most of the other methods,
+     * so repeated calls to this with the same MessagePlus may result in duplicate entries.
+     *
+     * @param messagePlus
+     */
+    public void insertDisplayLocationInstance(MessagePlus messagePlus) {
         if(mInsertOrReplaceLocationInstance == null) {
             mInsertOrReplaceLocationInstance = mDatabase.compileStatement(INSERT_OR_REPLACE_LOCATION_INSTANCE);
+            mInsertLocationInstanceSearchText = mDatabase.compileStatement(INSERT_LOCATION_INSTANCES_SEARCH_TEXT);
         }
         DisplayLocation location = messagePlus.getDisplayLocation();
         if(location != null) {
+            Long messageId = Long.valueOf(messagePlus.getMessage().getId());
             String name = location.getName();
             String shortName = location.getShortName();
-            String messageId = messagePlus.getMessage().getId();
             String channelId = messagePlus.getMessage().getChannelId();
             String factualId = location.getFactualId();
 
             mDatabase.beginTransaction();
             try {
-                mInsertOrReplaceLocationInstance.bindString(1, name);
+                mInsertOrReplaceLocationInstance.bindLong(1, messageId);
+                mInsertOrReplaceLocationInstance.bindString(2, name);
                 if(shortName != null) {
-                    mInsertOrReplaceLocationInstance.bindString(2, shortName);
+                    mInsertOrReplaceLocationInstance.bindString(3, shortName);
                 } else {
-                    mInsertOrReplaceLocationInstance.bindNull(2);
+                    mInsertOrReplaceLocationInstance.bindNull(3);
                 }
-                mInsertOrReplaceLocationInstance.bindString(3, messageId);
                 mInsertOrReplaceLocationInstance.bindString(4, channelId);
                 mInsertOrReplaceLocationInstance.bindDouble(5, location.getLatitude());
                 mInsertOrReplaceLocationInstance.bindDouble(6, location.getLongitude());
@@ -422,12 +438,32 @@ public class ADNDatabase {
                 }
                 mInsertOrReplaceLocationInstance.bindLong(8, messagePlus.getDisplayDate().getTime());
                 mInsertOrReplaceLocationInstance.execute();
+
+                insertSearchableDisplayLocation(messageId, channelId, name);
                 mDatabase.setTransactionSuccessful();
             } catch(Exception e) {
                 Log.e(TAG, e.getMessage(), e);
             } finally {
                 mDatabase.endTransaction();
                 mInsertOrReplaceLocationInstance.clearBindings();
+            }
+        }
+    }
+
+    private void insertSearchableDisplayLocation(long messageId, String channelId, String locationName) {
+        if(isFullTextSearchAvailable() && locationName != null) {
+            mDatabase.beginTransaction();
+            try {
+                mInsertLocationInstanceSearchText.bindLong(1, messageId);
+                mInsertLocationInstanceSearchText.bindString(2, channelId);
+                mInsertLocationInstanceSearchText.bindString(3, locationName);
+                mInsertLocationInstanceSearchText.execute();
+                mDatabase.setTransactionSuccessful();
+            } catch(Exception e) {
+                Log.e(TAG, e.getMessage(), e);
+            } finally {
+                mDatabase.endTransaction();
+                mInsertLocationInstanceSearchText.clearBindings();
             }
         }
     }
@@ -805,12 +841,12 @@ public class ADNDatabase {
             String args[] = new String[] { channelId };
             String orderBy = COL_LOCATION_INSTANCE_DATE + " DESC";
 
-            String[] cols = new String[] { COL_LOCATION_INSTANCE_NAME, COL_LOCATION_INSTANCE_SHORT_NAME, COL_LOCATION_INSTANCE_MESSAGE_ID, COL_LOCATION_INSTANCE_LATITUDE, COL_LOCATION_INSTANCE_LONGITUDE };
+            String[] cols = new String[] { COL_LOCATION_INSTANCE_MESSAGE_ID, COL_LOCATION_INSTANCE_NAME, COL_LOCATION_INSTANCE_SHORT_NAME, COL_LOCATION_INSTANCE_LATITUDE, COL_LOCATION_INSTANCE_LONGITUDE };
             cursor = mDatabase.query(TABLE_LOCATION_INSTANCES, cols, where, args, null, null, orderBy, null);
             while(cursor.moveToNext()) {
-                String name = cursor.getString(0);
-                String shortName = cursor.getString(1);
-                String messageId = cursor.getString(2);
+                String messageId = cursor.getString(0);
+                String name = cursor.getString(1);
+                String shortName = cursor.getString(2);
                 Double latitude = cursor.getDouble(3);
                 Double longitude = cursor.getDouble(4);
 
@@ -1072,6 +1108,27 @@ public class ADNDatabase {
         return getMessages(channelId, messageIds);
     }
 
+    public OrderedMessageBatch searchForMessagesByDisplayLocation(String channelId, String query) {
+        String where = COL_LOCATION_INSTANCE_CHANNEL_ID + " = ? AND " + COL_LOCATION_INSTANCE_NAME + " MATCH ?";
+        String[] args = new String[] { channelId, query };
+        Cursor cursor = null;
+        HashSet<String> messageIds = new HashSet<String>();
+        try {
+            cursor = mDatabase.query(TABLE_LOCATION_INSTANCES_SEARCH, new String[] { "docid" }, where, args, null, null, null, null);
+            while(cursor.moveToNext()) {
+                messageIds.add(cursor.getString(0));
+            }
+        } catch(Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+        } finally {
+            if(cursor != null) {
+                cursor.close();
+            }
+        }
+
+        return getMessages(channelId, messageIds);
+    }
+
     public MessagePlus getMessage(String channelId, String messageId) {
         HashSet<String> ids = new HashSet<String>(1);
         ids.add(messageId);
@@ -1266,6 +1323,7 @@ public class ADNDatabase {
             Message message = messagePlus.getMessage();
             Long messageId = Long.valueOf(message.getId());
             mDatabase.delete(TABLE_MESSAGES_SEARCH, "docid=" + messageId, null);
+            mDatabase.delete(TABLE_LOCATION_INSTANCES_SEARCH, "docid=" + messageId, null);
             mDatabase.delete(TABLE_MESSAGES, COL_MESSAGE_ID + " = " + messageId, null);
 
             //this might be null in the case of unsent messages.
