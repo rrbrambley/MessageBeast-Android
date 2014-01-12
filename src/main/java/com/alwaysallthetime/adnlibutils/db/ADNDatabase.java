@@ -99,6 +99,9 @@ public class ADNDatabase {
     public static final String COL_PENDING_MESSAGE_DELETION_CHANNEL_ID = "pending_message_deletion_channel_id";
     public static final String COL_PENDING_MESSAGE_DELETION_DELETE_ASSOCIATED_FILES = "pending_message_deletion_delete_files";
 
+    public static final String TABLE_PENDING_FILE_DELETIONS = "pending_file_deletions";
+    public static final String COL_PENDING_FILE_DELETION_FILE_ID = "pending_file_deletion_file_id";
+
     public static final String TABLE_ACTION_MESSAGES = "action_messages";
     public static final String COL_ACTION_MESSAGE_ID = "action_message_id";
     public static final String COL_ACTION_MESSAGE_CHANNEL_ID = "action_channel_id";
@@ -198,6 +201,12 @@ public class ADNDatabase {
             ") " +
             "VALUES(?, ?, ?)";
 
+    private static final String INSERT_OR_REPLACE_PENDING_FILE_DELETION = "INSERT OR REPLACE INTO " + TABLE_PENDING_FILE_DELETIONS +
+            " (" +
+            COL_PENDING_FILE_DELETION_FILE_ID +
+            ") " +
+            "VALUES(?)";
+
     private static final String INSERT_OR_REPLACE_PENDING_OEMBED = "INSERT OR REPLACE INTO " + TABLE_PENDING_OEMBEDS +
             " (" +
             COL_PENDING_OEMBED_PENDING_FILE_ID + ", " +
@@ -227,6 +236,7 @@ public class ADNDatabase {
     private SQLiteStatement mInsertOrReplaceOEmbedInstance;
     private SQLiteStatement mInsertOrReplacePendingFile;
     private SQLiteStatement mInsertOrReplacePendingMessageDeletion;
+    private SQLiteStatement mInsertOrReplacePendingFileDeletion;
     private SQLiteStatement mInsertOrReplacePendingOEmbed;
     private SQLiteStatement mInsertOrReplaceActionMessageSpec;
     private Gson mGson;
@@ -562,6 +572,29 @@ public class ADNDatabase {
         } finally {
             mDatabase.endTransaction();
             mInsertOrReplacePendingMessageDeletion.clearBindings();
+        }
+    }
+
+    /**
+     * Insert a pending file deletion.
+     *
+     * @param fileId the id of the file that should be deleted.
+     */
+    public void insertOrReplacePendingFileDeletion(String fileId) {
+        if(mInsertOrReplacePendingFileDeletion == null) {
+            mInsertOrReplacePendingFileDeletion = mDatabase.compileStatement(INSERT_OR_REPLACE_PENDING_FILE_DELETION);
+        }
+        mDatabase.beginTransaction();
+
+        try {
+            mInsertOrReplacePendingFileDeletion.bindString(1, fileId);
+            mInsertOrReplacePendingFileDeletion.execute();
+            mDatabase.setTransactionSuccessful();
+        } catch(Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+        } finally {
+            mDatabase.endTransaction();
+            mInsertOrReplacePendingFileDeletion.clearBindings();
         }
     }
 
@@ -1285,6 +1318,31 @@ public class ADNDatabase {
             messagePlus.setPendingOEmbeds(pendingOEmbeds);
         }
         return unsentMessages;
+    }
+
+    /**
+     * Get the ids of all pending file deletions.
+     *
+     * @return a Set of file ids corresponding to files that should be deleted.
+     */
+    public Set<String> getPendingFileDeletions() {
+        HashSet<String> pendingFileDeletions = new HashSet<String>();
+
+        Cursor cursor = null;
+        try {
+            cursor = mDatabase.query(TABLE_PENDING_FILE_DELETIONS, null, null, null, null, null, null, null);
+            while(cursor.moveToNext()) {
+                pendingFileDeletions.add(cursor.getString(0));
+            }
+        } catch(Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+        } finally {
+            if(cursor != null) {
+                cursor.close();
+            }
+        }
+
+        return pendingFileDeletions;
     }
 
     public HashMap<String, PendingMessageDeletion> getPendingMessageDeletions(String channelId) {

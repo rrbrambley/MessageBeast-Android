@@ -81,6 +81,10 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
             ADNDatabase.COL_PENDING_MESSAGE_DELETION_DELETE_ASSOCIATED_FILES + " BOOLEAN NOT NULL " +
             ")";
 
+    public static final String CREATE_PENDING_FILE_DELETIONS_TABLE = "CREATE TABLE IF NOT EXISTS " + ADNDatabase.TABLE_PENDING_FILE_DELETIONS + "(" +
+            ADNDatabase.COL_PENDING_FILE_DELETION_FILE_ID + " TEXT PRIMARY KEY " +
+            ")";
+
     public static final String CREATE_PENDING_OEMBEDS_TABLE = "CREATE TABLE IF NOT EXISTS " + ADNDatabase.TABLE_PENDING_OEMBEDS + "(" +
             ADNDatabase.COL_PENDING_OEMBED_PENDING_FILE_ID + " TEXT NOT NULL, " +
             ADNDatabase.COL_PENDING_OEMBED_MESSAGE_ID + " TEXT NOT NULL, " +
@@ -112,6 +116,7 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
             db.execSQL(CREATE_OEMBED_INSTANCES_TABLE);
             db.execSQL(CREATE_PENDING_FILES_TABLE);
             db.execSQL(CREATE_PENDING_MESSAGE_DELETIONS_TABLE);
+            db.execSQL(CREATE_PENDING_FILE_DELETIONS_TABLE);
             db.execSQL(CREATE_PENDING_OEMBEDS_TABLE);
             db.execSQL(CREATE_ACTION_MESSAGES_TABLE);
 
