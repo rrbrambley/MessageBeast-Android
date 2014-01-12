@@ -977,7 +977,7 @@ public class MessageManager {
                                 handler.onError(error);
                             }
                             delete();
-                            mDatabase.insertOrReplacePendingDeletion(messagePlus, false);
+                            mDatabase.insertOrReplacePendingMessageDeletion(messagePlus, false);
                         }
 
                         private void delete() {

@@ -544,7 +544,7 @@ public class ADNDatabase {
         }
     }
 
-    public void insertOrReplacePendingDeletion(MessagePlus messagePlus, boolean deleteFiles) {
+    public void insertOrReplacePendingMessageDeletion(MessagePlus messagePlus, boolean deleteFiles) {
         if(mInsertOrReplacePendingMessageDeletion == null) {
             mInsertOrReplacePendingMessageDeletion = mDatabase.compileStatement(INSERT_OR_REPLACE_PENDING_MESSAGE_DELETION);
         }
