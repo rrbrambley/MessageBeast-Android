@@ -191,15 +191,6 @@ public class MessageManager {
     private HashMap<String, QueryParameters> mParameters;
     private HashMap<String, MinMaxPair> mMinMaxPairs;
 
-    public static MessageManager getInstance() {
-        return sInstance;
-    }
-
-    public static MessageManager init(Context context, AppDotNetClient client, MessageManagerConfiguration configuration) {
-        sInstance = new MessageManager(context, client, configuration);
-        return sInstance;
-    }
-
     public MessageManager(Context context, AppDotNetClient client, MessageManagerConfiguration configuration) {
         mContext = context;
         mClient = client;
@@ -1264,7 +1255,7 @@ public class MessageManager {
             messagesNeedingPendingFile.add(messagePlus);
             //TODO: this should somehow be prepopulated?
 
-            FileManager.getInstance().startPendingFileUpload(pendingFileId);
+            FileManager.getInstance(mClient).startPendingFileUpload(pendingFileId);
             return;
         }
         Message theMessage = messagePlus.getMessage();

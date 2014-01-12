@@ -53,7 +53,7 @@ public class FileUploadService extends IntentService {
     protected void onHandleIntent(Intent intent) {
         if(intent.hasExtra(EXTRA_PENDING_FILE_ID)) {
             String pendingFileId = intent.getStringExtra(EXTRA_PENDING_FILE_ID);
-            PendingFile pf = FileManager.getInstance().getPendingFile(pendingFileId);
+            PendingFile pf = FileManager.getExistingInstance().getPendingFile(pendingFileId);
             byte[] fileBytes = getBytes(pf.getUri());
             if(fileBytes != null) {
                 createFile(fileBytes, pf.getType(), pf.getName(), pf.getMimeType(), pf.getKind(), pf.isPublic(), pendingFileId);
@@ -88,8 +88,7 @@ public class FileUploadService extends IntentService {
     }
 
     private void createFile(byte[] data, String fileType, String filename, String mimeType, String fileKind, boolean isPublic, final String pendingFileId) {
-        MessageManager messageManager = MessageManager.getInstance();
-        AppDotNetClient client = messageManager.getClient();
+        AppDotNetClient client = FileManager.getExistingInstance().getClient();
         File file = new File(fileKind, fileType, filename, isPublic);
         client.createFile(file, data, mimeType, new FileResponseHandler() {
             @Override
