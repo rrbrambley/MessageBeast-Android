@@ -18,6 +18,7 @@ import com.alwaysallthetime.adnlib.data.File;
 import com.alwaysallthetime.adnlib.data.Message;
 import com.alwaysallthetime.adnlib.data.MessageList;
 import com.alwaysallthetime.adnlib.gson.AppDotNetGson;
+import com.alwaysallthetime.adnlib.response.FileResponseHandler;
 import com.alwaysallthetime.adnlib.response.MessageListResponseHandler;
 import com.alwaysallthetime.adnlib.response.MessageResponseHandler;
 import com.alwaysallthetime.adnlibutils.ADNSharedPreferences;
@@ -929,6 +930,19 @@ public class MessageManager {
      * @param handler The handler that will act as a callback upon deletion.
      */
     public synchronized void deleteMessage(final MessagePlus messagePlus, final MessageDeletionResponseHandler handler) {
+        deleteMessage(messagePlus, false, handler);
+    }
+
+    /**
+     * Delete a Message. If the specified Message is unsent, it will simply be deleted from the local
+     * sqlite database and no server request is required.
+     *
+     * @param messagePlus The MessagePlus associated with the Message to be deleted
+     * @param deleteAssociatedFiles true if all OEmbed files should be deleted from
+     *                              the server, false otherwise. This will never affect local files.
+     * @param handler The handler that will act as a callback upon deletion.
+     */
+    public synchronized void deleteMessage(final MessagePlus messagePlus, boolean deleteAssociatedFiles, final MessageDeletionResponseHandler handler) {
         if(messagePlus.isUnsent()) {
             Message message = messagePlus.getMessage();
             String messageId = message.getId();
@@ -943,31 +957,68 @@ public class MessageManager {
                 handler.onSuccess();
             }
         } else {
-            mClient.deleteMessage(messagePlus.getMessage(), new MessageResponseHandler() {
+            Runnable runnable = new Runnable() {
                 @Override
-                public void onSuccess(Message responseData) {
-                    delete();
-                    if(handler != null) {
-                        handler.onSuccess();
-                    }
-                    mDatabase.deletePendingMessageDeletion(responseData.getId());
-                }
+                public void run() {
+                    mClient.deleteMessage(messagePlus.getMessage(), new MessageResponseHandler() {
+                        @Override
+                        public void onSuccess(Message responseData) {
+                            delete();
+                            if(handler != null) {
+                                handler.onSuccess();
+                            }
+                            mDatabase.deletePendingMessageDeletion(responseData.getId());
+                        }
 
-                @Override
-                public void onError(Exception error) {
-                    super.onError(error);
-                    if(handler != null) {
-                        handler.onError(error);
-                    }
-                    delete();
-                    mDatabase.insertOrReplacePendingDeletion(messagePlus, false);
-                }
+                        @Override
+                        public void onError(Exception error) {
+                            super.onError(error);
+                            if(handler != null) {
+                                handler.onError(error);
+                            }
+                            delete();
+                            mDatabase.insertOrReplacePendingDeletion(messagePlus, false);
+                        }
 
-                private void delete() {
-                    mDatabase.deleteMessage(messagePlus); //this one because the deleted one doesn't have the entities.
-                    onMessageDeleted(messagePlus.getMessage().getId(), messagePlus.getMessage().getChannelId());
+                        private void delete() {
+                            mDatabase.deleteMessage(messagePlus); //this one because the deleted one doesn't have the entities.
+                            onMessageDeleted(messagePlus.getMessage().getId(), messagePlus.getMessage().getChannelId());
+                        }
+                    });
                 }
-            });
+            };
+
+            if(deleteAssociatedFiles) {
+                List<Annotation> oEmbeds = messagePlus.getMessage().getAnnotationsOfType(Annotations.OEMBED);
+                deleteOEmbed(0, oEmbeds, runnable);
+            } else {
+                runnable.run();
+            }
+        }
+    }
+
+    private synchronized void deleteOEmbed(final int index, final List<Annotation> oEmbedAnnotations, final Runnable completionRunnable) {
+        if(index >= oEmbedAnnotations.size()) {
+            completionRunnable.run();
+        } else {
+            Annotation oEmbed = oEmbedAnnotations.get(index);
+            String fileId = (String) oEmbed.getValue().get("file_id");
+            if(fileId != null) {
+                mClient.deleteFile(fileId, new FileResponseHandler() {
+                    @Override
+                    public void onSuccess(File responseData) {
+                        deleteOEmbed(index+1, oEmbedAnnotations, completionRunnable);
+                    }
+
+                    @Override
+                    public void onError(Exception error) {
+                        super.onError(error);
+                        deleteOEmbed(index+1, oEmbedAnnotations, completionRunnable);
+                    }
+                });
+            } else {
+                deleteOEmbed(index+1, oEmbedAnnotations, completionRunnable);
+            }
         }
     }
 
