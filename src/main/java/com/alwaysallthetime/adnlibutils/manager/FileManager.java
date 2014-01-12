@@ -74,6 +74,18 @@ public class FileManager {
         mContext.startService(i);
     }
 
+    public void sendPendingFileDeletions() {
+        Set<String> pendingFileDeletions = mDatabase.getPendingFileDeletions();
+        for(String fileId : pendingFileDeletions) {
+            mClient.deleteFile(fileId, new FileResponseHandler() {
+                @Override
+                public void onSuccess(File responseData) {
+                    mDatabase.deletePendingFileDeletion(responseData.getId());
+                }
+            });
+        }
+    }
+
     private final BroadcastReceiver fileUploadReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {

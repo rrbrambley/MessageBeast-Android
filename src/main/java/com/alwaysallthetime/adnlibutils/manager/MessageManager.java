@@ -993,7 +993,7 @@ public class MessageManager {
             completionRunnable.run();
         } else {
             Annotation oEmbed = oEmbedAnnotations.get(index);
-            String fileId = (String) oEmbed.getValue().get("file_id");
+            final String fileId = (String) oEmbed.getValue().get("file_id");
             if(fileId != null) {
                 mClient.deleteFile(fileId, new FileResponseHandler() {
                     @Override
@@ -1004,7 +1004,8 @@ public class MessageManager {
                     @Override
                     public void onError(Exception error) {
                         super.onError(error);
-                        deleteOEmbed(index+1, oEmbedAnnotations, completionRunnable);
+                        mDatabase.insertOrReplacePendingFileDeletion(fileId);
+                        deleteOEmbed(index + 1, oEmbedAnnotations, completionRunnable);
                     }
                 });
             } else {
@@ -1340,6 +1341,7 @@ public class MessageManager {
      * @param channelId the Channel id
      */
     public synchronized void sendAllUnsent(final String channelId) {
+        FileManager.getInstance(mClient).sendPendingFileDeletions();
         sendPendingDeletions(channelId, new MessageDeletionResponseHandler() {
             @Override
             public void onSuccess() {
