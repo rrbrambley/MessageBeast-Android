@@ -1428,6 +1428,10 @@ public class ADNDatabase {
         mDatabase.delete(TABLE_PENDING_MESSAGE_DELETIONS, COL_PENDING_MESSAGE_DELETION_MESSAGE_ID + " = '" + messageId + "'", null);
     }
 
+    public void deletePendingFileDeletion(String fileId) {
+        mDatabase.delete(TABLE_PENDING_FILE_DELETIONS, COL_PENDING_FILE_DELETION_FILE_ID + " = '" + fileId + "'", null);
+    }
+
     private void deleteOEmbedInstances(String type, String messageId) {
         String where = COL_OEMBED_INSTANCE_TYPE + " = " + "'" + type + "' AND " + COL_OEMBED_INSTANCE_MESSAGE_ID + " = " + "'" + messageId + "'";
         mDatabase.delete(TABLE_OEMBED_INSTANCES, where, null);
