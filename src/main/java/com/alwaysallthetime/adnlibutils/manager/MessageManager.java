@@ -30,8 +30,8 @@ import com.alwaysallthetime.adnlibutils.db.HashtagInstances;
 import com.alwaysallthetime.adnlibutils.db.OrderedMessageBatch;
 import com.alwaysallthetime.adnlibutils.db.PendingFile;
 import com.alwaysallthetime.adnlibutils.db.PendingMessageDeletion;
-import com.alwaysallthetime.adnlibutils.filter.MessageMetadataInstancesFilter;
 import com.alwaysallthetime.adnlibutils.filter.MessageFilter;
+import com.alwaysallthetime.adnlibutils.filter.MessageMetadataInstancesFilter;
 import com.alwaysallthetime.adnlibutils.model.DisplayLocation;
 import com.alwaysallthetime.adnlibutils.model.FullSyncState;
 import com.alwaysallthetime.adnlibutils.model.Geolocation;
@@ -451,15 +451,11 @@ public class MessageManager {
         return orderedMessageBatch;
     }
 
-    private void lookupOEmbed(Collection<MessagePlus> messages, boolean persistIfEnabled) {
-        for(MessagePlus messagePlus : messages) {
-            Message message = messagePlus.getMessage();
-
-            List<Annotation> oembeds = message.getAnnotationsOfType(Annotations.OEMBED);
-            if(oembeds != null) {
-                messagePlus.addOEmbedsFromAnnotations(oembeds);
-                if(persistIfEnabled && mConfiguration.isDatabaseInsertionEnabled) {
-                    mDatabase.insertOrReplaceOEmbedInstances(messagePlus);
+    private void lookupAnnotations(Collection<MessagePlus> messages) {
+        if(mConfiguration.annotationsToExtract != null && mConfiguration.isDatabaseInsertionEnabled) {
+            for(MessagePlus messagePlus : messages) {
+                for(String annotationType : mConfiguration.annotationsToExtract) {
+                    mDatabase.insertOrReplaceAnnotationInstances(annotationType, messagePlus);
                 }
             }
         }
@@ -998,7 +994,7 @@ public class MessageManager {
                 mClient.deleteFile(fileId, new FileResponseHandler() {
                     @Override
                     public void onSuccess(File responseData) {
-                        deleteOEmbed(index+1, oEmbedAnnotations, completionRunnable);
+                        deleteOEmbed(index + 1, oEmbedAnnotations, completionRunnable);
                     }
 
                     @Override
@@ -1009,7 +1005,7 @@ public class MessageManager {
                     }
                 });
             } else {
-                deleteOEmbed(index+1, oEmbedAnnotations, completionRunnable);
+                deleteOEmbed(index + 1, oEmbedAnnotations, completionRunnable);
             }
         }
     }
@@ -1554,8 +1550,8 @@ public class MessageManager {
         if(mConfiguration.isLocationLookupEnabled) {
             lookupLocation(messages, persistIfEnabled);
         }
-        if(mConfiguration.isOEmbedLookupEnabled) {
-            lookupOEmbed(messages, persistIfEnabled);
+        if(persistIfEnabled) {
+            lookupAnnotations(messages);
         }
     }
 
@@ -1617,10 +1613,10 @@ public class MessageManager {
         }
 
         boolean isDatabaseInsertionEnabled;
-        boolean isOEmbedLookupEnabled;
         boolean isLocationLookupEnabled;
         MessageDisplayDateAdapter dateAdapter;
         MessageLocationLookupHandler locationLookupHandler;
+        Set<String> annotationsToExtract;
 
         /**
          * Enable or disable automatic insertion of Messages into a sqlite database
@@ -1641,21 +1637,6 @@ public class MessageManager {
          */
         public void setMessageDisplayDateAdapter(MessageDisplayDateAdapter adapter) {
             this.dateAdapter = adapter;
-        }
-
-        /**
-         * Enable OEmbed lookup on Messages. If enabled, annotations will be examined in order to
-         * determine if OEmbed photo or video annotations are present. The associated MessagePlus
-         * will then have these OEmbed Objects obtainable via convenience methods.
-         *
-         * This is especially useful when database insertion is enabled – instances of photo and
-         * video OEmbeds will be stored in a table for look up at a later time (e.g. "gimme all
-         * messages for which there are photos attached").
-         *
-         * @param isEnabled
-         */
-        public void setOEmbedLookupEnabled(boolean isEnabled) {
-            this.isOEmbedLookupEnabled = isEnabled;
         }
 
         /**
@@ -1693,6 +1674,22 @@ public class MessageManager {
          */
         public void setLocationLookupHandler(MessageLocationLookupHandler handler) {
             this.locationLookupHandler = handler;
+        }
+
+        /**
+         * Tell the MessageManager to examine the Annotations on all Messages to see if
+         * Annotations with the specified type exist. If so, a reference to the Message will be
+         * persisted to the sqlite database for lookup at a later time. For example, if you
+         * want to be able to find all Messages with OEmbeds at a later time, then
+         * you might call this method with the annotation type net.app.core.oembed.
+         *
+         * @param annotationType The Annotation type of interest.
+         */
+        public void addAnnotationExtraction(String annotationType) {
+            if(annotationsToExtract == null) {
+                annotationsToExtract = new HashSet<String>();
+            }
+            annotationsToExtract.add(annotationType);
         }
     }
 }

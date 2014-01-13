@@ -1,9 +1,9 @@
 package com.alwaysallthetime.adnlibutils.db;
 
-public class OEmbedInstances extends MessageMetadataInstances {
+public class AnnotationInstances extends MessageMetadataInstances {
     private String mType;
 
-    public OEmbedInstances(String type) {
+    public AnnotationInstances(String type) {
         super();
         mType = type;
     }

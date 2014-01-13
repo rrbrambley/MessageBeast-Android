@@ -2,6 +2,7 @@ package com.alwaysallthetime.adnlibutils.model;
 
 import android.util.Log;
 
+import com.alwaysallthetime.adnlib.Annotations;
 import com.alwaysallthetime.adnlib.data.Annotatable;
 import com.alwaysallthetime.adnlib.data.Annotation;
 import com.alwaysallthetime.adnlib.data.File;
@@ -25,7 +26,6 @@ public class MessagePlus {
     private Message mMessage;
     private Date mDisplayDate;
     private DisplayLocation mDisplayLocation;
-    private boolean mHasSetOEmbedValues;
     private List<PhotoOEmbed> mPhotoOEmbeds;
     private List<Html5VideoOEmbed> mHtml5VideoOEmbeds;
 
@@ -62,6 +62,7 @@ public class MessagePlus {
 
     public MessagePlus(Message message) {
         mMessage = message;
+        addOEmbedsFromAnnotations(message.getAnnotationsOfType(Annotations.OEMBED));
     }
 
     public Date getDisplayDate() {
@@ -82,10 +83,6 @@ public class MessagePlus {
 
     public void setDisplayLocation(DisplayLocation location) {
         mDisplayLocation = location;
-    }
-
-    public boolean hasSetOEmbedValues() {
-        return mHasSetOEmbedValues;
     }
 
     public boolean hasPhotoOEmbed() {
@@ -137,8 +134,7 @@ public class MessagePlus {
         return mPendingOEmbeds;
     }
 
-    public void addOEmbedsFromAnnotations(List<Annotation> annotations) {
-        mHasSetOEmbedValues = true;
+    private void addOEmbedsFromAnnotations(List<Annotation> annotations) {
         for(Annotation a : annotations) {
             HashMap<String, Object> value = a.getValue();
             String type = (String) value.get("type");

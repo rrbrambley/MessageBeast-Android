@@ -9,6 +9,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.util.Log;
 
+import com.alwaysallthetime.adnlib.data.Annotation;
 import com.alwaysallthetime.adnlib.data.Entities;
 import com.alwaysallthetime.adnlib.data.Message;
 import com.alwaysallthetime.adnlib.gson.AppDotNetGson;
@@ -72,12 +73,12 @@ public class ADNDatabase {
 
     public static final String TABLE_LOCATION_INSTANCES_SEARCH = "locations_search";
 
-    public static final String TABLE_OEMBED_INSTANCES = "oembeds";
-    public static final String COL_OEMBED_INSTANCE_TYPE = "oembed_type";
-    public static final String COL_OEMBED_INSTANCE_MESSAGE_ID = "oembed_instance_message_id";
-    public static final String COL_OEMBED_INSTANCE_CHANNEL_ID = "oembed_instance_channel_id";
-    public static final String COL_OEMBED_INSTANCE_COUNT = "oembed_instance_count";
-    public static final String COL_OEMBED_INSTANCE_DATE = "oembed_instance_date";
+    public static final String TABLE_ANNOTATION_INSTANCES = "annotation_instances";
+    public static final String COL_ANNOTATION_INSTANCE_TYPE = "annotation_instance_type";
+    public static final String COL_ANNOTATION_INSTANCE_MESSAGE_ID = "annotation_instance_message_id";
+    public static final String COL_ANNOTATION_INSTANCE_CHANNEL_ID = "annotation_instance_channel_id";
+    public static final String COL_ANNOTATION_INSTANCE_COUNT = "annotation_instance_count";
+    public static final String COL_ANNOTATION_INSTANCE_DATE = "annotation_instance_date";
 
     public static final String TABLE_PENDING_FILES = "pending_files";
     public static final String COL_PENDING_FILE_ID = "pending_file_id";
@@ -170,13 +171,13 @@ public class ADNDatabase {
             " (docid, " + COL_LOCATION_INSTANCE_CHANNEL_ID + ", " + COL_LOCATION_INSTANCE_NAME + ") " +
             "VALUES (?, ?, ?)";
 
-    private static final String INSERT_OR_REPLACE_OEMBED_INSTANCE = "INSERT OR REPLACE INTO " + TABLE_OEMBED_INSTANCES +
+    private static final String INSERT_OR_REPLACE_ANNOTATION_INSTANCE = "INSERT OR REPLACE INTO " + TABLE_ANNOTATION_INSTANCES +
             " (" +
-            COL_OEMBED_INSTANCE_TYPE + ", " +
-            COL_OEMBED_INSTANCE_MESSAGE_ID + ", " +
-            COL_OEMBED_INSTANCE_CHANNEL_ID + ", " +
-            COL_OEMBED_INSTANCE_COUNT + ", " +
-            COL_OEMBED_INSTANCE_DATE +
+            COL_ANNOTATION_INSTANCE_TYPE + ", " +
+            COL_ANNOTATION_INSTANCE_MESSAGE_ID + ", " +
+            COL_ANNOTATION_INSTANCE_CHANNEL_ID + ", " +
+            COL_ANNOTATION_INSTANCE_COUNT + ", " +
+            COL_ANNOTATION_INSTANCE_DATE +
             ") " +
             "VALUES(?, ?, ?, ?, ?)";
 
@@ -233,7 +234,7 @@ public class ADNDatabase {
     private SQLiteStatement mInsertOrReplaceGeolocation;
     private SQLiteStatement mInsertOrReplaceLocationInstance;
     private SQLiteStatement mInsertLocationInstanceSearchText;
-    private SQLiteStatement mInsertOrReplaceOEmbedInstance;
+    private SQLiteStatement mInsertOrReplaceAnnotationInstance;
     private SQLiteStatement mInsertOrReplacePendingFile;
     private SQLiteStatement mInsertOrReplacePendingMessageDeletion;
     private SQLiteStatement mInsertOrReplacePendingFileDeletion;
@@ -475,47 +476,38 @@ public class ADNDatabase {
         }
     }
 
-    public void insertOrReplaceOEmbedInstances(MessagePlus messagePlus) {
-        if(mInsertOrReplaceOEmbedInstance == null) {
-            mInsertOrReplaceOEmbedInstance = mDatabase.compileStatement(INSERT_OR_REPLACE_OEMBED_INSTANCE);
+    public void insertOrReplaceAnnotationInstances(String annotationType, MessagePlus messagePlus) {
+        if(mInsertOrReplaceAnnotationInstance == null) {
+            mInsertOrReplaceAnnotationInstance = mDatabase.compileStatement(INSERT_OR_REPLACE_ANNOTATION_INSTANCE);
         }
-        if(messagePlus.hasSetOEmbedValues()) {
-            mDatabase.beginTransaction();
-            try {
-                if(messagePlus.hasPhotoOEmbed()) {
-                    insertOrReplaceOEmbedInstances(messagePlus, messagePlus.getPhotoOEmbeds());
+        Message message = messagePlus.getMessage();
+        if(message.hasAnnotations()) {
+            List<Annotation> annotations = message.getAnnotationsOfType(annotationType);
+
+            int count = 0;
+            for(Annotation a : annotations) {
+                if(annotationType.equals(a.getType())) {
+                    count++;
                 }
-                if(messagePlus.hasHtml5VideoOEmbed()) {
-                    insertOrReplaceOEmbedInstances(messagePlus, messagePlus.getHtml5VideoOEmbeds());
-                }
-                mDatabase.setTransactionSuccessful();
-            } catch(Exception e) {
-                Log.e(TAG, e.getMessage(), e);
-            } finally {
-                mDatabase.endTransaction();
             }
-        }
-    }
 
-    //this assumes all oembeds are of the same type.
-    private void insertOrReplaceOEmbedInstances(MessagePlus messagePlus, List<? extends MessagePlus.OEmbed> oEmbeds) {
-        if(oEmbeds != null && oEmbeds.size() > 0) {
-            mDatabase.beginTransaction();
+            if(count > 0) {
+                mDatabase.beginTransaction();
 
-            try {
-                Message m = messagePlus.getMessage();
-                mInsertOrReplaceOEmbedInstance.bindString(1, oEmbeds.get(0).getType());
-                mInsertOrReplaceOEmbedInstance.bindString(2, m.getId());
-                mInsertOrReplaceOEmbedInstance.bindString(3, m.getChannelId());
-                mInsertOrReplaceOEmbedInstance.bindLong(4, oEmbeds.size());
-                mInsertOrReplaceOEmbedInstance.bindLong(5, messagePlus.getDisplayDate().getTime());
-                mInsertOrReplaceOEmbedInstance.execute();
-                mDatabase.setTransactionSuccessful();
-            } catch(Exception e) {
-                Log.e(TAG, e.getMessage(), e);
-            } finally {
-                mDatabase.endTransaction();
-                mInsertOrReplaceOEmbedInstance.clearBindings();
+                try {
+                    mInsertOrReplaceAnnotationInstance.bindString(1, annotationType);
+                    mInsertOrReplaceAnnotationInstance.bindString(2, message.getId());
+                    mInsertOrReplaceAnnotationInstance.bindString(3, message.getChannelId());
+                    mInsertOrReplaceAnnotationInstance.bindLong(4, count);
+                    mInsertOrReplaceAnnotationInstance.bindLong(5, messagePlus.getDisplayDate().getTime());
+                    mInsertOrReplaceAnnotationInstance.execute();
+                    mDatabase.setTransactionSuccessful();
+                } catch(Exception e) {
+                    Log.e(TAG, e.getMessage(), e);
+                } finally {
+                    mDatabase.endTransaction();
+                    mInsertOrReplaceAnnotationInstance.clearBindings();
+                }
             }
         }
     }
@@ -804,22 +796,21 @@ public class ADNDatabase {
     }
 
     /**
-     * Get an OEmbedInstances object representing the complete set of messages with an OEmbed
-     * Annotation of the specified type. The type String comes from the "type" value of the actual
-     * OEmbed Annotation, e.g. photo, html5video
+     * Get an AnnotationInstances object representing the complete set of messages with an
+     * Annotation of the specified type.
      *
      * @param channelId the Channel id
-     * @param type The OEmbed type
+     * @param type The Annotation type
      *
-     * @return OEmbedInstances
+     * @return AnnotationInstances
      */
-    public OEmbedInstances getOEmbedInstances(String channelId, String type) {
+    public AnnotationInstances getAnnotationInstances(String channelId, String type) {
         Cursor cursor = null;
-        OEmbedInstances instances = new OEmbedInstances(type);
+        AnnotationInstances instances = new AnnotationInstances(type);
         try {
-            String where = COL_OEMBED_INSTANCE_CHANNEL_ID + " = ? AND " + COL_OEMBED_INSTANCE_TYPE + " = ?";
+            String where = COL_ANNOTATION_INSTANCE_CHANNEL_ID + " = ? AND " + COL_ANNOTATION_INSTANCE_TYPE + " = ?";
             String[] args = new String[] { channelId, type };
-            cursor = mDatabase.query(TABLE_OEMBED_INSTANCES, new String[] { COL_OEMBED_INSTANCE_MESSAGE_ID }, where, args, null, null, null, null);
+            cursor = mDatabase.query(TABLE_ANNOTATION_INSTANCES, new String[] {COL_ANNOTATION_INSTANCE_MESSAGE_ID}, where, args, null, null, null, null);
 
             while(cursor.moveToNext()) {
                 String messageId = cursor.getString(0);
@@ -1381,6 +1372,8 @@ public class ADNDatabase {
             mDatabase.delete(TABLE_LOCATION_INSTANCES_SEARCH, "docid=" + messageId, null);
             mDatabase.delete(TABLE_MESSAGES, COL_MESSAGE_ID + " = " + messageId, null);
 
+            deleteAnnotationInstances(message.getId());
+
             //this might be null in the case of unsent messages.
             Entities entities = message.getEntities();
             if(entities != null) {
@@ -1399,12 +1392,6 @@ public class ADNDatabase {
                 mDatabase.delete(TABLE_LOCATION_INSTANCES, where, null);
             }
 
-            if(messagePlus.hasPhotoOEmbed()) {
-                deleteOEmbedInstances(messagePlus.getPhotoOEmbeds().get(0).getType(), message.getId());
-            }
-            if(messagePlus.hasHtml5VideoOEmbed()) {
-                deleteOEmbedInstances(messagePlus.getHtml5VideoOEmbeds().get(0).getType(), message.getId());
-            }
             if(messagePlus.hasPendingOEmbeds()) {
                 Set<String> pendingOEmbeds = messagePlus.getPendingOEmbeds();
                 for(String pendingFileId : pendingOEmbeds) {
@@ -1432,9 +1419,14 @@ public class ADNDatabase {
         mDatabase.delete(TABLE_PENDING_FILE_DELETIONS, COL_PENDING_FILE_DELETION_FILE_ID + " = '" + fileId + "'", null);
     }
 
-    private void deleteOEmbedInstances(String type, String messageId) {
-        String where = COL_OEMBED_INSTANCE_TYPE + " = " + "'" + type + "' AND " + COL_OEMBED_INSTANCE_MESSAGE_ID + " = " + "'" + messageId + "'";
-        mDatabase.delete(TABLE_OEMBED_INSTANCES, where, null);
+    private void deleteAnnotationInstances(String type, String messageId) {
+        String where = COL_ANNOTATION_INSTANCE_TYPE + " = " + "'" + type + "' AND " + COL_ANNOTATION_INSTANCE_MESSAGE_ID + " = " + "'" + messageId + "'";
+        mDatabase.delete(TABLE_ANNOTATION_INSTANCES, where, null);
+    }
+
+    private void deleteAnnotationInstances(String messageId) {
+        String where = COL_ANNOTATION_INSTANCE_MESSAGE_ID + " = " + "'" + messageId + "'";
+        mDatabase.delete(TABLE_ANNOTATION_INSTANCES, where, null);
     }
 
     public void deleteMessages(String channelId) {

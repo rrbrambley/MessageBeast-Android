@@ -56,13 +56,13 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
             ADNDatabase.COL_LOCATION_INSTANCE_NAME + " TEXT " +
             ")";
 
-    private static final String CREATE_OEMBED_INSTANCES_TABLE = "CREATE TABLE IF NOT EXISTS " + ADNDatabase.TABLE_OEMBED_INSTANCES + "(" +
-            ADNDatabase.COL_OEMBED_INSTANCE_TYPE + " TEXT NOT NULL, " +
-            ADNDatabase.COL_OEMBED_INSTANCE_MESSAGE_ID + " TEXT NOT NULL, " +
-            ADNDatabase.COL_OEMBED_INSTANCE_CHANNEL_ID + " TEXT NOT NULL, " +
-            ADNDatabase.COL_OEMBED_INSTANCE_COUNT + " INTEGER NOT NULL, " +
-            ADNDatabase.COL_OEMBED_INSTANCE_DATE + " INTEGER NOT NULL, " +
-            "PRIMARY KEY (" + ADNDatabase.COL_OEMBED_INSTANCE_TYPE + ", " + ADNDatabase.COL_OEMBED_INSTANCE_MESSAGE_ID + " ))";
+    private static final String CREATE_ANNOTATION_INSTANCES_TABLE = "CREATE TABLE IF NOT EXISTS " + ADNDatabase.TABLE_ANNOTATION_INSTANCES + "(" +
+            ADNDatabase.COL_ANNOTATION_INSTANCE_TYPE + " TEXT NOT NULL, " +
+            ADNDatabase.COL_ANNOTATION_INSTANCE_MESSAGE_ID + " TEXT NOT NULL, " +
+            ADNDatabase.COL_ANNOTATION_INSTANCE_CHANNEL_ID + " TEXT NOT NULL, " +
+            ADNDatabase.COL_ANNOTATION_INSTANCE_COUNT + " INTEGER NOT NULL, " +
+            ADNDatabase.COL_ANNOTATION_INSTANCE_DATE + " INTEGER NOT NULL, " +
+            "PRIMARY KEY (" + ADNDatabase.COL_ANNOTATION_INSTANCE_TYPE + ", " + ADNDatabase.COL_ANNOTATION_INSTANCE_MESSAGE_ID + " ))";
 
     public static final String CREATE_PENDING_FILES_TABLE = "CREATE TABLE IF NOT EXISTS " + ADNDatabase.TABLE_PENDING_FILES + "(" +
             ADNDatabase.COL_PENDING_FILE_ID + " TEXT PRIMARY KEY, " +
@@ -113,7 +113,7 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
             db.execSQL(CREATE_HASHTAG_INSTANCES_TABLE);
             db.execSQL(CREATE_GEOLOCATIONS_TABLE);
             db.execSQL(CREATE_LOCATION_INSTANCES_TABLE);
-            db.execSQL(CREATE_OEMBED_INSTANCES_TABLE);
+            db.execSQL(CREATE_ANNOTATION_INSTANCES_TABLE);
             db.execSQL(CREATE_PENDING_FILES_TABLE);
             db.execSQL(CREATE_PENDING_MESSAGE_DELETIONS_TABLE);
             db.execSQL(CREATE_PENDING_FILE_DELETIONS_TABLE);
