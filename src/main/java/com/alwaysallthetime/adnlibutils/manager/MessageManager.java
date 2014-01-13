@@ -875,12 +875,11 @@ public class MessageManager {
         final MessagePlus messagePlus = unsentBuilder.build();
         mDatabase.insertOrReplaceMessage(messagePlus);
 
-        //problem to solve - display locations need
-//        if(mConfiguration.isLocationLookupEnabled) {
-//            ArrayList<MessagePlus> mp = new ArrayList<MessagePlus>(1);
-//            mp.add(messagePlus);
-//            lookupLocation(mp, true);
-//        }
+        if(mConfiguration.isLocationLookupEnabled) {
+            ArrayList<MessagePlus> mp = new ArrayList<MessagePlus>(1);
+            mp.add(messagePlus);
+            lookupLocation(mp, true);
+        }
 
         LinkedHashMap<String, MessagePlus> channelUnsentMessages = getUnsentMessages(channelId);
         channelUnsentMessages.put(newMessageIdString, messagePlus);
