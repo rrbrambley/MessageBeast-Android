@@ -3,10 +3,14 @@ package com.alwaysallthetime.adnlibutils.db;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-public abstract class MessageEntityInstances {
+/**
+ * An abstract class used to group a set of Messages that all contain
+ * the same type of Message metadata.
+ */
+public abstract class MessageMetadataInstances {
     protected LinkedHashSet<String> mMessageIds;
 
-    public MessageEntityInstances() {
+    public MessageMetadataInstances() {
         mMessageIds = new LinkedHashSet<String>();
     }
 

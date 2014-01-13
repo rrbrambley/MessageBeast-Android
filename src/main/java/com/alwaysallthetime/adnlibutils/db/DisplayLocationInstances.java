@@ -2,7 +2,7 @@ package com.alwaysallthetime.adnlibutils.db;
 
 import com.alwaysallthetime.adnlibutils.model.DisplayLocation;
 
-public class DisplayLocationInstances extends MessageEntityInstances {
+public class DisplayLocationInstances extends MessageMetadataInstances {
 
     private DisplayLocation mLocation;
 
