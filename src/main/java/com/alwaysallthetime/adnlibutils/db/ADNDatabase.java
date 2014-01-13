@@ -484,21 +484,14 @@ public class ADNDatabase {
         if(message.hasAnnotations()) {
             List<Annotation> annotations = message.getAnnotationsOfType(annotationType);
 
-            int count = 0;
-            for(Annotation a : annotations) {
-                if(annotationType.equals(a.getType())) {
-                    count++;
-                }
-            }
-
-            if(count > 0) {
+            if(annotations.size() > 0) {
                 mDatabase.beginTransaction();
 
                 try {
                     mInsertOrReplaceAnnotationInstance.bindString(1, annotationType);
                     mInsertOrReplaceAnnotationInstance.bindString(2, message.getId());
                     mInsertOrReplaceAnnotationInstance.bindString(3, message.getChannelId());
-                    mInsertOrReplaceAnnotationInstance.bindLong(4, count);
+                    mInsertOrReplaceAnnotationInstance.bindLong(4, annotations.size());
                     mInsertOrReplaceAnnotationInstance.bindLong(5, messagePlus.getDisplayDate().getTime());
                     mInsertOrReplaceAnnotationInstance.execute();
                     mDatabase.setTransactionSuccessful();
