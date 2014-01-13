@@ -1515,6 +1515,12 @@ public class MessageManager {
         if(mConfiguration.isDatabaseInsertionEnabled) {
             mDatabase.insertOrReplaceMessage(messagePlus);
             mDatabase.insertOrReplaceHashtagInstances(messagePlus);
+
+            if(mConfiguration.annotationsToExtract != null) {
+                for(String annotationType : mConfiguration.annotationsToExtract) {
+                    mDatabase.insertOrReplaceAnnotationInstances(annotationType, messagePlus);
+                }
+            }
         }
     }
 
@@ -1549,9 +1555,6 @@ public class MessageManager {
     private void performLookups(Collection<MessagePlus> messages, boolean persistIfEnabled) {
         if(mConfiguration.isLocationLookupEnabled) {
             lookupLocation(messages, persistIfEnabled);
-        }
-        if(persistIfEnabled) {
-            lookupAnnotations(messages);
         }
     }
 
