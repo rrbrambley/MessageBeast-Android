@@ -9,15 +9,14 @@ import com.alwaysallthetime.adnlib.data.File;
 import com.alwaysallthetime.adnlib.data.Message;
 import com.alwaysallthetime.adnlibutils.AnnotationFactory;
 import com.alwaysallthetime.adnlibutils.AnnotationUtility;
+import com.alwaysallthetime.adnlibutils.db.PendingFileAttachment;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class MessagePlus {
 
@@ -29,7 +28,7 @@ public class MessagePlus {
     private List<PhotoOEmbed> mPhotoOEmbeds;
     private List<Html5VideoOEmbed> mHtml5VideoOEmbeds;
 
-    private Set<String> mPendingOEmbeds;
+    private HashMap<String, PendingFileAttachment> mPendingFileAttachments;
     private boolean mIsUnsent;
     private int mSendAttempts;
 
@@ -49,15 +48,26 @@ public class MessagePlus {
     }
 
     public boolean replacePendingOEmbedWithOEmbedAnnotation(String pendingFileId, File file) {
-        boolean removed = mPendingOEmbeds.remove(pendingFileId);
-        if(removed) {
-            mMessage.addAnnotation(AnnotationFactory.getOEmbedAnnotation(file));
+        PendingFileAttachment attachment = mPendingFileAttachments.remove(pendingFileId);
+        if(attachment != null) {
+            if(attachment.isOEmbed()) {
+                mMessage.addAnnotation(AnnotationFactory.getOEmbedAnnotation(file));
+            } else {
+                //TODO
+            }
         }
-        return removed;
+        return attachment != null;
     }
 
-    public void setPendingOEmbeds(Set<String> pendingOEmbeds) {
-        mPendingOEmbeds = pendingOEmbeds;
+    public void setPendingFileAttachments(List<PendingFileAttachment> pendingFileAttachments) {
+        if(pendingFileAttachments != null) {
+            mPendingFileAttachments = new HashMap<String, PendingFileAttachment>(pendingFileAttachments.size());
+            for(PendingFileAttachment attachment : pendingFileAttachments) {
+                mPendingFileAttachments.put(attachment.getPendingFileId(), attachment);
+            }
+        } else {
+            mPendingFileAttachments = null;
+        }
     }
 
     public MessagePlus(Message message) {
@@ -126,12 +136,12 @@ public class MessagePlus {
         return mSendAttempts;
     }
 
-    public boolean hasPendingOEmbeds() {
-        return mPendingOEmbeds != null && mPendingOEmbeds.size() > 0;
+    public boolean hasPendingFileAttachments() {
+        return mPendingFileAttachments != null && mPendingFileAttachments.size() > 0;
     }
 
-    public Set<String> getPendingOEmbeds() {
-        return mPendingOEmbeds;
+    public Map<String, PendingFileAttachment> getPendingFileAttachments() {
+        return mPendingFileAttachments;
     }
 
     private void addOEmbedsFromAnnotations(List<Annotation> annotations) {
@@ -417,7 +427,7 @@ public class MessagePlus {
         private String channelId;
         private String messageId;
         private Message message;
-        private LinkedHashSet<String> pendingOEmbeds;
+        private List<PendingFileAttachment> pendingFileAttachments;
 
         public static UnsentMessagePlusBuilder newBuilder(String channelId, String messageId, Message message) {
             UnsentMessagePlusBuilder builder = new UnsentMessagePlusBuilder();
@@ -427,17 +437,17 @@ public class MessagePlus {
             return builder;
         }
 
-        public UnsentMessagePlusBuilder addPendingOEmbed(String pendingFileId) {
-            if(pendingOEmbeds == null) {
-                pendingOEmbeds = new LinkedHashSet<String>();
+        public UnsentMessagePlusBuilder addPendingFileAttachmentId(String pendingFileId, boolean isOEmbed) {
+            if(pendingFileAttachments == null) {
+                pendingFileAttachments = new ArrayList<PendingFileAttachment>();
             }
-            pendingOEmbeds.add(pendingFileId);
+            pendingFileAttachments.add(new PendingFileAttachment(pendingFileId, isOEmbed, messageId, channelId));
             return this;
         }
 
         public MessagePlus build() {
             MessagePlus messagePlus = newUnsentMessagePlus(channelId, messageId, message);
-            messagePlus.setPendingOEmbeds(pendingOEmbeds);
+            messagePlus.setPendingFileAttachments(pendingFileAttachments);
             return messagePlus;
         }
     }

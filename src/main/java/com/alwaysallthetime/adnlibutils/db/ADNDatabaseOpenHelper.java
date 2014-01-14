@@ -85,12 +85,13 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
             ADNDatabase.COL_PENDING_FILE_DELETION_FILE_ID + " TEXT PRIMARY KEY " +
             ")";
 
-    public static final String CREATE_PENDING_OEMBEDS_TABLE = "CREATE TABLE IF NOT EXISTS " + ADNDatabase.TABLE_PENDING_OEMBEDS + "(" +
-            ADNDatabase.COL_PENDING_OEMBED_PENDING_FILE_ID + " TEXT NOT NULL, " +
-            ADNDatabase.COL_PENDING_OEMBED_MESSAGE_ID + " TEXT NOT NULL, " +
-            ADNDatabase.COL_PENDING_OEMBED_CHANNEL_ID + " TEXT NOT NULL, " +
-            "PRIMARY KEY (" + ADNDatabase.COL_PENDING_OEMBED_PENDING_FILE_ID + ", " +
-                              ADNDatabase.COL_PENDING_OEMBED_MESSAGE_ID + "))";
+    public static final String CREATE_PENDING_FILE_ATTACHMENTS_TABLE = "CREATE TABLE IF NOT EXISTS " + ADNDatabase.TABLE_PENDING_FILE_ATTACHMENTS + "(" +
+            ADNDatabase.COL_PENDING_FILE_ATTACHMENT_PENDING_FILE_ID + " TEXT NOT NULL, " +
+            ADNDatabase.COL_PENDING_FILE_ATTACHMENT_MESSAGE_ID + " TEXT NOT NULL, " +
+            ADNDatabase.COL_PENDING_FILE_ATTACHMENT_CHANNEL_ID + " TEXT NOT NULL, " +
+            ADNDatabase.COL_PENDING_FILE_ATTACHMENT_IS_OEMBED + " INTEGER NOT NULL, " +
+            "PRIMARY KEY (" + ADNDatabase.COL_PENDING_FILE_ATTACHMENT_PENDING_FILE_ID + ", " +
+                              ADNDatabase.COL_PENDING_FILE_ATTACHMENT_MESSAGE_ID + "))";
 
     public static final String CREATE_ACTION_MESSAGES_TABLE = "CREATE TABLE IF NOT EXISTS " + ADNDatabase.TABLE_ACTION_MESSAGES + "(" +
             ADNDatabase.COL_ACTION_MESSAGE_ID + " TEXT PRIMARY KEY, " +
@@ -116,7 +117,7 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
             db.execSQL(CREATE_PENDING_FILES_TABLE);
             db.execSQL(CREATE_PENDING_MESSAGE_DELETIONS_TABLE);
             db.execSQL(CREATE_PENDING_FILE_DELETIONS_TABLE);
-            db.execSQL(CREATE_PENDING_OEMBEDS_TABLE);
+            db.execSQL(CREATE_PENDING_FILE_ATTACHMENTS_TABLE);
             db.execSQL(CREATE_ACTION_MESSAGES_TABLE);
 
             if(ADNDatabase.isFullTextSearchAvailable()) {

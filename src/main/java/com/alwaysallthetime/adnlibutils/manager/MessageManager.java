@@ -618,6 +618,7 @@ public class MessageManager {
         List<MessagePlus> messagePlusses = mMessagesNeedingPendingFiles.get(pendingFileId);
         if(messagePlusses == null) {
             messagePlusses = new ArrayList<MessagePlus>(1);
+
             mMessagesNeedingPendingFiles.put(pendingFileId, messagePlusses);
         }
         return messagePlusses;
@@ -869,7 +870,7 @@ public class MessageManager {
         MessagePlus.UnsentMessagePlusBuilder unsentBuilder = MessagePlus.UnsentMessagePlusBuilder.newBuilder(channelId, newMessageIdString, message);
         Iterator<String> iterator = pendingFileIds.iterator();
         while(iterator.hasNext()) {
-            unsentBuilder.addPendingOEmbed(iterator.next());
+            unsentBuilder.addPendingFileAttachmentId(iterator.next(), true);
         }
         final MessagePlus messagePlus = unsentBuilder.build();
         mDatabase.insertOrReplaceMessage(messagePlus);
@@ -1244,8 +1245,8 @@ public class MessageManager {
 
     private synchronized void sendUnsentMessages(final LinkedHashMap<String, MessagePlus> unsentMessages, final ArrayList<String> sentMessageIds) {
         final MessagePlus messagePlus = unsentMessages.get(unsentMessages.keySet().iterator().next());
-        if(messagePlus.hasPendingOEmbeds()) {
-            String pendingFileId = messagePlus.getPendingOEmbeds().iterator().next();
+        if(messagePlus.hasPendingFileAttachments()) {
+            String pendingFileId = messagePlus.getPendingFileAttachments().keySet().iterator().next();
             List<MessagePlus> messagesNeedingPendingFile = getMessagesNeedingPendingFile(pendingFileId);
             messagesNeedingPendingFile.add(messagePlus);
             //TODO: this should somehow be prepopulated?
@@ -1583,9 +1584,9 @@ public class MessageManager {
                                 Message message = messagePlus.getMessage();
                                 messagePlus.replacePendingOEmbedWithOEmbedAnnotation(pendingFileId, file);
                                 mDatabase.insertOrReplaceMessage(messagePlus);
-                                mDatabase.deletePendingOEmbed(pendingFileId, message.getId(), message.getChannelId());
+                                mDatabase.deletePendingFiileAttachments(pendingFileId, message.getId(), message.getChannelId());
 
-                                if(messagePlus.getPendingOEmbeds().size() == 0) {
+                                if(messagePlus.getPendingFileAttachments().size() == 0) {
                                     channelIdsWithMessagesToSend.add(message.getChannelId());
                                 }
                             }

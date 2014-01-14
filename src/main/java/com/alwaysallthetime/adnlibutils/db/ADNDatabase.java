@@ -90,10 +90,11 @@ public class ADNDatabase {
     public static final String COL_PENDING_FILE_PUBLIC = "pending_file_public";
     public static final String COL_PENDING_FILE_SEND_ATTEMPTS = "pending_file_send_attempts";
 
-    public static final String TABLE_PENDING_OEMBEDS = "pending_oembeds";
-    public static final String COL_PENDING_OEMBED_PENDING_FILE_ID = "pending_oembed_file_id";
-    public static final String COL_PENDING_OEMBED_MESSAGE_ID = "pending_oembed_message_id";
-    public static final String COL_PENDING_OEMBED_CHANNEL_ID = "pending_oembed_channel_id";
+    public static final String TABLE_PENDING_FILE_ATTACHMENTS = "pending_file_attachments";
+    public static final String COL_PENDING_FILE_ATTACHMENT_PENDING_FILE_ID = "pending_file_attachment_file_id";
+    public static final String COL_PENDING_FILE_ATTACHMENT_MESSAGE_ID = "pending_file_attachment_message_id";
+    public static final String COL_PENDING_FILE_ATTACHMENT_CHANNEL_ID = "pending_file_attachment_channel_id";
+    public static final String COL_PENDING_FILE_ATTACHMENT_IS_OEMBED = "pending_file_attachment_is_oembed";
 
     public static final String TABLE_PENDING_MESSAGE_DELETIONS = "pending_message_deletions";
     public static final String COL_PENDING_MESSAGE_DELETION_MESSAGE_ID = "pending_message_deletion_message_id";
@@ -208,13 +209,14 @@ public class ADNDatabase {
             ") " +
             "VALUES(?)";
 
-    private static final String INSERT_OR_REPLACE_PENDING_OEMBED = "INSERT OR REPLACE INTO " + TABLE_PENDING_OEMBEDS +
+    private static final String INSERT_OR_REPLACE_PENDING_FILE_ATTACHMENT = "INSERT OR REPLACE INTO " + TABLE_PENDING_FILE_ATTACHMENTS +
             " (" +
-            COL_PENDING_OEMBED_PENDING_FILE_ID + ", " +
-            COL_PENDING_OEMBED_MESSAGE_ID + ", " +
-            COL_PENDING_OEMBED_CHANNEL_ID +
+            COL_PENDING_FILE_ATTACHMENT_PENDING_FILE_ID + ", " +
+            COL_PENDING_FILE_ATTACHMENT_MESSAGE_ID + ", " +
+            COL_PENDING_FILE_ATTACHMENT_CHANNEL_ID + ", " +
+            COL_PENDING_FILE_ATTACHMENT_IS_OEMBED +
             ") " +
-            "VALUES(?, ?, ?)";
+            "VALUES(?, ?, ?, ?)";
 
     private static final String INSERT_OR_REPLACE_ACTION_MESSAGE_SPEC = "INSERT OR REPLACE INTO " + TABLE_ACTION_MESSAGES +
             " (" +
@@ -238,7 +240,7 @@ public class ADNDatabase {
     private SQLiteStatement mInsertOrReplacePendingFile;
     private SQLiteStatement mInsertOrReplacePendingMessageDeletion;
     private SQLiteStatement mInsertOrReplacePendingFileDeletion;
-    private SQLiteStatement mInsertOrReplacePendingOEmbed;
+    private SQLiteStatement mInsertOrReplacePendingFileAttachment;
     private SQLiteStatement mInsertOrReplaceActionMessageSpec;
     private Gson mGson;
 
@@ -261,23 +263,24 @@ public class ADNDatabase {
         mGson = AppDotNetGson.getPersistenceInstance();
     }
 
-    private void insertOrReplacePendingOEmbed(String pendingFileId, String messageId, String channelId) {
-        if(mInsertOrReplacePendingOEmbed == null) {
-            mInsertOrReplacePendingOEmbed = mDatabase.compileStatement(INSERT_OR_REPLACE_PENDING_OEMBED);
+    private void insertOrReplacePendingFileAttachment(String pendingFileId, String messageId, String channelId, boolean isOEmbed) {
+        if(mInsertOrReplacePendingFileAttachment == null) {
+            mInsertOrReplacePendingFileAttachment = mDatabase.compileStatement(INSERT_OR_REPLACE_PENDING_FILE_ATTACHMENT);
         }
         mDatabase.beginTransaction();
 
         try {
-            mInsertOrReplacePendingOEmbed.bindString(1, pendingFileId);
-            mInsertOrReplacePendingOEmbed.bindString(2, messageId);
-            mInsertOrReplacePendingOEmbed.bindString(3, channelId);
-            mInsertOrReplacePendingOEmbed.execute();
+            mInsertOrReplacePendingFileAttachment.bindString(1, pendingFileId);
+            mInsertOrReplacePendingFileAttachment.bindString(2, messageId);
+            mInsertOrReplacePendingFileAttachment.bindString(3, channelId);
+            mInsertOrReplacePendingFileAttachment.bindLong(4, isOEmbed ? 1 : 0);
+            mInsertOrReplacePendingFileAttachment.execute();
             mDatabase.setTransactionSuccessful();
         } catch(Exception e) {
             Log.e(TAG, e.getMessage(), e);
         } finally {
             mDatabase.endTransaction();
-            mInsertOrReplacePendingOEmbed.clearBindings();
+            mInsertOrReplacePendingFileAttachment.clearBindings();
         }
     }
 
@@ -308,10 +311,10 @@ public class ADNDatabase {
             mInsertOrReplaceMessage.bindLong(7, messagePlus.getNumSendAttempts());
             mInsertOrReplaceMessage.execute();
 
-            Set<String> pendingOEmbeds = messagePlus.getPendingOEmbeds();
-            if(pendingOEmbeds != null) {
-                for(String pendingOEmbed : pendingOEmbeds) {
-                    insertOrReplacePendingOEmbed(pendingOEmbed, message.getId(), message.getChannelId());
+            Map<String, PendingFileAttachment> attachments = messagePlus.getPendingFileAttachments();
+            if(attachments != null) {
+                for(String pendingFileId : attachments.keySet()) {
+                    insertOrReplacePendingFileAttachment(pendingFileId, message.getId(), message.getChannelId(), attachments.get(pendingFileId).isOEmbed());
                 }
             }
 
@@ -766,17 +769,18 @@ public class ADNDatabase {
         return file;
     }
 
-    public Set<String> getPendingOEmbeds(String messageId, String channelId) {
-        HashSet<String> pendingOEmbeds = new HashSet<String>();
+    public List<PendingFileAttachment> getPendingFileAttachments(String messageId, String channelId) {
+        ArrayList<PendingFileAttachment> pendingAttachments = new ArrayList<PendingFileAttachment>();
         Cursor cursor = null;
         try {
-            String where = COL_PENDING_OEMBED_MESSAGE_ID + " = ? AND " + COL_PENDING_OEMBED_CHANNEL_ID + " = ?";
+            String where = COL_PENDING_FILE_ATTACHMENT_MESSAGE_ID + " = ? AND " + COL_PENDING_FILE_ATTACHMENT_CHANNEL_ID + " = ?";
             String args[] = new String[] { messageId, channelId };
-            cursor = mDatabase.query(TABLE_PENDING_OEMBEDS, new String[] { COL_PENDING_OEMBED_PENDING_FILE_ID }, where, args, null, null, null, null);
+            cursor = mDatabase.query(TABLE_PENDING_FILE_ATTACHMENTS, new String[] {COL_PENDING_FILE_ATTACHMENT_PENDING_FILE_ID}, where, args, null, null, null, null);
 
             while(cursor.moveToNext()) {
                 String pendingFileId = cursor.getString(0);
-                pendingOEmbeds.add(pendingFileId);
+                boolean isOEmbed = cursor.getInt(1) == 1;
+                pendingAttachments.add(new PendingFileAttachment(pendingFileId, isOEmbed, messageId, channelId));
             }
         } catch(Exception e) {
             Log.e(TAG, e.getMessage(), e);
@@ -785,7 +789,7 @@ public class ADNDatabase {
                 cursor.close();
             }
         }
-        return pendingOEmbeds;
+        return pendingAttachments;
     }
 
     /**
@@ -1246,8 +1250,8 @@ public class ADNDatabase {
         }
         for(MessagePlus messagePlus : unsentMessages) {
             Message message = messagePlus.getMessage();
-            Set<String> pendingOEmbeds = getPendingOEmbeds(message.getId(), message.getChannelId());
-            messagePlus.setPendingOEmbeds(pendingOEmbeds);
+            List<PendingFileAttachment> pendingAttachments = getPendingFileAttachments(message.getId(), message.getChannelId());
+            messagePlus.setPendingFileAttachments(pendingAttachments);
         }
         return new OrderedMessageBatch(messages, new MinMaxPair(minId, maxId));
     }
@@ -1298,8 +1302,8 @@ public class ADNDatabase {
         }
         for(MessagePlus messagePlus : unsentMessages.values()) {
             Message message = messagePlus.getMessage();
-            Set<String> pendingOEmbeds = getPendingOEmbeds(message.getId(), message.getChannelId());
-            messagePlus.setPendingOEmbeds(pendingOEmbeds);
+            List<PendingFileAttachment> pendingAttachments = getPendingFileAttachments(message.getId(), message.getChannelId());
+            messagePlus.setPendingFileAttachments(pendingAttachments);
         }
         return unsentMessages;
     }
@@ -1385,10 +1389,10 @@ public class ADNDatabase {
                 mDatabase.delete(TABLE_LOCATION_INSTANCES, where, null);
             }
 
-            if(messagePlus.hasPendingOEmbeds()) {
-                Set<String> pendingOEmbeds = messagePlus.getPendingOEmbeds();
-                for(String pendingFileId : pendingOEmbeds) {
-                    deletePendingOEmbed(pendingFileId, message.getId(), message.getChannelId());
+            if(messagePlus.hasPendingFileAttachments()) {
+                Map<String, PendingFileAttachment> pendingAttachments = messagePlus.getPendingFileAttachments();
+                for(String pendingFileId : pendingAttachments.keySet()) {
+                    deletePendingFiileAttachments(pendingFileId, message.getId(), message.getChannelId());
 
                     //TODO: can multiple message plus objects use the same pending file Id?
                     //if so, we shouldn't do this here - must make sure no other MPs need it.
@@ -1460,14 +1464,14 @@ public class ADNDatabase {
         }
     }
 
-    public void deletePendingOEmbed(String pendingFileId, String messageId, String channelId) {
+    public void deletePendingFiileAttachments(String pendingFileId, String messageId, String channelId) {
         mDatabase.beginTransaction();
 
         try {
-            String where = COL_PENDING_OEMBED_PENDING_FILE_ID + " = '" + pendingFileId + "' AND " +
-                           COL_PENDING_OEMBED_MESSAGE_ID + " = '" + messageId + "' AND " +
-                           COL_PENDING_OEMBED_CHANNEL_ID + " = '" + channelId + "'";
-            mDatabase.delete(TABLE_PENDING_OEMBEDS, where, null);
+            String where = COL_PENDING_FILE_ATTACHMENT_PENDING_FILE_ID + " = '" + pendingFileId + "' AND " +
+                    COL_PENDING_FILE_ATTACHMENT_MESSAGE_ID + " = '" + messageId + "' AND " +
+                    COL_PENDING_FILE_ATTACHMENT_CHANNEL_ID + " = '" + channelId + "'";
+            mDatabase.delete(TABLE_PENDING_FILE_ATTACHMENTS, where, null);
             mDatabase.setTransactionSuccessful();
         } catch(Exception e) {
             Log.e(TAG, e.getMessage(), e);
