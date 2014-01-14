@@ -28,6 +28,7 @@ import com.alwaysallthetime.adnlibutils.db.DisplayLocationInstances;
 import com.alwaysallthetime.adnlibutils.db.FilteredMessageBatch;
 import com.alwaysallthetime.adnlibutils.db.HashtagInstances;
 import com.alwaysallthetime.adnlibutils.db.OrderedMessageBatch;
+import com.alwaysallthetime.adnlibutils.db.PendingFileAttachment;
 import com.alwaysallthetime.adnlibutils.db.PendingMessageDeletion;
 import com.alwaysallthetime.adnlibutils.filter.MessageFilter;
 import com.alwaysallthetime.adnlibutils.filter.MessageMetadataInstancesFilter;
@@ -819,7 +820,7 @@ public class MessageManager {
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#INTENT_ACTION_UNSENT_MESSAGE_SEND_FAILURE
      */
     public synchronized MessagePlus createUnsentMessageAndAttemptSend(final String channelId, Message message) {
-        return createUnsentMessageAndAttemptSend(channelId, message, new HashSet<String>(0));
+        return createUnsentMessageAndAttemptSend(channelId, message, new ArrayList<PendingFileAttachment>(0));
     }
 
     /**
@@ -835,8 +836,8 @@ public class MessageManager {
      *
      * @param channelId the id of the Channel in which the Message should be created.
      * @param message The Message to be created.
-     * @param pendingFileIds The ids of the pending files that need to be sent before this Message can
-     *                       be sent to the server.
+     * @param pendingFileAttachments The pending files that need to be sent before this Message can
+     *                               be sent to the server.
      *
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendUnsentMessages(String)
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#sendPendingDeletions(String, com.alwaysallthetime.adnlibutils.manager.MessageManager.MessageDeletionResponseHandler)
@@ -844,7 +845,7 @@ public class MessageManager {
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#INTENT_ACTION_UNSENT_MESSAGES_SENT
      * @see com.alwaysallthetime.adnlibutils.manager.MessageManager#INTENT_ACTION_UNSENT_MESSAGE_SEND_FAILURE
      */
-    public synchronized MessagePlus createUnsentMessageAndAttemptSend(final String channelId, Message message, Set<String> pendingFileIds) {
+    public synchronized MessagePlus createUnsentMessageAndAttemptSend(final String channelId, Message message, List<PendingFileAttachment> pendingFileAttachments) {
         if(!mConfiguration.isDatabaseInsertionEnabled) {
             throw new RuntimeException("Database insertion must be enabled in order to use the unsent messages feature");
         }
@@ -868,9 +869,8 @@ public class MessageManager {
         String newMessageIdString = String.valueOf(newMessageId);
 
         MessagePlus.UnsentMessagePlusBuilder unsentBuilder = MessagePlus.UnsentMessagePlusBuilder.newBuilder(channelId, newMessageIdString, message);
-        Iterator<String> iterator = pendingFileIds.iterator();
-        while(iterator.hasNext()) {
-            unsentBuilder.addPendingFileAttachmentId(iterator.next(), true);
+        for(PendingFileAttachment attachment : pendingFileAttachments) {
+            unsentBuilder.addPendingFileAttachment(attachment);
         }
         final MessagePlus messagePlus = unsentBuilder.build();
         mDatabase.insertOrReplaceMessage(messagePlus);
@@ -1582,7 +1582,7 @@ public class MessageManager {
 
                             for(MessagePlus messagePlus : messagesNeedingFile) {
                                 Message message = messagePlus.getMessage();
-                                messagePlus.replacePendingOEmbedWithOEmbedAnnotation(pendingFileId, file);
+                                messagePlus.replacePendingFileAttachmentWithAnnotation(pendingFileId, file);
                                 mDatabase.insertOrReplaceMessage(messagePlus);
                                 mDatabase.deletePendingFileAttachments(pendingFileId, message.getId(), message.getChannelId());
 

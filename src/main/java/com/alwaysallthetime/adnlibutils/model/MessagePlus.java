@@ -47,13 +47,41 @@ public class MessagePlus {
         return messagePlus;
     }
 
-    public boolean replacePendingOEmbedWithOEmbedAnnotation(String pendingFileId, File file) {
+    /**
+     * After a pending file has been uploaded, take the returned file and add the OEmbed
+     * or file attachments annotation to the Message. If an attachments annotation already exist,
+     * this file is appended to the end of the existing file list.
+     *
+     * @param pendingFileId the pending file id that the provided File is meant to replace.
+     * @param file The File returned from the App.net server upon successful upload of the File.
+     * @return true if a pending file with the provided id exists, false if it does not and no
+     * annotation will be added.
+     */
+    public boolean replacePendingFileAttachmentWithAnnotation(String pendingFileId, File file) {
         PendingFileAttachment attachment = mPendingFileAttachments.remove(pendingFileId);
         if(attachment != null) {
             if(attachment.isOEmbed()) {
                 mMessage.addAnnotation(AnnotationFactory.getOEmbedAnnotation(file));
             } else {
-                //TODO
+                //if there's an existing file list, append to it.
+                List<Annotation> annotations = mMessage.getAnnotations();
+                if(annotations != null && annotations.size() > 0) {
+                    int index = -1;
+                    for(int i = 0; i < annotations.size(); i++) {
+                        if(annotations.get(i).getType().equals(Annotations.ATTACHMENTS)) {
+                            index = i;
+                            break;
+                        }
+                    }
+                    if(index != -1) {
+                        Annotation attachmentsAnnotation = annotations.get(index);
+                        AnnotationUtility.appendFileToAttachmentsFileList(attachmentsAnnotation, file);
+                    } else {
+                        mMessage.addAnnotation(AnnotationFactory.getAttachmentsAnnotation(file));
+                    }
+                } else {
+                    mMessage.addAnnotation(AnnotationFactory.getAttachmentsAnnotation(file));
+                }
             }
         }
         return attachment != null;
@@ -437,11 +465,11 @@ public class MessagePlus {
             return builder;
         }
 
-        public UnsentMessagePlusBuilder addPendingFileAttachmentId(String pendingFileId, boolean isOEmbed) {
+        public UnsentMessagePlusBuilder addPendingFileAttachment(PendingFileAttachment attachment) {
             if(pendingFileAttachments == null) {
                 pendingFileAttachments = new ArrayList<PendingFileAttachment>();
             }
-            pendingFileAttachments.add(new PendingFileAttachment(pendingFileId, isOEmbed, messageId, channelId));
+            pendingFileAttachments.add(attachment);
             return this;
         }
 

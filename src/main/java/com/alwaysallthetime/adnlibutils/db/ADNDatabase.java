@@ -780,7 +780,7 @@ public class ADNDatabase {
             while(cursor.moveToNext()) {
                 String pendingFileId = cursor.getString(0);
                 boolean isOEmbed = cursor.getInt(1) == 1;
-                pendingAttachments.add(new PendingFileAttachment(pendingFileId, isOEmbed, messageId, channelId));
+                pendingAttachments.add(new PendingFileAttachment(pendingFileId, isOEmbed));
             }
         } catch(Exception e) {
             Log.e(TAG, e.getMessage(), e);

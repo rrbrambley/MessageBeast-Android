@@ -6,14 +6,10 @@ package com.alwaysallthetime.adnlibutils.db;
 public class PendingFileAttachment {
     private String mPendingFileId;
     private boolean mIsOEmbed;
-    private String mMessageId;
-    private String mChannelId;
 
-    public PendingFileAttachment(String pendingFileId, boolean isOEmbed, String messageId, String channelId) {
+    public PendingFileAttachment(String pendingFileId, boolean isOEmbed) {
         mPendingFileId = pendingFileId;
         mIsOEmbed = isOEmbed;
-        mMessageId = messageId;
-        mChannelId = channelId;
     }
 
     public String getPendingFileId() {
@@ -22,13 +18,5 @@ public class PendingFileAttachment {
 
     public boolean isOEmbed() {
         return mIsOEmbed;
-    }
-
-    public String getMessageId() {
-        return mMessageId;
-    }
-
-    public String getChannelId() {
-        return mChannelId;
     }
 }
