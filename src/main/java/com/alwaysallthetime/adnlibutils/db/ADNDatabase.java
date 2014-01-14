@@ -769,12 +769,12 @@ public class ADNDatabase {
         return file;
     }
 
-    public List<PendingFileAttachment> getPendingFileAttachments(String messageId, String channelId) {
+    public List<PendingFileAttachment> getPendingFileAttachments(String messageId) {
         ArrayList<PendingFileAttachment> pendingAttachments = new ArrayList<PendingFileAttachment>();
         Cursor cursor = null;
         try {
-            String where = COL_PENDING_FILE_ATTACHMENT_MESSAGE_ID + " = ? AND " + COL_PENDING_FILE_ATTACHMENT_CHANNEL_ID + " = ?";
-            String args[] = new String[] { messageId, channelId };
+            String where = COL_PENDING_FILE_ATTACHMENT_MESSAGE_ID + " = ?";
+            String args[] = new String[] { messageId };
             cursor = mDatabase.query(TABLE_PENDING_FILE_ATTACHMENTS, new String[] {COL_PENDING_FILE_ATTACHMENT_PENDING_FILE_ID}, where, args, null, null, null, null);
 
             while(cursor.moveToNext()) {
@@ -1250,7 +1250,7 @@ public class ADNDatabase {
         }
         for(MessagePlus messagePlus : unsentMessages) {
             Message message = messagePlus.getMessage();
-            List<PendingFileAttachment> pendingAttachments = getPendingFileAttachments(message.getId(), message.getChannelId());
+            List<PendingFileAttachment> pendingAttachments = getPendingFileAttachments(message.getId());
             messagePlus.setPendingFileAttachments(pendingAttachments);
         }
         return new OrderedMessageBatch(messages, new MinMaxPair(minId, maxId));
@@ -1302,7 +1302,7 @@ public class ADNDatabase {
         }
         for(MessagePlus messagePlus : unsentMessages.values()) {
             Message message = messagePlus.getMessage();
-            List<PendingFileAttachment> pendingAttachments = getPendingFileAttachments(message.getId(), message.getChannelId());
+            List<PendingFileAttachment> pendingAttachments = getPendingFileAttachments(message.getId());
             messagePlus.setPendingFileAttachments(pendingAttachments);
         }
         return unsentMessages;
