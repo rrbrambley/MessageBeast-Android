@@ -79,11 +79,20 @@ public class FileManager {
 
     public void sendPendingFileDeletions() {
         Set<String> pendingFileDeletions = mDatabase.getPendingFileDeletions();
-        for(String fileId : pendingFileDeletions) {
+        for(final String fileId : pendingFileDeletions) {
             mClient.deleteFile(fileId, new FileResponseHandler() {
                 @Override
                 public void onSuccess(File responseData) {
                     mDatabase.deletePendingFileDeletion(responseData.getId());
+                }
+
+                @Override
+                public void onError(Exception error) {
+                    super.onError(error);
+                    Integer statusCode = getStatusCode();
+                    if(statusCode != null && statusCode >= 400 && statusCode < 500) {
+                        mDatabase.deletePendingFileDeletion(fileId);
+                    }
                 }
             });
         }
