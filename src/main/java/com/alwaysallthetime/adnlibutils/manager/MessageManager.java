@@ -947,23 +947,26 @@ public class MessageManager {
                 @Override
                 public void run() {
                     mClient.deleteMessage(messagePlus.getMessage(), new MessageResponseHandler() {
+                        //note: if the message was previously deleted, then we get a 200 and
+                        //onSuccess() is called. this differs from file deletion behavior -
+                        //the same scenario with a file deletion would result in a 403.
                         @Override
                         public void onSuccess(Message responseData) {
                             delete();
+                            mDatabase.deletePendingMessageDeletion(responseData.getId());
                             if(handler != null) {
                                 handler.onSuccess();
                             }
-                            mDatabase.deletePendingMessageDeletion(responseData.getId());
                         }
 
                         @Override
                         public void onError(Exception error) {
                             super.onError(error);
+                            delete();
+                            mDatabase.insertOrReplacePendingMessageDeletion(messagePlus, false);
                             if(handler != null) {
                                 handler.onError(error);
                             }
-                            delete();
-                            mDatabase.insertOrReplacePendingMessageDeletion(messagePlus, false);
                         }
 
                         private void delete() {
@@ -1043,7 +1046,7 @@ public class MessageManager {
             mClient.deleteFile(fileId, new FileResponseHandler() {
                 @Override
                 public void onSuccess(File responseData) {
-                    deleteFileInAttachmentsAnnotation(index+1, fileList, completionRunnable);
+                    deleteFileInAttachmentsAnnotation(index + 1, fileList, completionRunnable);
                 }
 
                 @Override
