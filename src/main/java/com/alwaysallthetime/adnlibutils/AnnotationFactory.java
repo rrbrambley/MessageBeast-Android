@@ -4,7 +4,10 @@ import com.alwaysallthetime.adnlib.Annotations;
 import com.alwaysallthetime.adnlib.data.Annotation;
 import com.alwaysallthetime.adnlib.data.File;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class AnnotationFactory {
     public static Annotation getCheckinAnnotation(String factualId) {
@@ -37,6 +40,29 @@ public class AnnotationFactory {
         replacement.put("file_id", file.getId());
         value.put(Annotations.REPLACEMENT_FILE, replacement);
         Annotation a = new Annotation(Annotations.OEMBED);
+        a.setValue(value);
+        return a;
+    }
+
+    public static Annotation getAttachmentsAnnotation(File file) {
+        ArrayList<File> fileList = new ArrayList<File>(1);
+        fileList.add(file);
+        return getAttachmentsAnnotation(fileList);
+    }
+
+    public static Annotation getAttachmentsAnnotation(List<File> files) {
+        HashMap<String, Object> value = new HashMap<String, Object>(1);
+
+        ArrayList<HashMap<String, String>> fileList = new ArrayList<HashMap<String, String>>(files.size());
+        for(File file : files) {
+            HashMap<String, String> nextFile = new HashMap<String, String>(3);
+            nextFile.put("file_token", file.getFileToken());
+            nextFile.put("format", "metadata");
+            nextFile.put("file_id", file.getId());
+            fileList.add(nextFile);
+        }
+        value.put(Annotations.REPLACEMENT_FILE_LIST, fileList);
+        Annotation a = new Annotation(Annotations.ATTACHMENTS);
         a.setValue(value);
         return a;
     }

@@ -5,6 +5,7 @@ import android.util.Log;
 import com.alwaysallthetime.adnlib.Annotations;
 import com.alwaysallthetime.adnlib.data.Annotation;
 import com.alwaysallthetime.adnlib.data.Channel;
+import com.alwaysallthetime.adnlib.data.File;
 import com.alwaysallthetime.adnlib.data.Message;
 
 import java.text.ParseException;
@@ -89,6 +90,15 @@ public class AnnotationUtility {
             }
         }
         return null;
+    }
+
+    public static void appendFileToAttachmentsFileList(Annotation attachments, File file) {
+        List<Map<String, String>> fileList = (List<Map<String, String>>) attachments.getValue().get(Annotations.REPLACEMENT_FILE_LIST);
+        HashMap<String, String> nextFile = new HashMap<String, String>(3);
+        nextFile.put("file_token", file.getFileToken());
+        nextFile.put("format", "metadata");
+        nextFile.put("file_id", file.getId());
+        fileList.add(nextFile);
     }
 
     public static String getActionChannelType(Channel channel) {
