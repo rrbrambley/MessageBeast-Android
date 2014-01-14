@@ -1005,7 +1005,13 @@ public class MessageManager {
                     @Override
                     public void onError(Exception error) {
                         super.onError(error);
-                        mDatabase.insertOrReplacePendingFileDeletion(fileId);
+
+                        //there's not really any good reason to retry deletion later
+                        //unless it's because we didn't actually get a response (e.g. no internet)
+                        Integer statusCode = getStatusCode();
+                        if(statusCode == null) {
+                            mDatabase.insertOrReplacePendingFileDeletion(fileId);
+                        }
                         deleteOEmbed(index + 1, oEmbedAnnotations, completionRunnable);
                     }
                 });
@@ -1044,7 +1050,12 @@ public class MessageManager {
                 @Override
                 public void onError(Exception error) {
                     super.onError(error);
-                    mDatabase.insertOrReplacePendingFileDeletion(fileId);
+                    //there's not really any good reason to retry deletion later
+                    //unless it's because we didn't actually get a response (e.g. no internet)
+                    Integer statusCode = getStatusCode();
+                    if(statusCode == null) {
+                        mDatabase.insertOrReplacePendingFileDeletion(fileId);
+                    }
                     deleteFileInAttachmentsAnnotation(index + 1, fileList, completionRunnable);
                 }
             });
