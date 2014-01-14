@@ -1005,11 +1005,10 @@ public class MessageManager {
                     @Override
                     public void onError(Exception error) {
                         super.onError(error);
-
-                        //there's not really any good reason to retry deletion later
-                        //unless it's because we didn't actually get a response (e.g. no internet)
+                        //statusCode == null probably means no internet
+                        //statusCode in 400s means we did something wrong (maybe it's already deleted)
                         Integer statusCode = getStatusCode();
-                        if(statusCode == null) {
+                        if(statusCode == null || (statusCode < 400 || statusCode >= 500)) {
                             mDatabase.insertOrReplacePendingFileDeletion(fileId);
                         }
                         deleteOEmbed(index + 1, oEmbedAnnotations, completionRunnable);
@@ -1050,10 +1049,10 @@ public class MessageManager {
                 @Override
                 public void onError(Exception error) {
                     super.onError(error);
-                    //there's not really any good reason to retry deletion later
-                    //unless it's because we didn't actually get a response (e.g. no internet)
+                    //statusCode == null probably means no internet
+                    //statusCode in 400s means we did something wrong (maybe it's already deleted)
                     Integer statusCode = getStatusCode();
-                    if(statusCode == null) {
+                    if(statusCode == null || (statusCode < 400 || statusCode >= 500)) {
                         mDatabase.insertOrReplacePendingFileDeletion(fileId);
                     }
                     deleteFileInAttachmentsAnnotation(index + 1, fileList, completionRunnable);
