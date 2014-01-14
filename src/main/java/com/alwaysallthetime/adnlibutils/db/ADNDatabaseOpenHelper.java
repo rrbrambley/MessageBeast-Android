@@ -90,8 +90,7 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
             ADNDatabase.COL_PENDING_OEMBED_MESSAGE_ID + " TEXT NOT NULL, " +
             ADNDatabase.COL_PENDING_OEMBED_CHANNEL_ID + " TEXT NOT NULL, " +
             "PRIMARY KEY (" + ADNDatabase.COL_PENDING_OEMBED_PENDING_FILE_ID + ", " +
-                              ADNDatabase.COL_PENDING_OEMBED_MESSAGE_ID + ", " +
-                              ADNDatabase.COL_PENDING_OEMBED_CHANNEL_ID + " ))";
+                              ADNDatabase.COL_PENDING_OEMBED_MESSAGE_ID + "))";
 
     public static final String CREATE_ACTION_MESSAGES_TABLE = "CREATE TABLE IF NOT EXISTS " + ADNDatabase.TABLE_ACTION_MESSAGES + "(" +
             ADNDatabase.COL_ACTION_MESSAGE_ID + " TEXT PRIMARY KEY, " +
