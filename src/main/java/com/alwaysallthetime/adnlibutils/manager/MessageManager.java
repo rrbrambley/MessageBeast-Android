@@ -924,7 +924,7 @@ public class MessageManager {
      * sqlite database and no server request is required.
      *
      * @param messagePlus The MessagePlus associated with the Message to be deleted
-     * @param deleteAssociatedFiles true if all OEmbed files should be deleted from
+     * @param deleteAssociatedFiles true if all files from OEmbed and attachment annotations should be deleted from
      *                              the server, false otherwise. This will never affect local files.
      * @param handler The handler that will act as a callback upon deletion.
      */
@@ -943,7 +943,7 @@ public class MessageManager {
                 handler.onSuccess();
             }
         } else {
-            Runnable runnable = new Runnable() {
+            final Runnable runnable = new Runnable() {
                 @Override
                 public void run() {
                     mClient.deleteMessage(messagePlus.getMessage(), new MessageResponseHandler() {
@@ -976,7 +976,13 @@ public class MessageManager {
 
             if(deleteAssociatedFiles) {
                 List<Annotation> oEmbeds = messagePlus.getMessage().getAnnotationsOfType(Annotations.OEMBED);
-                deleteOEmbed(0, oEmbeds, runnable);
+                deleteOEmbed(0, oEmbeds, new Runnable() {
+                    @Override
+                    public void run() {
+                        List<Annotation> attachments = messagePlus.getMessage().getAnnotationsOfType(Annotations.ATTACHMENTS);
+                        deleteAttachmentsLists(0, attachments, runnable);
+                    }
+                });
             } else {
                 runnable.run();
             }
@@ -1006,6 +1012,42 @@ public class MessageManager {
             } else {
                 deleteOEmbed(index + 1, oEmbedAnnotations, completionRunnable);
             }
+        }
+    }
+
+    private synchronized void deleteAttachmentsLists(final int index, final List<Annotation> attachmentsAnnotations, final Runnable completionRunnable) {
+        if(index >= attachmentsAnnotations.size()) {
+            completionRunnable.run();
+        } else {
+            Annotation attachment = attachmentsAnnotations.get(index);
+            deleteFileInAttachmentsAnnotation(0, (List<Map<String, Object>>) attachment.getValueForKey(Annotations.FILE_LIST), new Runnable() {
+                @Override
+                public void run() {
+                    deleteAttachmentsLists(index+1, attachmentsAnnotations, completionRunnable);
+                }
+            });
+        }
+    }
+
+    private synchronized void deleteFileInAttachmentsAnnotation(final int index, final List<Map<String, Object>> fileList, final Runnable completionRunnable) {
+        if(index >= fileList.size()) {
+            completionRunnable.run();
+        } else {
+            Map<String, Object> file = fileList.get(index);
+            final String fileId = (String) file.get("file_id");
+            mClient.deleteFile(fileId, new FileResponseHandler() {
+                @Override
+                public void onSuccess(File responseData) {
+                    deleteFileInAttachmentsAnnotation(index+1, fileList, completionRunnable);
+                }
+
+                @Override
+                public void onError(Exception error) {
+                    super.onError(error);
+                    mDatabase.insertOrReplacePendingFileDeletion(fileId);
+                    deleteFileInAttachmentsAnnotation(index + 1, fileList, completionRunnable);
+                }
+            });
         }
     }
 
