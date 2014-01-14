@@ -1584,7 +1584,7 @@ public class MessageManager {
                                 Message message = messagePlus.getMessage();
                                 messagePlus.replacePendingOEmbedWithOEmbedAnnotation(pendingFileId, file);
                                 mDatabase.insertOrReplaceMessage(messagePlus);
-                                mDatabase.deletePendingFiileAttachments(pendingFileId, message.getId(), message.getChannelId());
+                                mDatabase.deletePendingFileAttachments(pendingFileId, message.getId(), message.getChannelId());
 
                                 if(messagePlus.getPendingFileAttachments().size() == 0) {
                                     channelIdsWithMessagesToSend.add(message.getChannelId());
