@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.Uri;
+import android.util.Log;
 
 import com.alwaysallthetime.adnlib.AppDotNetClient;
 import com.alwaysallthetime.adnlib.data.File;
@@ -18,6 +19,8 @@ import java.util.Set;
 import java.util.UUID;
 
 public class FileManager {
+
+    private static final String TAG = "ADNLibUtils_FileManager";
 
     private final Context mContext;
     private final AppDotNetClient mClient;
@@ -90,17 +93,23 @@ public class FileManager {
         @Override
         public void onReceive(Context context, Intent intent) {
             if(FileUploadService.INTENT_ACTION_FILE_UPLOAD_COMPLETE.equals(intent.getAction())) {
+                //this can be null.
+                String pendingFileId = intent.getStringExtra(FileUploadService.EXTRA_PENDING_FILE_ID);
+
                 boolean success = intent.getBooleanExtra(FileUploadService.EXTRA_SUCCESS, false);
                 if(success) {
                     //TODO - do something with the file.
                     String fileJson = intent.getStringExtra(FileUploadService.EXTRA_FILE);
                     File file = AppDotNetGson.getPersistenceInstance().fromJson(fileJson, File.class);
 
-                    if(intent.hasExtra(FileUploadService.EXTRA_PENDING_FILE_ID)) {
-                        mDatabase.deletePendingFile(intent.getStringExtra(FileUploadService.EXTRA_PENDING_FILE_ID));
+                    if(pendingFileId != null) {
+                        mDatabase.deletePendingFile(pendingFileId);
                     }
-                } else {
-                    //TODO
+                } else if(pendingFileId != null) {
+                    Log.e(TAG, "Failed to upload pending file with id " + pendingFileId);
+                    PendingFile pendingFile = mDatabase.getPendingFile(pendingFileId);
+                    pendingFile.incrementSendAttempts();
+                    mDatabase.insertOrReplacePendingFile(pendingFile);
                 }
             }
         }

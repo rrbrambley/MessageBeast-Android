@@ -28,7 +28,6 @@ import com.alwaysallthetime.adnlibutils.db.DisplayLocationInstances;
 import com.alwaysallthetime.adnlibutils.db.FilteredMessageBatch;
 import com.alwaysallthetime.adnlibutils.db.HashtagInstances;
 import com.alwaysallthetime.adnlibutils.db.OrderedMessageBatch;
-import com.alwaysallthetime.adnlibutils.db.PendingFile;
 import com.alwaysallthetime.adnlibutils.db.PendingMessageDeletion;
 import com.alwaysallthetime.adnlibutils.filter.MessageFilter;
 import com.alwaysallthetime.adnlibutils.filter.MessageMetadataInstancesFilter;
@@ -1596,11 +1595,6 @@ public class MessageManager {
                                 Log.d(TAG, "Now retrying send for unsent messages in channel " + channelId);
                             }
                         }
-                    } else {
-                        Log.e(TAG, "Failed to upload pending file with id " + pendingFileId);
-                        PendingFile pendingFile = mDatabase.getPendingFile(pendingFileId);
-                        pendingFile.incrementSendAttempts();
-                        mDatabase.insertOrReplacePendingFile(pendingFile);
                     }
                 }
             }
