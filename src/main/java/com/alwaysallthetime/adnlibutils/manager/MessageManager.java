@@ -186,7 +186,7 @@ public class MessageManager {
 
     private HashMap<String, LinkedHashMap<String, MessagePlus>> mMessages;
     private HashMap<String, LinkedHashMap<String, MessagePlus>> mUnsentMessages;
-    private HashMap<String, List<MessagePlus>> mPendingFiles;
+    private HashMap<String, List<MessagePlus>> mMessagesNeedingPendingFiles;
     private HashMap<String, QueryParameters> mParameters;
     private HashMap<String, MinMaxPair> mMinMaxPairs;
 
@@ -200,7 +200,7 @@ public class MessageManager {
         mUnsentMessages = new HashMap<String, LinkedHashMap<String, MessagePlus>>();
         mMinMaxPairs = new HashMap<String, MinMaxPair>();
         mParameters = new HashMap<String, QueryParameters>();
-        mPendingFiles = new HashMap<String, List<MessagePlus>>();
+        mMessagesNeedingPendingFiles = new HashMap<String, List<MessagePlus>>();
 
         IntentFilter intentFilter = new IntentFilter(FileUploadService.INTENT_ACTION_FILE_UPLOAD_COMPLETE);
         context.registerReceiver(fileUploadReceiver, intentFilter);
@@ -615,10 +615,10 @@ public class MessageManager {
     }
 
     private synchronized List<MessagePlus> getMessagesNeedingPendingFile(String pendingFileId) {
-        List<MessagePlus> messagePlusses = mPendingFiles.get(pendingFileId);
+        List<MessagePlus> messagePlusses = mMessagesNeedingPendingFiles.get(pendingFileId);
         if(messagePlusses == null) {
             messagePlusses = new ArrayList<MessagePlus>(1);
-            mPendingFiles.put(pendingFileId, messagePlusses);
+            mMessagesNeedingPendingFiles.put(pendingFileId, messagePlusses);
         }
         return messagePlusses;
     }
@@ -1573,7 +1573,7 @@ public class MessageManager {
                     if(success) {
                         Log.d(TAG, "Successfully uploaded pending file with id " + pendingFileId);
 
-                        List<MessagePlus> messagesNeedingFile = mPendingFiles.get(pendingFileId);
+                        List<MessagePlus> messagesNeedingFile = mMessagesNeedingPendingFiles.get(pendingFileId);
                         if(messagesNeedingFile != null) {
                             HashSet<String> channelIdsWithMessagesToSend = new HashSet<String>();
                             String fileJson = intent.getStringExtra(FileUploadService.EXTRA_FILE);
