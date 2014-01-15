@@ -1123,7 +1123,7 @@ public class ADNDatabase {
             }
         }
 
-        return getMessages(channelId, messageIds);
+        return getMessages(messageIds);
     }
 
     public OrderedMessageBatch searchForMessagesByDisplayLocation(String channelId, String query) {
@@ -1144,13 +1144,13 @@ public class ADNDatabase {
             }
         }
 
-        return getMessages(channelId, messageIds);
+        return getMessages(messageIds);
     }
 
-    public MessagePlus getMessage(String channelId, String messageId) {
+    public MessagePlus getMessage(String messageId) {
         HashSet<String> ids = new HashSet<String>(1);
         ids.add(messageId);
-        OrderedMessageBatch messages = getMessages(channelId, ids);
+        OrderedMessageBatch messages = getMessages(ids);
         LinkedHashMap<String, MessagePlus> orderedMessages = messages.getMessages();
         if(orderedMessages.size() == 1) {
             return orderedMessages.values().iterator().next();
@@ -1159,22 +1159,20 @@ public class ADNDatabase {
     }
 
     /**
-     * Get Messages in a Channel
+     * Get Messages by id.
      *
-     * @param channelId The id of the Channel.
      * @param messageIds The ids of the Messages to get.
      * @return OrderedMessageBatch
      */
-    public OrderedMessageBatch getMessages(String channelId, Collection<String> messageIds) {
-        String where = COL_MESSAGE_CHANNEL_ID + " =? AND " + COL_MESSAGE_ID + " IN (";
-        String[] args = new String[messageIds.size() + 1];
-        args[0] = channelId;
+    public OrderedMessageBatch getMessages(Collection<String> messageIds) {
+        String where = COL_MESSAGE_ID + " IN (";
+        String[] args = new String[messageIds.size()];
 
-        int index = 1;
+        int index = 0;
         Iterator<String> iterator = messageIds.iterator();
         while(iterator.hasNext()) {
             args[index] = iterator.next();
-            if(index > 1) {
+            if(index > 0) {
                 where += ", ?";
             } else {
                 where += " ?";

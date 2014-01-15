@@ -311,7 +311,7 @@ public class MessageManager {
      */
     public LinkedHashMap<String, MessagePlus> loadPersistedMessagesTemporarily(String channelId, DisplayLocation location, ADNDatabase.LocationPrecision precision) {
         DisplayLocationInstances locationInstances = mDatabase.getDisplayLocationInstances(channelId, location, precision);
-        return loadAndConfigureTemporaryMessages(channelId, locationInstances.getMessageIds());
+        return loadAndConfigureTemporaryMessages(locationInstances.getMessageIds());
     }
 
     /**
@@ -326,7 +326,7 @@ public class MessageManager {
      */
     public LinkedHashMap<String, MessagePlus> loadPersistedMessagesTemporarily(String channelId, String hashtagName) {
         HashtagInstances hashtagInstances = mDatabase.getHashtagInstances(channelId, hashtagName);
-        return loadAndConfigureTemporaryMessages(channelId, hashtagInstances.getMessageIds());
+        return loadAndConfigureTemporaryMessages(hashtagInstances.getMessageIds());
     }
 
     /**
@@ -335,12 +335,11 @@ public class MessageManager {
      * Messages will be returned after performing DisplayLocation and OEmbed lookup, provided those
      * features are enabled in the MessageManagerConfiguration.
      *
-     * @param channelId the Channel id
      * @param messageIds the Message ids
      * @return a LinkedHashMap mapping Message ids to MessagePlus objects
      */
-    public LinkedHashMap<String, MessagePlus> loadAndConfigureTemporaryMessages(String channelId, Collection<String> messageIds) {
-        OrderedMessageBatch orderedMessageBatch = mDatabase.getMessages(channelId, messageIds);
+    public LinkedHashMap<String, MessagePlus> loadAndConfigureTemporaryMessages(Collection<String> messageIds) {
+        OrderedMessageBatch orderedMessageBatch = mDatabase.getMessages(messageIds);
         LinkedHashMap<String, MessagePlus> messages = orderedMessageBatch.getMessages();
         performLookups(messages.values(), false);
         return messages;

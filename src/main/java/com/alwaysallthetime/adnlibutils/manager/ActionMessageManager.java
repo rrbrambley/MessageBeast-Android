@@ -212,14 +212,13 @@ public class ActionMessageManager {
      * that have had the action applied.
      */
     public synchronized List<MessagePlus> getActionedMessages(String actionChannelId) {
-        String targetChannelId = getTargetChannelId(actionChannelId);
         LinkedHashMap<String, MessagePlus> loadedMessagesFromActionChannel =  mMessageManager.loadPersistedMessagesTemporarily(actionChannelId, MAX_BATCH_LOAD_FROM_DISK);
-        return getTargetMessages(loadedMessagesFromActionChannel.values(), targetChannelId);
+        return getTargetMessages(loadedMessagesFromActionChannel.values());
     }
 
-    private synchronized List<MessagePlus> getTargetMessages(Collection<MessagePlus> actionMessages, String targetChannelId) {
+    private synchronized List<MessagePlus> getTargetMessages(Collection<MessagePlus> actionMessages) {
         Set<String> newTargetMessageIds = getTargetMessageIds(actionMessages);
-        LinkedHashMap<String, MessagePlus> targetMessages = mMessageManager.loadAndConfigureTemporaryMessages(targetChannelId, newTargetMessageIds);
+        LinkedHashMap<String, MessagePlus> targetMessages = mMessageManager.loadAndConfigureTemporaryMessages(newTargetMessageIds);
         return new ArrayList<MessagePlus>(targetMessages.values());
     }
 
@@ -229,7 +228,7 @@ public class ActionMessageManager {
         LinkedHashMap<String, MessagePlus> more = mMessageManager.loadPersistedMessages(actionChannelId, MAX_BATCH_LOAD_FROM_DISK);
         if(more.size() > 0) {
             Set<String> newTargetMessageIds = getTargetMessageIds(more.values());
-            LinkedHashMap<String, MessagePlus> moreTargetMessages = mMessageManager.loadAndConfigureTemporaryMessages(targetChannelId, newTargetMessageIds);
+            LinkedHashMap<String, MessagePlus> moreTargetMessages = mMessageManager.loadAndConfigureTemporaryMessages(newTargetMessageIds);
 
             responseHandler.setIsMore(more.size() == MAX_BATCH_LOAD_FROM_DISK);
             responseHandler.onSuccess(new ArrayList(moreTargetMessages.values()), true);
@@ -241,7 +240,7 @@ public class ActionMessageManager {
                 @Override
                 public void onSuccess(List<MessagePlus> responseData, boolean appended) {
                     Set<String> newTargetMessageIds = getTargetMessageIds(responseData);
-                    LinkedHashMap<String, MessagePlus> moreTargetMessages = mMessageManager.loadAndConfigureTemporaryMessages(targetChannelId, newTargetMessageIds);
+                    LinkedHashMap<String, MessagePlus> moreTargetMessages = mMessageManager.loadAndConfigureTemporaryMessages(newTargetMessageIds);
 
                     responseHandler.setIsMore(isMore());
                     responseHandler.onSuccess(new ArrayList(moreTargetMessages.values()), true);
@@ -352,7 +351,7 @@ public class ActionMessageManager {
     private synchronized void deleteActionMessages(final List<ActionMessageSpec> actionMessageSpecs, final int currentIndex, final Runnable completionRunnable) {
         final ActionMessageSpec actionMessageSpec = actionMessageSpecs.get(0);
         final String actionChannelId = actionMessageSpec.getActionChannelId();
-        MessagePlus actionMessagePlus = mDatabase.getMessage(actionChannelId, actionMessageSpec.getActionMessageId());
+        MessagePlus actionMessagePlus = mDatabase.getMessage(actionMessageSpec.getActionMessageId());
 
         //the success/failure of this should not matter - on failure, it will be a pending deletion
         mMessageManager.deleteMessage(actionMessagePlus, new MessageManager.MessageDeletionResponseHandler() {
