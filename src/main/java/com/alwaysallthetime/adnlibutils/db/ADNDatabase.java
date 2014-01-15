@@ -1390,7 +1390,7 @@ public class ADNDatabase {
             if(messagePlus.hasPendingFileAttachments()) {
                 Map<String, PendingFileAttachment> pendingAttachments = messagePlus.getPendingFileAttachments();
                 for(String pendingFileId : pendingAttachments.keySet()) {
-                    deletePendingFileAttachments(pendingFileId, message.getId(), message.getChannelId());
+                    deletePendingFileAttachment(pendingFileId, message.getId());
 
                     //TODO: can multiple message plus objects use the same pending file Id?
                     //if so, we shouldn't do this here - must make sure no other MPs need it.
@@ -1462,13 +1462,12 @@ public class ADNDatabase {
         }
     }
 
-    public void deletePendingFileAttachments(String pendingFileId, String messageId, String channelId) {
+    public void deletePendingFileAttachment(String pendingFileId, String messageId) {
         mDatabase.beginTransaction();
 
         try {
             String where = COL_PENDING_FILE_ATTACHMENT_PENDING_FILE_ID + " = '" + pendingFileId + "' AND " +
-                    COL_PENDING_FILE_ATTACHMENT_MESSAGE_ID + " = '" + messageId + "' AND " +
-                    COL_PENDING_FILE_ATTACHMENT_CHANNEL_ID + " = '" + channelId + "'";
+                    COL_PENDING_FILE_ATTACHMENT_MESSAGE_ID + " = '" + messageId + "'";
             mDatabase.delete(TABLE_PENDING_FILE_ATTACHMENTS, where, null);
             mDatabase.setTransactionSuccessful();
         } catch(Exception e) {

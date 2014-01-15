@@ -1638,7 +1638,7 @@ public class MessageManager {
                                 Message message = messagePlus.getMessage();
                                 messagePlus.replacePendingFileAttachmentWithAnnotation(pendingFileId, file);
                                 mDatabase.insertOrReplaceMessage(messagePlus);
-                                mDatabase.deletePendingFileAttachments(pendingFileId, message.getId(), message.getChannelId());
+                                mDatabase.deletePendingFileAttachment(pendingFileId, message.getId());
 
                                 if(messagePlus.getPendingFileAttachments().size() == 0) {
                                     channelIdsWithMessagesToSend.add(message.getChannelId());
