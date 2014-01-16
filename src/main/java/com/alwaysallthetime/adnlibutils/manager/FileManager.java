@@ -90,7 +90,7 @@ public class FileManager {
                 public void onError(Exception error) {
                     super.onError(error);
                     Integer statusCode = getStatusCode();
-                    if(statusCode != null && statusCode >= 400 && statusCode < 500) {
+                    if(statusCode != null && statusCode == 403) {
                         mDatabase.deletePendingFileDeletion(fileId);
                     }
                 }

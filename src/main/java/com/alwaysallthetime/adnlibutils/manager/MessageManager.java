@@ -1008,9 +1008,9 @@ public class MessageManager {
                     public void onError(Exception error) {
                         super.onError(error);
                         //statusCode == null probably means no internet
-                        //statusCode in 400s means we did something wrong (maybe it's already deleted)
+                        //statusCode 403 means it's already deleted
                         Integer statusCode = getStatusCode();
-                        if(statusCode == null || (statusCode < 400 || statusCode >= 500)) {
+                        if(statusCode == null || statusCode != 403) {
                             mDatabase.insertOrReplacePendingFileDeletion(fileId);
                         }
                         deleteOEmbed(index + 1, oEmbedAnnotations, completionRunnable);
@@ -1052,9 +1052,9 @@ public class MessageManager {
                 public void onError(Exception error) {
                     super.onError(error);
                     //statusCode == null probably means no internet
-                    //statusCode in 400s means we did something wrong (maybe it's already deleted)
+                    //statusCode 403 means it's already deleted
                     Integer statusCode = getStatusCode();
-                    if(statusCode == null || (statusCode < 400 || statusCode >= 500)) {
+                    if(statusCode == null || statusCode != 403) {
                         mDatabase.insertOrReplacePendingFileDeletion(fileId);
                     }
                     deleteFileInAttachmentsAnnotation(index + 1, fileList, completionRunnable);
