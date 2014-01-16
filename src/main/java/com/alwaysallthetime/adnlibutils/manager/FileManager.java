@@ -15,6 +15,8 @@ import com.alwaysallthetime.adnlibutils.ADNApplication;
 import com.alwaysallthetime.adnlibutils.db.ADNDatabase;
 import com.alwaysallthetime.adnlibutils.db.PendingFile;
 
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
@@ -25,6 +27,7 @@ public class FileManager {
     private final Context mContext;
     private final AppDotNetClient mClient;
     private ADNDatabase mDatabase;
+    private Set<String> mFilesInProgress;
 
     private static FileManager sInstance;
 
@@ -51,6 +54,7 @@ public class FileManager {
         mClient = client;
         mContext = ADNApplication.getContext();
         mDatabase = ADNDatabase.getInstance(mContext);
+        mFilesInProgress = Collections.synchronizedSet(new HashSet<String>(1));
 
         IntentFilter intentFilter = new IntentFilter(FileUploadService.INTENT_ACTION_FILE_UPLOAD_COMPLETE);
         mContext.registerReceiver(fileUploadReceiver, intentFilter);
@@ -72,9 +76,12 @@ public class FileManager {
     }
 
     public void startPendingFileUpload(String pendingFileId) {
-        Intent i = new Intent(mContext, FileUploadService.class);
-        i.putExtra(FileUploadService.EXTRA_PENDING_FILE_ID, pendingFileId);
-        mContext.startService(i);
+        if(!mFilesInProgress.contains(pendingFileId)) {
+            mFilesInProgress.add(pendingFileId);
+            Intent i = new Intent(mContext, FileUploadService.class);
+            i.putExtra(FileUploadService.EXTRA_PENDING_FILE_ID, pendingFileId);
+            mContext.startService(i);
+        }
     }
 
     public void sendPendingFileDeletions() {
@@ -104,6 +111,9 @@ public class FileManager {
             if(FileUploadService.INTENT_ACTION_FILE_UPLOAD_COMPLETE.equals(intent.getAction())) {
                 //this can be null.
                 String pendingFileId = intent.getStringExtra(FileUploadService.EXTRA_PENDING_FILE_ID);
+                if(pendingFileId != null) {
+                    mFilesInProgress.remove(pendingFileId);
+                }
 
                 boolean success = intent.getBooleanExtra(FileUploadService.EXTRA_SUCCESS, false);
                 if(success) {
