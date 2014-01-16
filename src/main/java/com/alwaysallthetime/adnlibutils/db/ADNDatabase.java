@@ -1306,6 +1306,28 @@ public class ADNDatabase {
         return unsentMessages;
     }
 
+    public OrderedMessageBatch getMessagesDependentOnPendingFile(String pendingFileId) {
+        HashSet<String> messageIds = new HashSet<String>();
+
+        Cursor cursor = null;
+        try {
+            String where = COL_PENDING_FILE_ATTACHMENT_PENDING_FILE_ID + " = ?";
+            String args[] = new String[] { pendingFileId };
+            String cols[] = { COL_PENDING_FILE_ATTACHMENT_MESSAGE_ID };
+            cursor = mDatabase.query(TABLE_PENDING_FILE_ATTACHMENTS, cols, where, args, null, null, null, null);
+            while(cursor.moveToNext()) {
+                messageIds.add(cursor.getString(0));
+            }
+        } catch(Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+        } finally {
+            if(cursor != null) {
+                cursor.close();
+            }
+        }
+        return getMessages(messageIds);
+    }
+
     /**
      * Get the ids of all pending file deletions.
      *

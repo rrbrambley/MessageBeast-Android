@@ -187,7 +187,7 @@ public class MessageManager {
 
     private HashMap<String, LinkedHashMap<String, MessagePlus>> mMessages;
     private HashMap<String, LinkedHashMap<String, MessagePlus>> mUnsentMessages;
-    private HashMap<String, List<MessagePlus>> mMessagesNeedingPendingFiles;
+    private HashMap<String, LinkedHashMap<String, MessagePlus>> mMessagesNeedingPendingFiles;
     private HashMap<String, QueryParameters> mParameters;
     private HashMap<String, MinMaxPair> mMinMaxPairs;
 
@@ -201,7 +201,7 @@ public class MessageManager {
         mUnsentMessages = new HashMap<String, LinkedHashMap<String, MessagePlus>>();
         mMinMaxPairs = new HashMap<String, MinMaxPair>();
         mParameters = new HashMap<String, QueryParameters>();
-        mMessagesNeedingPendingFiles = new HashMap<String, List<MessagePlus>>();
+        mMessagesNeedingPendingFiles = new HashMap<String, LinkedHashMap<String, MessagePlus>>();
 
         IntentFilter intentFilter = new IntentFilter(FileUploadService.INTENT_ACTION_FILE_UPLOAD_COMPLETE);
         context.registerReceiver(fileUploadReceiver, intentFilter);
@@ -614,11 +614,11 @@ public class MessageManager {
         return unsentMessages;
     }
 
-    private synchronized List<MessagePlus> getMessagesNeedingPendingFile(String pendingFileId) {
-        List<MessagePlus> messagePlusses = mMessagesNeedingPendingFiles.get(pendingFileId);
+    private synchronized LinkedHashMap<String, MessagePlus> getMessagesNeedingPendingFile(String pendingFileId) {
+        LinkedHashMap<String, MessagePlus> messagePlusses = mMessagesNeedingPendingFiles.get(pendingFileId);
         if(messagePlusses == null) {
-            messagePlusses = new ArrayList<MessagePlus>(1);
-
+            OrderedMessageBatch messagesDependentOnPendingFile = mDatabase.getMessagesDependentOnPendingFile(pendingFileId);
+            messagePlusses = messagesDependentOnPendingFile.getMessages();
             mMessagesNeedingPendingFiles.put(pendingFileId, messagePlusses);
         }
         return messagePlusses;
@@ -1301,8 +1301,8 @@ public class MessageManager {
         final MessagePlus messagePlus = unsentMessages.get(unsentMessages.keySet().iterator().next());
         if(messagePlus.hasPendingFileAttachments()) {
             String pendingFileId = messagePlus.getPendingFileAttachments().keySet().iterator().next();
-            List<MessagePlus> messagesNeedingPendingFile = getMessagesNeedingPendingFile(pendingFileId);
-            messagesNeedingPendingFile.add(messagePlus);
+            LinkedHashMap<String, MessagePlus> messagesNeedingPendingFile = getMessagesNeedingPendingFile(pendingFileId);
+            messagesNeedingPendingFile.put(messagePlus.getMessage().getId(), messagePlus);
             //TODO: this should somehow be prepopulated?
 
             FileManager.getInstance(mClient).startPendingFileUpload(pendingFileId);
@@ -1628,13 +1628,13 @@ public class MessageManager {
                     if(success) {
                         Log.d(TAG, "Successfully uploaded pending file with id " + pendingFileId);
 
-                        List<MessagePlus> messagesNeedingFile = mMessagesNeedingPendingFiles.get(pendingFileId);
+                        LinkedHashMap<String, MessagePlus> messagesNeedingFile = getMessagesNeedingPendingFile(pendingFileId);
                         if(messagesNeedingFile != null) {
                             HashSet<String> channelIdsWithMessagesToSend = new HashSet<String>();
                             String fileJson = intent.getStringExtra(FileUploadService.EXTRA_FILE);
                             File file = AppDotNetGson.getPersistenceInstance().fromJson(fileJson, File.class);
 
-                            for(MessagePlus messagePlus : messagesNeedingFile) {
+                            for(MessagePlus messagePlus : messagesNeedingFile.values()) {
                                 Message message = messagePlus.getMessage();
                                 messagePlus.replacePendingFileAttachmentWithAnnotation(pendingFileId, file);
                                 mDatabase.insertOrReplaceMessage(messagePlus);
