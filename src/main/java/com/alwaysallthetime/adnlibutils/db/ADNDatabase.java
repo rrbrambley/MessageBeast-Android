@@ -775,7 +775,7 @@ public class ADNDatabase {
         try {
             String where = COL_PENDING_FILE_ATTACHMENT_MESSAGE_ID + " = ?";
             String args[] = new String[] { messageId };
-            cursor = mDatabase.query(TABLE_PENDING_FILE_ATTACHMENTS, new String[] {COL_PENDING_FILE_ATTACHMENT_PENDING_FILE_ID}, where, args, null, null, null, null);
+            cursor = mDatabase.query(TABLE_PENDING_FILE_ATTACHMENTS, new String[] {COL_PENDING_FILE_ATTACHMENT_PENDING_FILE_ID, COL_PENDING_FILE_ATTACHMENT_IS_OEMBED}, where, args, null, null, null, null);
 
             while(cursor.moveToNext()) {
                 String pendingFileId = cursor.getString(0);
