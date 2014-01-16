@@ -1636,19 +1636,19 @@ public class MessageManager {
                                 Message message = messagePlus.getMessage();
                                 messagePlus.replacePendingFileAttachmentWithAnnotation(pendingFileId, file);
 
-                                //
-                                //TODO This applies to unsent messages and messages needing file
-                                //we should probably only keep one copy of messagePlus in memory at a
-                                //time.
-                                //
-                                //if the message plus is currently in the channel message map,
-                                //then replace it with the newly modified one.
-
+                                //TODO: this is kind of crappy, but needs to be done
+                                //modify the in-memory message plusses to use this new copy
+                                //in the future, we might want to change the way unsent messages
+                                //are held on to in memory.
                                 String messageId = message.getId();
                                 String channelId = message.getChannelId();
                                 LinkedHashMap<String, MessagePlus> channelMessages = getChannelMessages(channelId);
                                 if(channelMessages.containsKey(messageId)) {
                                     channelMessages.put(messageId, messagePlus);
+                                }
+                                LinkedHashMap<String, MessagePlus> unsentMessages = getUnsentMessages(channelId);
+                                if(unsentMessages.containsKey(messageId)) {
+                                    unsentMessages.put(messageId, messagePlus);
                                 }
 
                                 mDatabase.insertOrReplaceMessage(messagePlus);
