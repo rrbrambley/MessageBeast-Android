@@ -1306,7 +1306,7 @@ public class ADNDatabase {
         return unsentMessages;
     }
 
-    public OrderedMessageBatch getMessagesDependentOnPendingFile(String pendingFileId) {
+    public Set<String> getMessagesDependentOnPendingFile(String pendingFileId) {
         HashSet<String> messageIds = new HashSet<String>();
 
         Cursor cursor = null;
@@ -1325,7 +1325,7 @@ public class ADNDatabase {
                 cursor.close();
             }
         }
-        return getMessages(messageIds);
+        return messageIds;
     }
 
     /**
