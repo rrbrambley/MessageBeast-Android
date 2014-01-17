@@ -9,7 +9,6 @@ import android.util.Log;
 
 import com.alwaysallthetime.adnlib.AppDotNetClient;
 import com.alwaysallthetime.adnlib.data.File;
-import com.alwaysallthetime.adnlib.gson.AppDotNetGson;
 import com.alwaysallthetime.adnlib.response.FileResponseHandler;
 import com.alwaysallthetime.adnlibutils.ADNApplication;
 import com.alwaysallthetime.adnlibutils.db.ADNDatabase;
@@ -117,10 +116,6 @@ public class FileManager {
 
                 boolean success = intent.getBooleanExtra(FileUploadService.EXTRA_SUCCESS, false);
                 if(success) {
-                    //TODO - do something with the file.
-                    String fileJson = intent.getStringExtra(FileUploadService.EXTRA_FILE);
-                    File file = AppDotNetGson.getPersistenceInstance().fromJson(fileJson, File.class);
-
                     if(pendingFileId != null) {
                         mDatabase.deletePendingFile(pendingFileId);
                     }
