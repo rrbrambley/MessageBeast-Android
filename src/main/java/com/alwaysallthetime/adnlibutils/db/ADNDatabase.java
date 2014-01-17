@@ -1321,7 +1321,7 @@ public class ADNDatabase {
 
     private OrderedMessageBatch getMessages(String where, String[] args, String orderBy, String limit) {
         LinkedHashMap<String, MessagePlus> messages = new LinkedHashMap<String, MessagePlus>();
-        ArrayList<MessagePlus> unsentMessages = new ArrayList<MessagePlus>();
+        ArrayList<MessagePlus> messagePlusses = new ArrayList<MessagePlus>();
         String maxId = null;
         String minId = null;
         Cursor cursor = null;
@@ -1349,7 +1349,7 @@ public class ADNDatabase {
                     maxId = messageId;
                 }
                 if(isUnsent) {
-                    unsentMessages.add(messagePlus);
+                    messagePlusses.add(messagePlus);
                 }
             }
 
@@ -1363,7 +1363,7 @@ public class ADNDatabase {
                 cursor.close();
             }
         }
-        for(MessagePlus messagePlus : unsentMessages) {
+        for(MessagePlus messagePlus : messagePlusses) {
             Message message = messagePlus.getMessage();
             List<PendingFileAttachment> pendingAttachments = getPendingFileAttachments(message.getId());
             messagePlus.setPendingFileAttachments(pendingAttachments);
