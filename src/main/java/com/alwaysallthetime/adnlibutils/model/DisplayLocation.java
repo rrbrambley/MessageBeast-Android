@@ -1,11 +1,16 @@
 package com.alwaysallthetime.adnlibutils.model;
 
+import android.content.Context;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import com.alwaysallthetime.adnlib.Annotations;
 import com.alwaysallthetime.adnlib.data.Annotation;
+import com.alwaysallthetime.adnlib.data.Place;
+import com.alwaysallthetime.adnlibutils.db.ADNDatabase;
 
 import java.util.HashMap;
+import java.util.Map;
 
 public class DisplayLocation implements Parcelable {
     public enum LocationType {
@@ -35,13 +40,28 @@ public class DisplayLocation implements Parcelable {
     private double mLatitude;
     private double mLongitude;
 
-    public static DisplayLocation fromCheckinAnnotation(Annotation checkin) {
+    public static DisplayLocation fromCheckinAnnotation(Context context, Annotation checkin) {
         HashMap<String, Object> value = checkin.getValue();
-        String locationName = (String) value.get("name");
-        String factualId = (String) value.get("factual_id");
-        DisplayLocation loc = new DisplayLocation(locationName, factualId, (Double)value.get("latitude"), (Double)value.get("longitude"));
-        loc.setType(LocationType.CHECKIN);
-        return loc;
+
+        Map<String, String> placeValue = (Map<String, String>) value.get(Annotations.REPLACEMENT_PLACE);
+        if(placeValue != null) {
+            //has not yet been sent to server
+            String factualId = placeValue.get("factual_id");
+            Place place = ADNDatabase.getInstance(context).getPlace(factualId);
+            if(place != null) {
+                DisplayLocation loc = new DisplayLocation(place.getName(), factualId, place.getLatitude(), place.getLongitude());
+                loc.setType(LocationType.CHECKIN);
+                return loc;
+            }
+        } else {
+            //has been sent to server
+            String locationName = (String) value.get("name");
+            String factualId = (String) value.get("factual_id");
+            DisplayLocation loc = new DisplayLocation(locationName, factualId, (Double)value.get("latitude"), (Double)value.get("longitude"));
+            loc.setType(LocationType.CHECKIN);
+            return loc;
+        }
+        return null;
     }
 
     public static DisplayLocation fromOhaiLocation(Annotation ohaiLocation) {
@@ -64,16 +84,6 @@ public class DisplayLocation implements Parcelable {
         loc.setType(LocationType.GEOLOCATION);
         loc.setShortName(geolocation.getSubLocality());
         return loc;
-    }
-
-    public static boolean isDisplayableCheckinAnnotation(Annotation checkin) {
-        if(checkin != null) {
-            HashMap<String, Object> value = checkin.getValue();
-            if(value != null && value.get("latitude") != null && value.get("longitude") != null) {
-                return true;
-            }
-        }
-        return false;
     }
 
     public DisplayLocation(String name, double latitude, double longitude) {

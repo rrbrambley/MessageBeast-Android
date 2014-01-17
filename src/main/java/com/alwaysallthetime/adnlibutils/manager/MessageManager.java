@@ -465,12 +465,15 @@ public class MessageManager {
             Message message = messagePlus.getMessage();
 
             Annotation checkin = message.getFirstAnnotationOfType(Annotations.CHECKIN);
-            if(DisplayLocation.isDisplayableCheckinAnnotation(checkin)) {
-                messagePlus.setDisplayLocation(DisplayLocation.fromCheckinAnnotation(checkin));
-                if(persistIfEnabled && mConfiguration.isDatabaseInsertionEnabled) {
-                    mDatabase.insertOrReplaceDisplayLocationInstance(messagePlus);
+            if(checkin != null) {
+                DisplayLocation displayLocation = DisplayLocation.fromCheckinAnnotation(mContext, checkin);
+                if(displayLocation != null) {
+                    messagePlus.setDisplayLocation(displayLocation);
+                    if(persistIfEnabled && mConfiguration.isDatabaseInsertionEnabled) {
+                        mDatabase.insertOrReplaceDisplayLocationInstance(messagePlus);
+                    }
+                    continue;
                 }
-                continue;
             }
 
             Annotation ohaiLocation = message.getFirstAnnotationOfType(Annotations.OHAI_LOCATION);
