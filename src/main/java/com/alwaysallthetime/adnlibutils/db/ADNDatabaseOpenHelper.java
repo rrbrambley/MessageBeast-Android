@@ -39,6 +39,14 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
             ADNDatabase.COL_GEOLOCATION_LONGITUDE + " REAL NOT NULL, " +
             "PRIMARY KEY (" + ADNDatabase.COL_GEOLOCATION_LATITUDE + ", " + ADNDatabase.COL_GEOLOCATION_LONGITUDE + " ))";
 
+    private static final String CREATE_PLACES_TABLE = "CREATE TABLE IF NOT EXISTS " + ADNDatabase.TABLE_PLACES + "(" +
+            ADNDatabase.COL_PLACE_FACTUAL_ID + " TEXT PRIMARY KEY, " +
+            ADNDatabase.COL_PLACE_NAME + " TEXT NOT NULL, " +
+            ADNDatabase.COL_PLACE_ROUNDED_LATITUDE + " REAL NOT NULL, " +
+            ADNDatabase.COL_PLACE_ROUNDED_LONGITUDE + " REAL NOT NULL, " +
+            ADNDatabase.COL_PLACE_JSON + " TEXT NOT NULL " +
+            ")";
+
     private static final String CREATE_LOCATION_INSTANCES_TABLE = "CREATE TABLE IF NOT EXISTS " + ADNDatabase.TABLE_LOCATION_INSTANCES + "(" +
             ADNDatabase.COL_LOCATION_INSTANCE_MESSAGE_ID + " INTEGER PRIMARY KEY, " +
             ADNDatabase.COL_LOCATION_INSTANCE_NAME + " TEXT NOT NULL, " +
@@ -112,6 +120,7 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
             db.execSQL(CREATE_MESSAGES_TABLE);
             db.execSQL(CREATE_HASHTAG_INSTANCES_TABLE);
             db.execSQL(CREATE_GEOLOCATIONS_TABLE);
+            db.execSQL(CREATE_PLACES_TABLE);
             db.execSQL(CREATE_LOCATION_INSTANCES_TABLE);
             db.execSQL(CREATE_ANNOTATION_INSTANCES_TABLE);
             db.execSQL(CREATE_PENDING_FILES_TABLE);

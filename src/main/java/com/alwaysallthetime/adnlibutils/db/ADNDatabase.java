@@ -12,6 +12,7 @@ import android.util.Log;
 import com.alwaysallthetime.adnlib.data.Annotation;
 import com.alwaysallthetime.adnlib.data.Entities;
 import com.alwaysallthetime.adnlib.data.Message;
+import com.alwaysallthetime.adnlib.data.Place;
 import com.alwaysallthetime.adnlib.gson.AppDotNetGson;
 import com.alwaysallthetime.adnlibutils.manager.MinMaxPair;
 import com.alwaysallthetime.adnlibutils.model.DisplayLocation;
@@ -73,6 +74,13 @@ public class ADNDatabase {
 
     public static final String TABLE_LOCATION_INSTANCES_SEARCH = "locations_search";
 
+    public static final String TABLE_PLACES = "places";
+    public static final String COL_PLACE_FACTUAL_ID = "place_factual_id";
+    public static final String COL_PLACE_NAME = "place_name";
+    public static final String COL_PLACE_ROUNDED_LATITUDE = "place_rounded_latitude";
+    public static final String COL_PLACE_ROUNDED_LONGITUDE = "place_rounded_longitude";
+    public static final String COL_PLACE_JSON = "place_json";
+
     public static final String TABLE_ANNOTATION_INSTANCES = "annotation_instances";
     public static final String COL_ANNOTATION_INSTANCE_TYPE = "annotation_instance_type";
     public static final String COL_ANNOTATION_INSTANCE_MESSAGE_ID = "annotation_instance_message_id";
@@ -118,7 +126,17 @@ public class ADNDatabase {
     public enum LocationPrecision {
         ONE_HUNDRED_METERS, //actually 111 m
         ONE_THOUSAND_METERS, //actually 1.11 km
-        TEN_THOUSAND_METERS //actually 11.1 km
+        TEN_THOUSAND_METERS; //actually 11.1 km
+
+        public static int getNumPrecisionDigits(LocationPrecision precision) {
+            int precisionDigits = 3;
+            if(precision == LocationPrecision.ONE_THOUSAND_METERS) {
+                precisionDigits = 2;
+            } else if(precision == LocationPrecision.TEN_THOUSAND_METERS) {
+                precisionDigits = 1;
+            }
+            return precisionDigits;
+        }
     };
 
     private static final String INSERT_OR_REPLACE_MESSAGE = "INSERT OR REPLACE INTO " + TABLE_MESSAGES +
@@ -167,6 +185,16 @@ public class ADNDatabase {
             COL_LOCATION_INSTANCE_DATE +
             ") " +
             "VALUES(?, ?, ?, ?, ?, ?, ?, ?)";
+
+    private static final String INSERT_OR_REPLACE_PLACE = "INSERT OR REPLACE INTO " + TABLE_PLACES +
+            " (" +
+            COL_PLACE_FACTUAL_ID + ", " +
+            COL_PLACE_NAME + ", " +
+            COL_PLACE_ROUNDED_LATITUDE + ", " +
+            COL_PLACE_ROUNDED_LONGITUDE + ", " +
+            COL_PLACE_JSON +
+            ") " +
+            "VALUES(?, ?, ?, ?, ?)";
 
     private static final String INSERT_LOCATION_INSTANCES_SEARCH_TEXT = "INSERT INTO " + TABLE_LOCATION_INSTANCES_SEARCH +
             " (docid, " + COL_LOCATION_INSTANCE_CHANNEL_ID + ", " + COL_LOCATION_INSTANCE_NAME + ") " +
@@ -234,6 +262,7 @@ public class ADNDatabase {
     private SQLiteStatement mInsertMessageSearchText;
     private SQLiteStatement mInsertOrReplaceHashtag;
     private SQLiteStatement mInsertOrReplaceGeolocation;
+    private SQLiteStatement mInsertOrReplacePlace;
     private SQLiteStatement mInsertOrReplaceLocationInstance;
     private SQLiteStatement mInsertLocationInstanceSearchText;
     private SQLiteStatement mInsertOrReplaceAnnotationInstance;
@@ -409,6 +438,30 @@ public class ADNDatabase {
         } finally {
             mDatabase.endTransaction();
             mInsertOrReplaceGeolocation.clearBindings();
+        }
+    }
+
+    public void insertOrReplacePlace(Place place) {
+        if(mInsertOrReplacePlace == null) {
+            mInsertOrReplacePlace = mDatabase.compileStatement(INSERT_OR_REPLACE_PLACE);
+        }
+        mDatabase.beginTransaction();
+        try {
+            double latitude = getRoundedValue(place.getLatitude(), 3);
+            double longitude = getRoundedValue(place.getLongitude(), 3);
+
+            mInsertOrReplacePlace.bindString(1, place.getFactualId());
+            mInsertOrReplacePlace.bindString(2, place.getName());
+            mInsertOrReplacePlace.bindDouble(3, latitude);
+            mInsertOrReplacePlace.bindDouble(4, longitude);
+            mInsertOrReplacePlace.bindString(5, AppDotNetGson.getPersistenceInstance().toJson(place));
+            mInsertOrReplacePlace.execute();
+            mDatabase.setTransactionSuccessful();
+        } catch(Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+        } finally {
+            mDatabase.endTransaction();
+            mInsertOrReplacePlace.clearBindings();
         }
     }
 
@@ -937,12 +990,7 @@ public class ADNDatabase {
 
             String latArg = null;
             String longArg = null;
-            int precisionDigits = 3;
-            if(precision == LocationPrecision.ONE_THOUSAND_METERS) {
-                precisionDigits = 2;
-            } else if(precision == LocationPrecision.TEN_THOUSAND_METERS) {
-                precisionDigits = 1;
-            }
+            int precisionDigits = LocationPrecision.getNumPrecisionDigits(precision);
 
             latArg = String.format("%s%%", String.valueOf(getRoundedValue(location.getLatitude(), precisionDigits)));
             longArg = String.format("%s%%", String.valueOf(getRoundedValue(location.getLongitude(), precisionDigits)));
@@ -996,6 +1044,75 @@ public class ADNDatabase {
         return null;
     }
 
+    /**
+     * Get a Place by factual id
+     *
+     * @param factualId the factual id corresponding to the App.net Place
+     * @return a Place if one with the specified factual id exists, null otherwise.
+     */
+    public Place getPlace(String factualId) {
+        Place place = null;
+        Cursor cursor = null;
+        try {
+            String where = COL_PLACE_FACTUAL_ID + " = ?";
+
+            Gson gson = AppDotNetGson.getPersistenceInstance();
+
+            String[] args = new String[] { factualId };
+            String[] cols = new String[] { COL_PLACE_JSON };
+            cursor = mDatabase.query(TABLE_PLACES, cols, where, args, null, null, null, null);
+            if(cursor.moveToNext()) {
+                String json = cursor.getString(0);
+                place = gson.fromJson(json, Place.class);
+            }
+        } catch(Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+        } finally {
+            if(cursor != null) {
+                cursor.close();
+            }
+        }
+        return place;
+    }
+
+    /**
+     * Get a List of Places whose geocoordinates match the provided coordinate to a certain precision.
+     *
+     * Place longitude and latitude are stored by rounding to three decimal places. By providing a less
+     * precise LocationPrecision, you can lookup by locations that match, e.g. 2 or 1 decimal places.
+     *
+     * @param latitude the latitude to match
+     * @param longitude the longitude to match
+     * @return a List of Place objects whose latitude and longitude match when the provided LocationPrecision
+     * is applied.
+     */
+    public List<Place> getPlaces(double latitude, double longitude, LocationPrecision precision) {
+        ArrayList<Place> places = new ArrayList<Place>();
+        Cursor cursor = null;
+        try {
+            String where = COL_PLACE_ROUNDED_LATITUDE + " LIKE ? AND " + COL_PLACE_ROUNDED_LONGITUDE + " LIKE ?";
+
+            Gson gson = AppDotNetGson.getPersistenceInstance();
+            int precisionDigits = LocationPrecision.getNumPrecisionDigits(precision);
+            String latArg = String.format("%s%%", String.valueOf(getRoundedValue(latitude, precisionDigits)));
+            String longArg = String.format("%s%%", String.valueOf(getRoundedValue(longitude, precisionDigits)));
+
+            String[] args = new String[] { latArg, longArg };
+            String[] cols = new String[] { COL_PLACE_JSON };
+            cursor = mDatabase.query(TABLE_PLACES, cols, where, args, null, null, null, null);
+            while(cursor.moveToNext()) {
+                String json = cursor.getString(0);
+                places.add(gson.fromJson(json, Place.class));
+            }
+        } catch(Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+        } finally {
+            if(cursor != null) {
+                cursor.close();
+            }
+        }
+        return places;
+    }
 
     /**
      * Get all Hashtags for a channel sorted in descending order – from most recently used to
