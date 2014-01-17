@@ -42,8 +42,9 @@ public class FileUploadService extends IntentService {
     //OR
     //
 
-    //2. This:
+    //2. These:
     public static final String EXTRA_PENDING_FILE_ID = "com.alwaysallthetime.adnlibutils.manager.extras.FileUploadService.extras.pendingFileId";
+    public static final String EXTRA_ASSOCIATED_CHANNEL_ID = "com.alwaysallthetime.adnlibutils.manager.extras.FileUploadService.extras.channelId";
 
     public FileUploadService() {
         super(FileUploadService.class.getSimpleName());
@@ -53,10 +54,11 @@ public class FileUploadService extends IntentService {
     protected void onHandleIntent(Intent intent) {
         if(intent.hasExtra(EXTRA_PENDING_FILE_ID)) {
             String pendingFileId = intent.getStringExtra(EXTRA_PENDING_FILE_ID);
+            String channelId = intent.getStringExtra(EXTRA_ASSOCIATED_CHANNEL_ID);
             PendingFile pf = FileManager.getExistingInstance().getPendingFile(pendingFileId);
             byte[] fileBytes = getBytes(pf.getUri());
             if(fileBytes != null) {
-                createFile(fileBytes, pf.getType(), pf.getName(), pf.getMimeType(), pf.getKind(), pf.isPublic(), pendingFileId);
+                createFile(fileBytes, pf.getType(), pf.getName(), pf.getMimeType(), pf.getKind(), pf.isPublic(), pendingFileId, channelId);
             } else {
                 sendFileNotFoundBroadcast(null);
             }
@@ -70,7 +72,7 @@ public class FileUploadService extends IntentService {
             String mimeType = getMimeType(fileUri);
             byte[] fileBytes = getBytes(fileUri);
             if(fileBytes != null) {
-                createFile(fileBytes, fileType, filename, mimeType, fileKind, isFilePublic, null);
+                createFile(fileBytes, fileType, filename, mimeType, fileKind, isFilePublic, null, null);
             } else {
                 sendFileNotFoundBroadcast(null);
             }
@@ -87,7 +89,7 @@ public class FileUploadService extends IntentService {
         sendBroadcast(i);
     }
 
-    private void createFile(byte[] data, String fileType, String filename, String mimeType, String fileKind, boolean isPublic, final String pendingFileId) {
+    private void createFile(byte[] data, String fileType, String filename, String mimeType, String fileKind, boolean isPublic, final String pendingFileId, final String channelId) {
         AppDotNetClient client = FileManager.getExistingInstance().getClient();
         File file = new File(fileKind, fileType, filename, isPublic);
         client.createFile(file, data, mimeType, new FileResponseHandler() {
@@ -96,6 +98,9 @@ public class FileUploadService extends IntentService {
                 Intent i = new Intent(INTENT_ACTION_FILE_UPLOAD_COMPLETE);
                 i.putExtra(EXTRA_SUCCESS, true);
                 i.putExtra(EXTRA_FILE, AppDotNetGson.getPersistenceInstance().toJson(responseData));
+                if(channelId != null) {
+                    i.putExtra(EXTRA_ASSOCIATED_CHANNEL_ID, channelId);
+                }
                 if(pendingFileId != null) {
                     i.putExtra(EXTRA_PENDING_FILE_ID, pendingFileId);
                 }
@@ -108,6 +113,9 @@ public class FileUploadService extends IntentService {
 
                 Intent i = new Intent(INTENT_ACTION_FILE_UPLOAD_COMPLETE);
                 i.putExtra(EXTRA_SUCCESS, false);
+                if(channelId != null) {
+                    i.putExtra(EXTRA_ASSOCIATED_CHANNEL_ID, channelId);
+                }
                 if(pendingFileId != null) {
                     i.putExtra(EXTRA_PENDING_FILE_ID, pendingFileId);
                 }

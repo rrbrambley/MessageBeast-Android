@@ -1305,7 +1305,7 @@ public class MessageManager {
             String pendingFileId = messagePlus.getPendingFileAttachments().keySet().iterator().next();
             Set<String> messagesNeedingPendingFile = getMessageIdsNeedingPendingFile(pendingFileId);
             messagesNeedingPendingFile.add(messagePlus.getMessage().getId());
-            FileManager.getInstance(mClient).startPendingFileUpload(pendingFileId);
+            FileManager.getInstance(mClient).startPendingFileUpload(pendingFileId, messagePlus.getMessage().getChannelId());
             return;
         }
         Message theMessage = messagePlus.getMessage();
@@ -1623,6 +1623,7 @@ public class MessageManager {
         public void onReceive(Context context, Intent intent) {
             if(FileUploadService.INTENT_ACTION_FILE_UPLOAD_COMPLETE.equals(intent.getAction())) {
                 String pendingFileId = intent.getStringExtra(FileUploadService.EXTRA_PENDING_FILE_ID);
+                String associatedChannelId = intent.getStringExtra(FileUploadService.EXTRA_ASSOCIATED_CHANNEL_ID);
                 if(pendingFileId != null) {
                     boolean success = intent.getBooleanExtra(FileUploadService.EXTRA_SUCCESS, false);
                     if(success) {
@@ -1631,7 +1632,12 @@ public class MessageManager {
                         Set<String> messagesIdsNeedingFile = getMessageIdsNeedingPendingFile(pendingFileId);
                         if(messagesIdsNeedingFile != null) {
                             LinkedHashMap<String, MessagePlus> messagesNeedingFile = mDatabase.getMessages(messagesIdsNeedingFile).getMessages();
+
+                            //always add the associated channel Id so that we can finish the
+                            //sending of the unsent message in the channel that triggered the upload.
                             HashSet<String> channelIdsWithMessagesToSend = new HashSet<String>();
+                            channelIdsWithMessagesToSend.add(associatedChannelId);
+
                             String fileJson = intent.getStringExtra(FileUploadService.EXTRA_FILE);
                             File file = AppDotNetGson.getPersistenceInstance().fromJson(fileJson, File.class);
 

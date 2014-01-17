@@ -74,11 +74,12 @@ public class FileManager {
         return pendingFile;
     }
 
-    public void startPendingFileUpload(String pendingFileId) {
+    public void startPendingFileUpload(String pendingFileId, String associatedChannelId) {
         if(!mFilesInProgress.contains(pendingFileId)) {
             mFilesInProgress.add(pendingFileId);
             Intent i = new Intent(mContext, FileUploadService.class);
             i.putExtra(FileUploadService.EXTRA_PENDING_FILE_ID, pendingFileId);
+            i.putExtra(FileUploadService.EXTRA_ASSOCIATED_CHANNEL_ID, associatedChannelId);
             mContext.startService(i);
         }
     }
