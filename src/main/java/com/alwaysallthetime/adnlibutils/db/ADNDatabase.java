@@ -1348,6 +1348,9 @@ public class ADNDatabase {
                 if(maxId == null) {
                     maxId = messageId;
                 }
+                //this is just for efficiency
+                //if it is already sent, then we don't need to try to populate pending
+                //file attachments.
                 if(isUnsent) {
                     messagePlusses.add(messagePlus);
                 }
@@ -1363,11 +1366,7 @@ public class ADNDatabase {
                 cursor.close();
             }
         }
-        for(MessagePlus messagePlus : messagePlusses) {
-            Message message = messagePlus.getMessage();
-            List<PendingFileAttachment> pendingAttachments = getPendingFileAttachments(message.getId());
-            messagePlus.setPendingFileAttachments(pendingAttachments);
-        }
+        populatePendingFileAttachments(messagePlusses);
         return new OrderedMessageBatch(messages, new MinMaxPair(minId, maxId));
     }
 
@@ -1415,12 +1414,16 @@ public class ADNDatabase {
                 cursor.close();
             }
         }
-        for(MessagePlus messagePlus : unsentMessages.values()) {
+        populatePendingFileAttachments(unsentMessages.values());
+        return unsentMessages;
+    }
+
+    private void populatePendingFileAttachments(Collection<MessagePlus> messagePlusses) {
+        for(MessagePlus messagePlus : messagePlusses) {
             Message message = messagePlus.getMessage();
             List<PendingFileAttachment> pendingAttachments = getPendingFileAttachments(message.getId());
             messagePlus.setPendingFileAttachments(pendingAttachments);
         }
-        return unsentMessages;
     }
 
     public Set<String> getMessagesDependentOnPendingFile(String pendingFileId) {
