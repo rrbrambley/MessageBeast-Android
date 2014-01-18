@@ -1619,6 +1619,33 @@ public class ADNDatabase {
         }
     }
 
+    public void deletePlace(String factualId) {
+        mDatabase.beginTransaction();
+
+        try {
+            String where = COL_PLACE_FACTUAL_ID + " = '" + factualId + "'";
+            mDatabase.delete(TABLE_PLACES, where, null);
+            mDatabase.setTransactionSuccessful();
+        } catch(Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+        } finally {
+            mDatabase.endTransaction();
+        }
+    }
+
+    public void deletePlaces() {
+        mDatabase.beginTransaction();
+
+        try {
+            mDatabase.delete(TABLE_PLACES, null, null);
+            mDatabase.setTransactionSuccessful();
+        } catch(Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+        } finally {
+            mDatabase.endTransaction();
+        }
+    }
+
     private double getRoundedValue(double value, int numDecimals) {
         BigDecimal bigValue = new BigDecimal(value);
         return bigValue.setScale(numDecimals, BigDecimal.ROUND_DOWN).doubleValue();
