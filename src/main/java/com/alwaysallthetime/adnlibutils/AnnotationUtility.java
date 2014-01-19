@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.TimeZone;
 
 /**
- * Created by brambley on 10/9/13.
+ * A Utility for obtaining data from Annotations on App.net resources.
  */
 public class AnnotationUtility {
     private static final String TAG = "ADNLibUtils_AnnotationUtility";
@@ -47,6 +47,13 @@ public class AnnotationUtility {
         return message.getCreatedAt();
     }
 
+    /**
+     * Get a Date object corresponding to the provided ISO 8601 string
+     *
+     * @param date the date string
+     * @return a Date object corresponding to the provided ISO 8601 string, or null
+     * if the string cannot be parsed.
+     */
     public static Date getDateFromIso8601String(String date) {
         initFormatter();
         try {
@@ -57,11 +64,23 @@ public class AnnotationUtility {
         return null;
     }
 
+    /**
+     * Get a date string in ISO 8601 format.
+     *
+     * @param date the Date object to convert to a String
+     * @return a date string in ISO 8601 format.
+     */
     public static String getIso8601StringfromDate(Date date) {
         initFormatter();
         return mIso8601Format.format(date);
     }
 
+    /**
+     * Get the first-found OEmbed Annotation of type "photo," if one exists, or null otherwise.
+     *
+     * @param message the Message from which the photo OEmbed Annotation should be obtained.
+     * @return the first OEmbed Annotation of type "photo," if one exists, or null otherwise.
+     */
     public static Annotation getFirstOEmbedPhotoAnnotation(Message message) {
         Annotation oEmbedAnnotation = message.getFirstAnnotationOfType(Annotations.OEMBED);
         if(oEmbedAnnotation != null && OEMBED_TYPE_PHOTO.equals(oEmbedAnnotation.getValue().get("type"))) {
@@ -70,6 +89,12 @@ public class AnnotationUtility {
         return null;
     }
 
+    /**
+     * Get the URL of the first-found OEmbed Annotation of type "photo," if one exists, or null otherwise.
+     *
+     * @param message the Message from which the OEmbed photo URL should be obtained.
+     * @return the URL of the first OEmbed Annotation of type "photo," if one exists, or null otherwise.
+     */
     public static String getFirstOEmbedPhotoUrl(Message message) {
         Annotation oEmbedAnnotation = getFirstOEmbedPhotoAnnotation(message);
         if(oEmbedAnnotation != null) {
@@ -78,6 +103,12 @@ public class AnnotationUtility {
         return null;
     }
 
+    /**
+     * Get the source URL of the first-found OEmbed Annotation of type "html5video," if one exists, or null otherwise.
+     *
+     * @param message the Message from which the OEmbed html5video URL should be obtained.
+     * @return the source URL of the first OEmbed Annotation of type "h5ml5video," if one exists, or null otherwise.
+     */
     public static String getFirstHTML5VideoSource(Message message) {
         Annotation oEmbedAnnotation = message.getFirstAnnotationOfType(Annotations.OEMBED);
         if(OEMBED_TYPE_HTML5VIDEO.equals(oEmbedAnnotation.getValue().get("type"))) {
@@ -93,6 +124,13 @@ public class AnnotationUtility {
         return null;
     }
 
+    /**
+     * Append a file to an Attachments annotation. This method assumes
+     * that the annotation has an existing +net.app.core.file_list key.
+     *
+     * @param attachments The Attachments annotation to which the File should be appended
+     * @param file The file to append
+     */
     public static void appendFileToAttachmentsFileList(Annotation attachments, File file) {
         List<Map<String, String>> fileList = (List<Map<String, String>>) attachments.getValue().get(Annotations.REPLACEMENT_FILE_LIST);
         HashMap<String, String> nextFile = new HashMap<String, String>(3);
@@ -102,6 +140,13 @@ public class AnnotationUtility {
         fileList.add(nextFile);
     }
 
+    /**
+     * Get the action_type value from a Channel's com.alwaysallthetime.action.metadata Annotation.
+     *
+     * @param channel The Channel for which the action type should be obtained
+     * @return the action_type value from a Channel's com.alwaysallthetime.action.metadata Annotation,
+     * or null if no such Annotation exists
+     */
     public static String getActionChannelType(Channel channel) {
         Annotation a = channel.getFirstAnnotationOfType(PrivateChannelUtility.CHANNEL_ANNOTATION_TYPE_METADATA);
         if(a != null) {
@@ -110,6 +155,13 @@ public class AnnotationUtility {
         return null;
     }
 
+    /**
+     * Get the channel_id value from a Channel's com.alwaysallthetime.action.metadata Annotation.
+     *
+     * @param actionChannel the Channel from which the target channel id should be obtained
+     * @return the channel_id value from a Channel's com.alwaysallthetime.action.metadata Annotation,
+     * or null if no such Annotation exists
+     */
     public static String getTargetChannelId(Channel actionChannel) {
         Annotation a = actionChannel.getFirstAnnotationOfType(PrivateChannelUtility.CHANNEL_ANNOTATION_TYPE_METADATA);
         if(a != null) {
@@ -118,6 +170,13 @@ public class AnnotationUtility {
         return null;
     }
 
+    /**
+     * Get the id value from the provided Message's com.alwaysallthetime.action.target_message Annotation.
+     *
+     * @param actionMessage the Message from which the target Message id should be obtained
+     * @return the id value from the provided Message's com.alwaysallthetime.action.target_message Annotation,
+     * or null if no such Annotation exists
+     */
     public static String getTargetMessageId(Message actionMessage) {
         Annotation targetMessage = actionMessage.getFirstAnnotationOfType(PrivateChannelUtility.MESSAGE_ANNOTATION_TARGET_MESSAGE);
         if(targetMessage != null) {
