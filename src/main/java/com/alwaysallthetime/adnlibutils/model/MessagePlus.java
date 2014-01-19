@@ -38,7 +38,7 @@ public class MessagePlus {
         setChannelIdWithReflection(channelId, message);
 
 //        message.setEntities(EntityGenerator.getEntities(message.getText()));
-        message.addAnnotation(AnnotationUtility.newDisplayDateAnnotation(date));
+        message.addAnnotation(AnnotationFactory.getDisplayDateAnnotation(date));
 
         MessagePlus messagePlus = new MessagePlus(message);
         messagePlus.setIsUnsent(true);

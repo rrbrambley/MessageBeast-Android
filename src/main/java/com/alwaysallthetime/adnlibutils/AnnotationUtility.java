@@ -62,14 +62,6 @@ public class AnnotationUtility {
         return mIso8601Format.format(date);
     }
 
-    public static Annotation newDisplayDateAnnotation(Date date) {
-        Annotation displayDateAnnotation = new Annotation(Annotations.OHAI_DISPLAY_DATE);
-        HashMap<String, Object> value = new HashMap<String, Object>(1);
-        value.put("date", getIso8601StringfromDate(date));
-        displayDateAnnotation.setValue(value);
-        return displayDateAnnotation;
-    }
-
     public static Annotation getFirstOEmbedPhotoAnnotation(Message message) {
         Annotation oEmbedAnnotation = message.getFirstAnnotationOfType(Annotations.OEMBED);
         if(oEmbedAnnotation != null && OEMBED_TYPE_PHOTO.equals(oEmbedAnnotation.getValue().get("type"))) {

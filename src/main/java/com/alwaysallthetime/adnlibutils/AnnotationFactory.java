@@ -5,6 +5,7 @@ import com.alwaysallthetime.adnlib.data.Annotation;
 import com.alwaysallthetime.adnlib.data.File;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -85,5 +86,19 @@ public class AnnotationFactory {
         value.put(valueName, valueObject);
         annotation.setValue(value);
         return annotation;
+    }
+
+    /**
+     * Get an Annotation of type net.app.ohai.displaydate with the provided Date
+     *
+     * @param date The Date to format for the display date Annotation
+     * @return an Annotation of type net.app.ohai.displaydate with the provided Date
+     */
+    public static Annotation getDisplayDateAnnotation(Date date) {
+        Annotation displayDateAnnotation = new Annotation(Annotations.OHAI_DISPLAY_DATE);
+        HashMap<String, Object> value = new HashMap<String, Object>(1);
+        value.put("date", AnnotationUtility.getIso8601StringfromDate(date));
+        displayDateAnnotation.setValue(value);
+        return displayDateAnnotation;
     }
 }
