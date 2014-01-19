@@ -27,7 +27,16 @@ public class AnnotationUtility {
 
     private static SimpleDateFormat mIso8601Format;
 
-    public static Date getJournalEntryDate(Message message) {
+
+    /**
+     * Get the date specified by an Annotation of type net.app.ohai.displaydate, if it exists.
+     * If no display date annotation exists, then the provided Message's created_at date is returned.
+     *
+     * @param message The Message from which the display date should be obtained.
+     * @return a Date corresponding to the value of the Ohai display date, or the Message's created_at
+     * date if no net.app.ohai.displaydate annotation exists.
+     */
+    public static Date getOhaiDisplayDate(Message message) {
         Annotation displayDate = message.getFirstAnnotationOfType(Annotations.OHAI_DISPLAY_DATE);
         if(displayDate != null) {
             String date = (String) displayDate.getValue().get("date");
