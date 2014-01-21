@@ -59,10 +59,10 @@ public class PrivateChannelUtility {
 
     /**
      * Get the existing Channel of the provided type, or create and return a new one if one hasn't already
-     * been created.
+     * been created.<br><br>
      *
      * In the event that the user has more than one channel of the specified type, the algorithm
-     * used to return the Channel is the same as that which is described in the Ohai Channel documentation.
+     * used to return the Channel is the same as that which is described in the Ohai Channel documentation.<br><br>
      *
      * @param client the AppDotNetClient to use for the request
      * @param channelType the Channel type
@@ -107,10 +107,17 @@ public class PrivateChannelUtility {
 
     /**
      * Get the existing Action Channel of the specified action type for specified target Channel.
-     * If one doesn't already exist, then create a new one and return it.
+     * If one doesn't already exist, then create a new one and return it. Rather than calling this
+     * method directly, you will probably want to use the ActionMessageManager's initActionChannel
+     * method.<br><br>
      *
-     * In the event that the user has more than one channel of the specified type, the algorithm
-     * used to return the Channel is the same as that which is described in the Ohai Channel documentation.
+     * An Action Channel is a Channel of type com.alwaysallthetime.action. It contains a
+     * com.alwaysallthetime.action.metadata Annotation with the keys channel_id and action_type,
+     * whose values are the target Channel id and action type, respectively.<br><br>
+     *
+     * In the event that the user has more than one Channel of the specified action type, pointing
+     * to the specified target Channel, the algorithm used to return the Channel is the same as that
+     * which is described in the Ohai Channel documentation.<br><br>
      *
      * @param client the AppDotNetClient to use for the request
      * @param actionType the action type associated with the Channel.
