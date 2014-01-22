@@ -20,6 +20,11 @@ Some key features of Message Beast are:
 4. **Full text search**. All Messages stored in the sqlite database are candidates for full-text search. This means you can build features that let users easily find old Messages in an instant.
 5. **Loads of other data lookups**. Other than full-text search, you can lookup messages by location, hashtag, date, or by occurrence of any Annotation that you wish.
 
+Getting Started
+---------
+More docs in the works...
+
+
 License
 -------
 The MIT License (MIT)
