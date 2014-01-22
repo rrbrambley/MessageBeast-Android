@@ -210,7 +210,7 @@ public class PrivateChannelUtility {
         client.retrieveCurrentUserSubscribedChannels(params, new ChannelListResponseHandler() {
             @Override
             public void onSuccess(ChannelList responseData) {
-                Channel theChannel = getNewestPrivateChannel(responseData);
+                Channel theChannel = getOldestPrivateChannel(responseData);
 
                 if(theChannel != null) {
                     ADNSharedPreferences.savePrivateChannel(theChannel);
@@ -232,7 +232,7 @@ public class PrivateChannelUtility {
         client.retrieveCurrentUserSubscribedChannels(params, new ChannelListResponseHandler() {
             @Override
             public void onSuccess(ChannelList responseData) {
-                Channel theChannel = getNewestActionChannel(responseData, actionType, targetChannelId);
+                Channel theChannel = getOldestActionChannel(responseData, actionType, targetChannelId);
 
                 if(theChannel != null) {
                     ADNSharedPreferences.saveActionChannel(theChannel, actionType, targetChannelId);
@@ -327,7 +327,7 @@ public class PrivateChannelUtility {
         });
     }
 
-    private static Channel getNewestPrivateChannel(ChannelList responseData) {
+    private static Channel getOldestPrivateChannel(ChannelList responseData) {
         Channel theChannel = null;
         if(responseData.size() == 1) {
             theChannel = responseData.get(0);
@@ -347,7 +347,7 @@ public class PrivateChannelUtility {
         return theChannel;
     }
 
-    private static Channel getNewestActionChannel(ChannelList responseData, String actionType, String targetChannelId) {
+    private static Channel getOldestActionChannel(ChannelList responseData, String actionType, String targetChannelId) {
         Channel theChannel = null;
         if(responseData.size() == 1) {
             Channel channel = responseData.get(0);
