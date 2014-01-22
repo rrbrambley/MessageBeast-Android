@@ -5,12 +5,12 @@ import java.util.Set;
 
 /**
  * An abstract class used to group a set of Messages that all contain
- * the same type of Message metadata.
+ * the same type of Message metadata. Metadata
  */
-public abstract class MessageMetadataInstances {
+public abstract class MessageInstances {
     protected LinkedHashSet<String> mMessageIds;
 
-    public MessageMetadataInstances() {
+    public MessageInstances() {
         mMessageIds = new LinkedHashSet<String>();
     }
 

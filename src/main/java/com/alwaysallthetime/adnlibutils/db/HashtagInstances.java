@@ -1,6 +1,6 @@
 package com.alwaysallthetime.adnlibutils.db;
 
-public class HashtagInstances extends MessageMetadataInstances {
+public class HashtagInstances extends MessageInstances {
     private String mName;
 
     public HashtagInstances(String name) {

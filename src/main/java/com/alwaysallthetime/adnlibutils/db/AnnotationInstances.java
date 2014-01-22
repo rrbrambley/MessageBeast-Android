@@ -1,6 +1,6 @@
 package com.alwaysallthetime.adnlibutils.db;
 
-public class AnnotationInstances extends MessageMetadataInstances {
+public class AnnotationInstances extends MessageInstances {
     private String mType;
 
     public AnnotationInstances(String type) {
