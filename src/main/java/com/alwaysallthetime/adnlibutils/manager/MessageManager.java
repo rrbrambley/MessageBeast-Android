@@ -31,7 +31,7 @@ import com.alwaysallthetime.adnlibutils.db.OrderedMessageBatch;
 import com.alwaysallthetime.adnlibutils.db.PendingFileAttachment;
 import com.alwaysallthetime.adnlibutils.db.PendingMessageDeletion;
 import com.alwaysallthetime.adnlibutils.filter.MessageFilter;
-import com.alwaysallthetime.adnlibutils.filter.MessageMetadataInstancesFilter;
+import com.alwaysallthetime.adnlibutils.filter.MessageInstancesFilter;
 import com.alwaysallthetime.adnlibutils.model.DisplayLocation;
 import com.alwaysallthetime.adnlibutils.model.FullSyncState;
 import com.alwaysallthetime.adnlibutils.model.Geolocation;
@@ -364,7 +364,7 @@ public class MessageManager {
      * @return a LinkedHashMap, mapping hashtag name to a HashtagInstances object. This is
      *         in descending order, from most to least recent.
      */
-    public LinkedHashMap<String, HashtagInstances> getHashtagInstances(String channelId, MessageMetadataInstancesFilter messageFilter) {
+    public LinkedHashMap<String, HashtagInstances> getHashtagInstances(String channelId, MessageInstancesFilter messageFilter) {
         LinkedHashMap<String, HashtagInstances> hashtagInstances = mDatabase.getHashtagInstances(channelId);
         messageFilter.filterInstances(hashtagInstances);
         return hashtagInstances;
@@ -387,7 +387,7 @@ public class MessageManager {
      * @param messageFilter the filter to use to excluded unwanted results.
      * @return a List of DisplayLocationInstances in descending order, from most to least recent
      */
-    public List<DisplayLocationInstances> getDisplayLocationInstances(String channelId, MessageMetadataInstancesFilter messageFilter) {
+    public List<DisplayLocationInstances> getDisplayLocationInstances(String channelId, MessageInstancesFilter messageFilter) {
         LinkedHashMap<String, DisplayLocationInstances> displayLocationInstancesMap = mDatabase.getDisplayLocationInstancesMap(channelId);
         messageFilter.filterInstances(displayLocationInstancesMap);
         return new ArrayList<DisplayLocationInstances>(displayLocationInstancesMap.values());
