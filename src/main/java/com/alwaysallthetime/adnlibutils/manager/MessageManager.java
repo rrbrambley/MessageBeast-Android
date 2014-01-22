@@ -1451,21 +1451,28 @@ public class MessageManager {
             }
         } else {
             PendingMessageDeletion deletion = pendingMessageDeletions.get(index);
-            mClient.deleteMessage(deletion.getChannelId(), deletion.getMessageId(), new MessageResponseHandler() {
-                @Override
-                public void onSuccess(Message responseData) {
-                    mDatabase.deletePendingMessageDeletion(responseData.getId());
-                    sendPendingDeletion(index + 1, pendingMessageDeletions, responseHandler);
-                }
-
-                @Override
-                public void onError(Exception error) {
-                    super.onError(error);
-                    if(responseHandler != null) {
-                        responseHandler.onError(error);
+            final MessagePlus messagePlus = mDatabase.getMessage(deletion.getMessageId());
+            if(messagePlus != null) {
+                deleteMessage(messagePlus, deletion.deleteAssociatedFiles(), new MessageDeletionResponseHandler() {
+                    @Override
+                    public void onSuccess() {
+                        mDatabase.deletePendingMessageDeletion(messagePlus.getMessage().getId());
+                        sendPendingDeletion(index + 1, pendingMessageDeletions, responseHandler);
                     }
-                }
-            });
+
+                    @Override
+                    public void onError(Exception error) {
+                        Log.e(TAG, "failed to delete message " + messagePlus.getMessage().getId() + "; " + error.getMessage(), error);
+                        if(responseHandler != null) {
+                            responseHandler.onError(error);
+                        }
+                    }
+                });
+            } else {
+                Log.d(TAG, "no persisted Message was found for PendingMessageDeletion with id " + deletion.getMessageId());
+                mDatabase.deletePendingMessageDeletion(messagePlus.getMessage().getId());
+                sendPendingDeletion(index + 1, pendingMessageDeletions, responseHandler);
+            }
         }
     }
 

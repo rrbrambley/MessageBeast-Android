@@ -20,7 +20,7 @@ public class PendingMessageDeletion {
         return mChannelId;
     }
 
-    public boolean isDeleteAssociatedFiles() {
+    public boolean deleteAssociatedFiles() {
         return mDeleteAssociatedFiles;
     }
 }
