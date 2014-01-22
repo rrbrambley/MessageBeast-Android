@@ -19,6 +19,9 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * The FileManager is used to handle the creation and deletion of App.net File objects
+ */
 public class FileManager {
 
     private static final String TAG = "ADNLibUtils_FileManager";
@@ -42,6 +45,13 @@ public class FileManager {
         return sInstance;
     }
 
+    /**
+     * Get an instance of FileManager.
+     *
+     * @param client the AppDotNetClient to use with the FileManager if a new one is created. If
+     *               the singleton already exists, then this is ignored.
+     * @return FileManager
+     */
     public static FileManager getInstance(AppDotNetClient client) {
         if(sInstance == null) {
             sInstance = new FileManager(client);
@@ -59,21 +69,68 @@ public class FileManager {
         mContext.registerReceiver(fileUploadReceiver, intentFilter);
     }
 
+    /**
+     * Get the AppDotNetClient used by this FileManager.
+     *
+     * @return the AppDotNetClient used by this FileManager
+     */
     public AppDotNetClient getClient() {
         return mClient;
     }
 
-    public String addPendingFile(Uri uri, String type, String name, String mimeType, String kind, boolean isPublic) {
+    /**
+     * Create a new PendingFile to be uploaded to App.net at some point in the future. The PendingFile
+     * is persisted to sqlite.
+     *
+     * @param uri the Uri corresponding to the location of the file on disk
+     * @param type the type to be set on the App.net File's "type" field.
+     * @param name the name of the App.net File
+     * @param mimeType the MIME type of the file
+     * @param kind the kind of the App.net file
+     * @param isPublic true if the File is public, false otherwise
+     * @return a new PendingFile
+     */
+    public PendingFile createPendingFile(Uri uri, String type, String name, String mimeType, String kind, boolean isPublic) {
         String id = UUID.randomUUID().toString();
         mDatabase.insertOrReplacePendingFile(id, uri.toString(), type, name, mimeType, kind, isPublic, 0);
-        return id;
+        return new PendingFile(id, uri, type, name, mimeType, kind, isPublic, 0);
     }
 
+    /**
+     * Get a persisted PendingFile.
+     *
+     * @param id the id of the PendingFile
+     * @return a PendingFile with the provided id, or null if none exists.
+     */
     public PendingFile getPendingFile(String id) {
         PendingFile pendingFile = mDatabase.getPendingFile(id);
         return pendingFile;
     }
 
+    /**
+     * Start uploading a PendingFile. If the file upload is already in progress, then this is a
+     * no-op.
+     *
+     * @param pendingFileId the id of the PendingFile
+     *
+     * @see com.alwaysallthetime.adnlibutils.manager.FileManager#startPendingFileUpload(String, String)
+     */
+    public void startPendingFileUpload(String pendingFileId) {
+        startPendingFileUpload(pendingFileId, null);
+    }
+
+    /**
+     * Start uploading a PendingFile. If the file upload is already in progress, then this is a
+     * no-op.
+     *
+     * @param pendingFileId the id of the PendingFile
+     * @param associatedChannelId the id of a Channel associated with the file, or null if none exists.
+     * For example, if the PendingFile is used for a PendingFileAttachment on a Message, then the
+     * id of the Channel that contains the Message should be provided. This serves as a hint to
+     * FileUploadService.INTENT_ACTION_FILE_UPLOAD_COMPLETE broadcast receivers why the file upload
+     * may have been initiated (e.g. need to upload this file before we can create a new Message
+     * with an OEmbed.
+     */
     public void startPendingFileUpload(String pendingFileId, String associatedChannelId) {
         if(!mFilesInProgress.contains(pendingFileId)) {
             mFilesInProgress.add(pendingFileId);
@@ -84,6 +141,9 @@ public class FileManager {
         }
     }
 
+    /**
+     * Send all pending file deletions in all Channels.
+     */
     public void sendPendingFileDeletions() {
         Set<String> pendingFileDeletions = mDatabase.getPendingFileDeletions();
         for(final String fileId : pendingFileDeletions) {

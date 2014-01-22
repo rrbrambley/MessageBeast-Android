@@ -18,6 +18,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * A MessagePlus is a Message with extra metadata attached to it. These are usually constructed
+ * by the MessageManager.
+ *
+ * @see com.alwaysallthetime.adnlibutils.manager.MessageManager
+ */
 public class MessagePlus {
 
     private static final String TAG = "ADNLibUtils_MessagePlus";
@@ -31,21 +37,6 @@ public class MessagePlus {
     private HashMap<String, PendingFileAttachment> mPendingFileAttachments;
     private boolean mIsUnsent;
     private int mSendAttempts;
-
-    private static MessagePlus newUnsentMessagePlus(String channelId, String messageId, Message message) {
-        Date date = new Date();
-        setMessageIdWithReflection(messageId, message);
-        setChannelIdWithReflection(channelId, message);
-
-//        message.setEntities(EntityGenerator.getEntities(message.getText()));
-        message.addAnnotation(AnnotationFactory.getDisplayDateAnnotation(date));
-
-        MessagePlus messagePlus = new MessagePlus(message);
-        messagePlus.setIsUnsent(true);
-        messagePlus.setDisplayDate(date);
-
-        return messagePlus;
-    }
 
     /**
      * After a pending file has been uploaded, take the returned file and add the OEmbed
@@ -87,6 +78,11 @@ public class MessagePlus {
         return attachment != null;
     }
 
+    /**
+     * Set the List of PendingFileAttachments for this MessagePlus.
+     *
+     * @param pendingFileAttachments
+     */
     public void setPendingFileAttachments(List<PendingFileAttachment> pendingFileAttachments) {
         if(pendingFileAttachments != null) {
             mPendingFileAttachments = new HashMap<String, PendingFileAttachment>(pendingFileAttachments.size());
@@ -98,76 +94,164 @@ public class MessagePlus {
         }
     }
 
+    /**
+     * Construct a new MessagePlus.
+     *
+     * @param message the Message
+     */
     public MessagePlus(Message message) {
         mMessage = message;
         addOEmbedsFromAnnotations(message.getAnnotationsOfType(Annotations.OEMBED));
     }
 
+    /**
+     * Get the display date associated with this MessagePlus. If no display date has been
+     * set, then the Message's getCreatedAt() value is returned.
+     *
+     * @return the display date associated with this MessagePlus, or the value of Message.getCreatedAt()
+     * if no display date has been explicitly set.
+     */
     public Date getDisplayDate() {
         return mDisplayDate != null ? mDisplayDate : mMessage.getCreatedAt();
     }
 
+    /**
+     * Set a display date on this MessagePlus. This is useful when the Message's getCreatedAt()
+     * value is different than the date that should be associated with this MessagePlus in the
+     * UI.
+     *
+     * @param displayDate a date that should be associated with this MessagePlus in the UI
+     */
     public void setDisplayDate(Date displayDate) {
         mDisplayDate = displayDate;
     }
 
+    /**
+     * @return true if this MessagePlus has a DisplayLocation associated with it, false otherwise.
+     */
     public boolean hasDisplayLocation() {
         return mDisplayLocation != null;
     }
 
+    /**
+     * Get the DisplayLocation associated with this MessagePlus, or null if none exists.
+     *
+     * @return the DisplayLocation associated with this MessagePlus, or null if none exists.
+     */
     public DisplayLocation getDisplayLocation() {
         return mDisplayLocation;
     }
 
+    /**
+     * Set the DisplayLocation to be associated with this MessagePlus.
+     *
+     * @param location the DisplayLocation to be associated with this MessagePlus.
+     */
     public void setDisplayLocation(DisplayLocation location) {
         mDisplayLocation = location;
     }
 
+    /**
+     * @return true if the associated Message has one or more photo OEmbeds, false otherwise.
+     */
     public boolean hasPhotoOEmbed() {
         return mPhotoOEmbeds != null && mPhotoOEmbeds.size() > 0;
     }
 
+    /**
+     * Get the List of PhotoOEmbeds as obtained by examining the annotations of the Message.
+     *
+     * @return the List of PhotoOEmbeds
+     */
     public List<PhotoOEmbed> getPhotoOEmbeds() {
         return mPhotoOEmbeds;
     }
 
+    /**
+     * @return true if the associated Message has one or more html5video OEmbeds, false otherwise.
+     */
     public boolean hasHtml5VideoOEmbed() {
         return mHtml5VideoOEmbeds != null && mHtml5VideoOEmbeds.size() > 0;
     }
 
+    /**
+     * Get the List of Html5VideoOEmbeds as obtained by examining the annotations of the Message.
+     *
+     * @return the List of Html5VideoOEmbeds
+     */
     public List<Html5VideoOEmbed> getHtml5VideoOEmbeds() {
         return mHtml5VideoOEmbeds;
     }
 
+    /**
+     * Get the backing Message for this MessagePlus.
+     *
+     * @return the backing Message for this MessagePlus.
+     */
     public Message getMessage() {
         return mMessage;
     }
 
+    /**
+     * Set the unsent flag on this MessagPlus, indicating whether the backing Message has yet to be
+     * sent to the server
+     *
+     * @param isUnsent true if the backing Message has not been sent to the server, false otherwise.
+     */
     public void setIsUnsent(boolean isUnsent) {
         mIsUnsent = isUnsent;
     }
 
+    /**
+     * @return true if the backing Message has not been sent to the server, false otherwise.
+     */
     public boolean isUnsent() {
         return mIsUnsent;
     }
 
+    /**
+     * Get the number of times that we have already attempted and failed to send the backing
+     * Message to the server.
+     *
+     * @return the number of times that we have already attempted and failed to send the backing
+     * Message to the server.
+     */
     public int getNumSendAttempts() {
         return mSendAttempts;
     }
 
+    /**
+     * Set the number of times that we have already attempted and failed to send the backing
+     * Message to the server.
+     */
     public void setNumSendAttempts(int numAttempts) {
         mSendAttempts = numAttempts;
     }
 
+    /**
+     * Increment the number of times that we have already attempted and failed to send the backing
+     * Message to the server.
+     * @return the number of send attempts (post-increment)
+     */
     public int incrementSendAttempts() {
         mSendAttempts++;
         return mSendAttempts;
     }
 
+    /**
+     * @return true if this represents and unsent Message that is dependent on one or more Files
+     * being uploaded prior to being sent to the server, false otherwise.
+     */
     public boolean hasPendingFileAttachments() {
         return mPendingFileAttachments != null && mPendingFileAttachments.size() > 0;
     }
 
+    /**
+     * Get a Map whose keys are PendingFile ids mapped to PendingFileAttachment objects.
+     * This may be null.
+     *
+     * @return the Map of PendingFileAttachments.
+     */
     public Map<String, PendingFileAttachment> getPendingFileAttachments() {
         return mPendingFileAttachments;
     }
@@ -451,6 +535,9 @@ public class MessagePlus {
         }
     }
 
+    /**
+     * UnsentMessagePlusBuilder is used to construct unsent MessagePlus objects.
+     */
     public static class UnsentMessagePlusBuilder {
         private String channelId;
         private String messageId;
@@ -478,5 +565,21 @@ public class MessagePlus {
             messagePlus.setPendingFileAttachments(pendingFileAttachments);
             return messagePlus;
         }
+    }
+
+
+    private static MessagePlus newUnsentMessagePlus(String channelId, String messageId, Message message) {
+        Date date = new Date();
+        setMessageIdWithReflection(messageId, message);
+        setChannelIdWithReflection(channelId, message);
+
+//        message.setEntities(EntityGenerator.getEntities(message.getText()));
+        message.addAnnotation(AnnotationFactory.getDisplayDateAnnotation(date));
+
+        MessagePlus messagePlus = new MessagePlus(message);
+        messagePlus.setIsUnsent(true);
+        messagePlus.setDisplayDate(date);
+
+        return messagePlus;
     }
 }
