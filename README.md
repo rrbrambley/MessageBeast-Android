@@ -20,10 +20,23 @@ Some key features of Message Beast are:
 4. **Full text search**. All Messages stored in the sqlite database are candidates for full-text search. This means you can build features that let users easily find old Messages in an instant.
 5. **Loads of other data lookups**. Other than full-text search, you can lookup messages by location, hashtag, date, or by occurrence of any Annotation that you wish.
 
-Getting Started
+Overview
 ---------
-More docs in the works...
+Begin by modifying your AndroidManifest.xml's ``application`` tag to use ADNApplication:
 
+```xml
+<application
+  android:name="com.alwaysallthetime.messagebeast.ADNApplication"
+  ...>
+```
+
+The point of this is simply to allow a convenient way for Message Beast features to get an Application Context via ``ADNApplication.getContext()`` globally. If you don't want to use ADNApplication as your Application type, simply call ``ADNApplication.setApplicationContext(getApplicationContext());`` in your main Activity on startup so that the Context is set.
+
+Depending on your needs, you will then want to interface with one or more of the following:
+
+* **MessageManager**: This class provides the main Message lifecycle functionality, including retrieving, deleting, and creating new Messages. It wraps ADNLib's base functionality to perform these tasks, and seamlessly persists Messages and Message metadata as new Messages are encountered/created. It also provides the functionality associated with creating offline Messages and sending them at a later time. Furthermore, it interfaces with the SQLite database to provide simple methods for doing things like performing full-text searches, and obtaining instances of Messages in which specific hashtags, locations, other types of Annotations were used.
+* **ActionMessageManager**: This class wraps the MessageManager to support performing mutable actions via what Message Beast calls *Action Channels*. An Action Channel is a channel of type ``com.alwaysallthetime.action`` in which all Messages are [machine-only Messages](http://developers.app.net/docs/resources/message/#machine-only-messages), each with an Annotation that points to a *target* Message in your "main" Channel. An *Action Message* thus serves as a flag, indicating that the user performed a specific action on a Message (e.g. marked an entry as a favorite). The deletion of an Action Message corresponds to the undoing of the action on a Message. The ActionMessageManager is used to create Action Messages with the simple methods ``applyChannelAtion()`` and ``removeChannelAction()``.
+* **ChannelSyncManager**: The ChannelSyncManager was created to compensate for the fact that you may end up using several Channels for any given application while working with this library (especially when working with Action Channels). To avoid having to make many method calls to retrieve the newest Messages in all these Channels simultaneously, you can use the ChannelSyncManager and make a single method call to achieve this.
 
 License
 -------
