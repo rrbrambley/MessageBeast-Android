@@ -38,6 +38,15 @@ Depending on your needs, you will then want to interface with one or more of the
 * **ActionMessageManager**: This class wraps the MessageManager to support performing mutable actions via what Message Beast calls *Action Channels*. An Action Channel is a channel of type ``com.alwaysallthetime.action`` in which all Messages are [machine-only Messages](http://developers.app.net/docs/resources/message/#machine-only-messages), each with an Annotation that points to a *target* Message in your "main" Channel. An *Action Message* thus serves as a flag, indicating that the user performed a specific action on a Message (e.g. marked an entry as a favorite). The deletion of an Action Message corresponds to the undoing of the action on a Message. The ActionMessageManager is used to create Action Messages with the simple methods ``applyChannelAtion()`` and ``removeChannelAction()``.
 * **ChannelSyncManager**: The ChannelSyncManager was created to compensate for the fact that you may end up using several Channels for any given application while working with this library (especially when working with Action Channels). To avoid having to make many method calls to retrieve the newest Messages in all these Channels simultaneously, you can use the ChannelSyncManager and make a single method call to achieve this.
 
+<p align="center">
+  <img src="https://raw.github.com/rrbrambley/MessageBeast-Android/master/Images/ArchitectureDependency.png"/>
+</p>
+
+Example Code
+------------
+coming soon...
+
+
 License
 -------
 The MIT License (MIT)
