@@ -21,6 +21,9 @@ import com.alwaysallthetime.adnlib.gson.AppDotNetGson;
 import com.alwaysallthetime.adnlib.response.FileResponseHandler;
 import com.alwaysallthetime.adnlib.response.MessageListResponseHandler;
 import com.alwaysallthetime.adnlib.response.MessageResponseHandler;
+import com.alwaysallthetime.asyncgeocoder.AsyncGeocoder;
+import com.alwaysallthetime.asyncgeocoder.response.AsyncGeocoderResponseHandler;
+import com.alwaysallthetime.messagebeast.ADNApplication;
 import com.alwaysallthetime.messagebeast.ADNSharedPreferences;
 import com.alwaysallthetime.messagebeast.PrivateChannelUtility;
 import com.alwaysallthetime.messagebeast.db.ADNDatabase;
@@ -36,8 +39,6 @@ import com.alwaysallthetime.messagebeast.model.DisplayLocation;
 import com.alwaysallthetime.messagebeast.model.FullSyncState;
 import com.alwaysallthetime.messagebeast.model.Geolocation;
 import com.alwaysallthetime.messagebeast.model.MessagePlus;
-import com.alwaysallthetime.asyncgeocoder.AsyncGeocoder;
-import com.alwaysallthetime.asyncgeocoder.response.AsyncGeocoderResponseHandler;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -191,8 +192,8 @@ public class MessageManager {
     private HashMap<String, QueryParameters> mParameters;
     private HashMap<String, MinMaxPair> mMinMaxPairs;
 
-    public MessageManager(Context context, AppDotNetClient client, MessageManagerConfiguration configuration) {
-        mContext = context;
+    public MessageManager(AppDotNetClient client, MessageManagerConfiguration configuration) {
+        mContext = ADNApplication.getContext();
         mClient = client;
         mConfiguration = configuration;
         mDatabase = ADNDatabase.getInstance(mContext);
@@ -204,7 +205,7 @@ public class MessageManager {
         mMessagesNeedingPendingFiles = new HashMap<String, Set<String>>();
 
         IntentFilter intentFilter = new IntentFilter(FileUploadService.INTENT_ACTION_FILE_UPLOAD_COMPLETE);
-        context.registerReceiver(fileUploadReceiver, intentFilter);
+        mContext.registerReceiver(fileUploadReceiver, intentFilter);
     }
 
     private synchronized OrderedMessageBatch loadPersistedMessageBatch(String channelId, int limit, boolean performLookups) {
