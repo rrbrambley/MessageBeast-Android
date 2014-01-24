@@ -44,7 +44,141 @@ Depending on your needs, you will then want to interface with one or more of the
 
 Example Code
 ------------
-coming soon...
+The easiest way to work with one or more Channels is to rely on a ChannelSyncManager. This will do all the heavy lifting  associated with creating and initializing your private Channels, as well as performing full syncs on these Channels. Here's an example in which we will work with an [Ohai Journal Channel](https://github.com/appdotnet/object-metadata/blob/master/channel-types/net.app.ohai.journal.md):
+
+```java
+
+//set up the query parameters to be used when making requests for my channel.
+private QueryParameters queryParameters = 
+            new QueryParameters(GeneralParameter.INCLUDE_MESSAGE_ANNOTATIONS,
+            GeneralParameter.INCLUDE_MACHINE, GeneralParameter.EXCLUDE_DELETED);
+
+//create a ChannelSpec for an Ohai Journal Channel. 
+ChannelSpec channelSpec = new ChannelSpec("net.app.ohai.journal", queryParameters);
+
+//construct an AppDotNetClient
+AppDotNetClient client = AppDotNetClient(ADNApplication.getContext(), myClientId, myPasswordGrantSecret);
+
+//you can configure this all you want; read the docs for this.
+MessageManager.MessageManagerConfiguration config = new MessageManager.MessageManagerConfiguration();
+
+ChannelSyncManager channelSyncManager = new ChannelSyncManager(client, config, new ChannelSpecSet(channelSpec));
+channelSyncManager.initChannels(new ChannelSyncManager.ChannelsInitializedHandler() {
+    @Override
+    public void onChannelsInitialized() {
+        //we're now ready to call channelSyncManager.retrieveNewestMessages() whenevs.
+    }
+
+    @Override
+    public void onException() {
+        //Log.e("app", "something went wrong");
+    }
+});
+```
+
+The above code creates a new MessageManager when the ChannelSyncManager is constructed. In more advanced use cases, you may wish to have a MessageManager available without the use of a ChannelSyncManager. Regardless, you will only need one instance of a MessageManager, so you may choose to create a singleton instance by doing something like this:
+
+```java
+public class MessageManagerInstance {
+    
+    private static MessageManager sMessageManager;
+    
+    public static MessageManager getInstance() {
+        if(sMessageManager == null) {
+            MessageManager.MessageManagerConfiguration config = new MessageManager.MessageManagerConfiguration();
+            
+            //all Messages will be inserted into the sqlite database
+            config.setDatabaseInsertionEnabled(true);
+              
+            //location annotations will be examined and DisplayLocations will be assigned to Messages
+            config.setLocationLookupEnabled(true);
+              
+            //a reference to all Messages wwith OEmbed Annotations will be stored in the sqlite database
+            config.addAnnotationExtraction(Annotations.OEMBED);
+              
+            //instead of relying only on Message.getCreatedAt(), use the Ohai display date annotation
+            config.setMessageDisplayDateAdapter(new MessageManager.MessageDisplayDateAdapter() {
+                @Override
+                public Date getDisplayDate(Message message) {
+                    return AnnotationUtility.getOhaiDisplayDate(message);
+                }
+            });
+              
+            //Pass your instance of an AppDotNetClient. Voila. a MessageManager.
+            sMessageManager = new MessageManager(myAppDotNetClient, config);
+        }
+        return sMessageManager;
+    }
+}
+```
+
+And then you could choose to use this singleton instance to construct a ChannelSyncManager as well, if you wanted.
+
+If you'd like to build an app that supports mutable actions on Messages in your Channel, you should use the ActionMessageManager. Let's suppose you're working on a to-do list app that allows users to mark entries as "high-priority." Here's an example of how you might use the above MessageManager singleton code to construct an ActionMessageManager that uses one Action Channel:
+
+```java
+ActionMessageManager myActionMessageManager = ActionMessageManager.getInstance(MessageManagerInstance.getInstance());
+myActionMessageManager.initActionChannel.initActionChannel("com.myapp.action.highpriority", myTodoChannel, new ActionMessageManager.ActionChannelInitializedHandler() {
+    @Override
+    public void onInitialized(Channel channel) {
+        //now we're ready to apply actions to myTodoChannel
+        //let's stash this newly initialized Action Channel to be used later...
+        mHighPriorityChannel = channel;
+    }
+    
+    @Override
+    public void onException(Exception exception) {
+        //whoops
+        Log.e(TAG, exception.getMessage(), exception);
+    }
+});
+```
+
+And later on you could allow the user to perform the high priority action on a Message by doing something like:
+
+```java
+myActionMessageManager.applyChannelAction(mHighPriorityChannel.getId(), myMessage);
+```
+
+And remove the action with:
+
+```java
+myActionMessageManager.removeChannelAction(mHighPriorityChannel.getId(), myMessage.getId());
+```
+
+Here's an example of how you could more easily work with your main to-do list Channel and your high-priority Action Channel by using the ChannelSyncManager:
+
+```java
+
+//set up the query parameters to be used when making requests for my channel.
+private QueryParameters queryParameters = 
+    new QueryParameters(GeneralParameter.INCLUDE_MESSAGE_ANNOTATIONS,
+    GeneralParameter.INCLUDE_MACHINE, GeneralParameter.EXCLUDE_DELETED);
+
+ChannelSpec todoChannelSpec = new ChannelSpec("com.myapp.todolist", queryParameters);
+TargetWithActionChannelsSpecSet spec = new TargetWithActionChannelsSpecSet(todoChannelSpec,
+        "com.myapp.action.highpriority");
+ActionMessageManager amm = ActionMessageManagerInstance.getInstance(MessageManagerInstance.getInstance());
+ChannelSyncManager channelSyncManager = new ChannelSyncManager(amm, spec);
+            
+channelSyncManager.initChannels(new ChannelSyncManager.ChannelsInitializedHandler() {
+    @Override
+    public void onChannelsInitialized() {
+        //we can now work with our Channels!
+        
+        mMyTodoChannel = mSyncManager.getTargetChannel();
+        mMyHighPriorityActionChannel = mSyncManager.getActionChannel("com.myapp.action.highpriority");
+    }
+
+    @Override
+    public void onException() {
+        Log.e("app", "something went wrong");
+    }
+});
+```
+
+
+more coming...
 
 
 License
