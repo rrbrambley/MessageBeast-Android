@@ -3,15 +3,16 @@ package com.alwaysallthetime.messagebeast.manager;
 import android.content.Intent;
 import android.util.Log;
 
+import com.alwaysallthetime.adnlib.AppDotNetClient;
 import com.alwaysallthetime.adnlib.data.Channel;
 import com.alwaysallthetime.messagebeast.ADNApplication;
 import com.alwaysallthetime.messagebeast.PrivateChannelUtility;
+import com.alwaysallthetime.messagebeast.filter.MessageFilter;
 import com.alwaysallthetime.messagebeast.model.ChannelRefreshResult;
 import com.alwaysallthetime.messagebeast.model.ChannelRefreshResultSet;
 import com.alwaysallthetime.messagebeast.model.ChannelSpec;
 import com.alwaysallthetime.messagebeast.model.ChannelSpecSet;
 import com.alwaysallthetime.messagebeast.model.FullSyncState;
-import com.alwaysallthetime.messagebeast.filter.MessageFilter;
 import com.alwaysallthetime.messagebeast.model.MessagePlus;
 import com.alwaysallthetime.messagebeast.model.TargetWithActionChannelsSpecSet;
 
@@ -92,6 +93,25 @@ public class ChannelSyncManager {
     }
 
     /**
+     * Create a ChannelSyncManager for a set of Channels, an AppDotNetClient
+     * and a MessageManagerConfiguration. This constructor is convenient for use cases where you don't
+     * plan on creating a MessageManager for use outside of the ChannelSyncManager.
+     *
+     * Note that this constructor is not for use with Action Channels.
+     *
+     * @param appDotNetClient The AppDotNetClient used to make requests. This will be used to construct
+     *                        the MessageManager.
+     * @param configuration The MessageManagerConfiguration to be used to construct the MessageManager.
+     * @param channelSpecSet The ChannelSpecSet describing the Channels to be used with ChannelSyncManager
+     *
+     * @see com.alwaysallthetime.messagebeast.manager.ChannelSyncManager#ChannelSyncManager(ActionMessageManager, com.alwaysallthetime.messagebeast.model.TargetWithActionChannelsSpecSet)
+     */
+    public ChannelSyncManager(AppDotNetClient appDotNetClient, MessageManager.MessageManagerConfiguration configuration, ChannelSpecSet channelSpecSet) {
+        mMessageManager = new MessageManager(appDotNetClient, configuration);
+        mChannelSpecSet = channelSpecSet;
+    }
+
+    /**
      * Create a ChannelSyncManager for a set of Channels.
      *
      * Note that this constructor is not for use with Action Channels.
@@ -107,7 +127,25 @@ public class ChannelSyncManager {
     }
 
     /**
-     * Create a ChannelSyncManager to be used with a Channel and a set of Action Channels
+     * Create a ChannelSyncManager to be used with a Channel and a set of Action Channels. This
+     * constructor creates a MessageManager and ActionMessageManager; it is convenient for use
+     * cases that don't require the use of these Managers outside of the ChannelSyncManager.
+     *
+     * @param appDotNetClient The AppDotNetClient used to make requests. This will be used to construct
+     *                        the MessageManager.
+     * @param configuration The MessageManagerConfiguration to be used to construct the MessageManager.
+     * @param channelSpecSet The TargetWithActionChannelsSpecSet describing the Channels to be used with ChannelSyncManager
+     *
+     * @see com.alwaysallthetime.messagebeast.manager.ChannelSyncManager#ChannelSyncManager(ActionMessageManager, com.alwaysallthetime.messagebeast.model.TargetWithActionChannelsSpecSet)
+     */
+    public ChannelSyncManager(AppDotNetClient appDotNetClient, MessageManager.MessageManagerConfiguration configuration, TargetWithActionChannelsSpecSet channelSpecSet) {
+        mMessageManager = new MessageManager(appDotNetClient, configuration);
+        mActionMessageManager = ActionMessageManager.getInstance(mMessageManager);
+        mTargetWithActionChannelsSpecSet = channelSpecSet;
+    }
+
+    /**
+     * Create a ChannelSyncManager to be used with a Channel and a set of Action Channels.
      *
      * @param actionMessageManager An instance of ActionMessageManager.
      * @param channelSpecSet The TargetWithActionChannelsSpecSet describing the Channels to be used with ChannelSyncManager
@@ -324,6 +362,26 @@ public class ChannelSyncManager {
                 retrieveNewestActionChannelMessages(index + 1, refreshResultSet, refreshHandler);
             }
         }
+    }
+
+    /**
+     * Get the MessageManager used by this ChannelSyncManager.
+     *
+     * @return the MessageManager used by this ChannelSyncManager
+     */
+    public MessageManager getMessageManager() {
+        return mMessageManager;
+    }
+
+    /**
+     * Get the ActionMessageManager used by this ChannelSyncManager. Will be null if this
+     * ChannelSyncManager was not constructed with a TargetWithActionChannelsSpecSet.
+     *
+     * @return the ActionMessageManager used by this ChannelSyncManager, or null if it does not
+     * use one.
+     */
+    public ActionMessageManager getActionMessageManager() {
+        return mActionMessageManager;
     }
 
     public Channel getTargetChannel() {
