@@ -20,18 +20,8 @@ Some key features of Message Beast are:
 4. **Full text search**. All Messages stored in the sqlite database are candidates for full-text search. This means you can build features that let users easily find old Messages in an instant.
 5. **Loads of other data lookups**. Other than full-text search, you can lookup messages by location, hashtag, date, or by occurrence of any Annotation that you wish.
 
-Overview
+Core Architecture
 ---------
-Begin by modifying your AndroidManifest.xml's ``application`` tag to use ADNApplication:
-
-```xml
-<application
-  android:name="com.alwaysallthetime.messagebeast.ADNApplication"
-  ...>
-```
-
-The point of this is simply to allow a convenient way for Message Beast features to get an Application Context via ``ADNApplication.getContext()`` globally. If you don't want to use ADNApplication as your Application type, simply call ``ADNApplication.setApplicationContext(getApplicationContext());`` in your main Activity on startup so that the Context is set.
-
 Depending on your needs, you will then want to interface with one or more of the following:
 
 * **MessageManager**: This class provides the main Message lifecycle functionality, including retrieving, deleting, and creating new Messages. It wraps ADNLib's base functionality to perform these tasks, and seamlessly persists Messages and Message metadata as new Messages are encountered/created. It also provides the functionality associated with creating offline Messages and sending them at a later time. Furthermore, it interfaces with the SQLite database to provide simple methods for doing things like performing full-text searches, and obtaining instances of Messages in which specific hashtags, locations, other types of Annotations were used.
@@ -47,6 +37,15 @@ When working with these manager classes, you will most often be using **MessageP
 
 Example Code
 ------------
+Begin by modifying your AndroidManifest.xml's ``application`` tag to use ADNApplication:
+
+```xml
+<application
+  android:name="com.alwaysallthetime.messagebeast.ADNApplication"
+  ...>
+```
+
+The point of this is simply to allow a convenient way for Message Beast features to get an Application Context via ``ADNApplication.getContext()`` globally. If you don't want to use ADNApplication as your Application type, simply call ``ADNApplication.setApplicationContext(getApplicationContext());`` in your main Activity on startup so that the Context is set.
 
 <h3>ChannelSyncManager</h3>
 The easiest way to work with one or more Channels is to rely on a ChannelSyncManager. This will do all the heavy lifting  associated with creating and initializing your private Channels, as well as performing full syncs on these Channels. Here's an example in which we will work with an [Ohai Journal Channel](https://github.com/appdotnet/object-metadata/blob/master/channel-types/net.app.ohai.journal.md):
