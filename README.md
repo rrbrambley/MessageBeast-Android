@@ -42,8 +42,13 @@ Depending on your needs, you will then want to interface with one or more of the
   <img src="https://raw.github.com/rrbrambley/MessageBeast-Android/master/Images/ArchitectureDependency.png"/>
 </p>
 
+<h3>MessagePlus</h3>
+When working with these manager classes, you will most often be using **MessagePlus** objects. MessagePlus is a wrapper around ADNLib's Message class that adds extra functionality – including stuff for display locations, display dates, OEmbed getters, and features required to support unsent Messages. You will generally never need to construct MessagePlus objects directly, as they will be given to you via the managers.
+
 Example Code
 ------------
+
+<h3>ChannelSyncManager</h3>
 The easiest way to work with one or more Channels is to rely on a ChannelSyncManager. This will do all the heavy lifting  associated with creating and initializing your private Channels, as well as performing full syncs on these Channels. Here's an example in which we will work with an [Ohai Journal Channel](https://github.com/appdotnet/object-metadata/blob/master/channel-types/net.app.ohai.journal.md):
 
 ```java
@@ -76,6 +81,7 @@ channelSyncManager.initChannels(new ChannelSyncManager.ChannelsInitializedHandle
 });
 ```
 
+<h3>MessageManager</h3>
 The above code creates a new MessageManager when the ChannelSyncManager is constructed. In more advanced use cases, you may wish to have a MessageManager available without the use of a ChannelSyncManager. Regardless, you will only need one instance of a MessageManager, so you may choose to create a singleton instance by doing something like this:
 
 ```java
@@ -93,7 +99,7 @@ public class MessageManagerInstance {
             //location annotations will be examined and DisplayLocations will be assigned to Messages
             config.setLocationLookupEnabled(true);
               
-            //a reference to all Messages wwith OEmbed Annotations will be stored in the sqlite database
+            //a reference to all Messages with OEmbed Annotations will be stored in the sqlite database
             config.addAnnotationExtraction(Annotations.OEMBED);
               
             //instead of relying only on Message.getCreatedAt(), use the Ohai display date annotation
@@ -114,6 +120,7 @@ public class MessageManagerInstance {
 
 And then you could choose to use this singleton instance to construct a ChannelSyncManager as well, if you wanted.
 
+<h3>ActionMessageManager</h3>
 If you'd like to build an app that supports mutable actions on Messages in your Channel, you should use the ActionMessageManager. Let's suppose you're working on a to-do list app that allows users to mark entries as "high-priority." Here's an example of how you might use the above MessageManager singleton code to construct an ActionMessageManager that uses one Action Channel:
 
 ```java
@@ -177,8 +184,11 @@ channelSyncManager.initChannels(new ChannelSyncManager.ChannelsInitializedHandle
 });
 ```
 
+<h3>Full Sync</h3>
+work in progress...
 
-more coming...
+<h3>Offline Message Creation</h3>
+work in progress...
 
 
 License
