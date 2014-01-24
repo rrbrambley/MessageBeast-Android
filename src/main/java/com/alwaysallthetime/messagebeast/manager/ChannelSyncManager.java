@@ -384,12 +384,41 @@ public class ChannelSyncManager {
         return mActionMessageManager;
     }
 
+    /**
+     * Get the target Channel for this manager's Action Channels. This will be null if you did
+     * not construct this class with a TargetWithActionChannelsSpecSet. Note that you should be
+     * calling initChannels() before attempting to call this method.
+     *
+     * @return the target Channel for this manager's Action Channels, or null if none exists.
+     */
     public Channel getTargetChannel() {
         return mTargetChannel;
     }
 
+    /**
+     * Get an Action Channel initialized by this manager. This will be null if you did
+     * not construct this class with a TargetWithActionChannelsSpecSet. Note that you should be
+     * calling initChannels() before attempting to call this method.
+     *
+     * @param actionType the action_type value in the Action Channel's metadata Annotation.
+     * @return The Action Channel with the specified action type, or null if none exists.
+     */
     public Channel getActionChannel(String actionType) {
         return mActionChannels.get(actionType);
+    }
+
+    /**
+     * Return a Map of Channels whose keys are Channel ids.
+     * This will be null if you constructed this manager with a TargetWithActionChannelsSpecSet.
+     * Note that you should be calling initChannels() before attempting to call this method.
+     *
+     * @return a Map of Channels whose keys are Channel ids, or null if none exists.
+     *
+     * @see ChannelSyncManager#getTargetChannel()
+     * @see ChannelSyncManager#getActionChannel(String)
+     */
+    public HashMap<String, Channel> getChannels() {
+        return new HashMap<String, Channel>(mChannels);
     }
 
     private void initChannels(final int index, final ChannelsInitializedHandler initializedHandler) {
