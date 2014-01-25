@@ -361,6 +361,25 @@ OrderedMessageBatch results = messageManager.searchMessagesWithDisplayLocationQu
                               "The Mission");
 ```
 
+Other methods available for looking up Messages:
+
+```java
+//all messages in my channel that use the oembed Annotation
+LinkedHashMap<String, MessagePlus> oembeds = messageManager.getMessagesWithAnnotation(myChannel.getId(),
+                                            "net.app.core.oembed");
+
+//hashtag name : HashtagInstances; HashtagInstances contains all Message ids with a given hashtag
+LinkedHashMap<String, HashtagInstances> hashtags = messageManager.getHashtagInstances(myChannel.getId());
+
+//DisplayLocationInstances contains ids of all Messages with a specific DisplayLocation
+List<DisplayLocationInstances> displayLocations = messageManager.getDisplayLocationInstances(myChannel.getId());
+```
+
+Future Improvements, Additions, Fixes
+------
+See [Issues](https://github.com/rrbrambley/MessageBeast-Android/issues).
+
+
 License
 -------
 The MIT License (MIT)
