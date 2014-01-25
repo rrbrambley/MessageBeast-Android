@@ -183,6 +183,16 @@ channelSyncManager.initChannels(new ChannelSyncManager.ChannelsInitializedHandle
 });
 ```
 
+<h3>Loading Persisted Messages</h3>
+The MessageManager's retrieve Messages will always only retrieve Messages that it does not currently have persisted. If you want to load persisted Messages, e.g. on app launch, you should:
+
+```java
+//load up to 50 Messages in my channel.
+LinkedHashMap<String, MessagePlus> messages = loadPersistedMessages(myChannel.getId(), 50);
+```
+
+When you load persisted Messages, the Message's stay available in the MessageManager's internal Message map. This means that subsequent calls to loadPersistedMessages() will load *more* Messages (e.g. Mesasges 0-49 in first call above, then 50-99 in second call). If you don't need the Messages to be kept in memory, you should use one of the ``loadPersistedMessagesTemporarily()`` methods.
+
 <h3>Full Channel Sync</h3>
 Having all a user's data available on their device (versus in the cloud) might be necessary to make your app function properly. If this is the case, you might want to use one of the following methods of syncing the user's data.
 
@@ -323,7 +333,33 @@ PendingFile pendingFile = fileManager.createPendingFile(photoUri, fileType,
 myMessageManager.createUnsentMessageAndAttemptSend(myChannel.getId(), message, attachments);
 ```
 
-...more coming
+When Messages fail to send on their first attempt, you need to trigger another send attempt before any of MessageManager's retrieve methods can be executed. For example, ``retrieveNewestMessages()`` will return false if unsent Messages are blocking the newest Messages from being retrieved.
+
+```java
+//this will send both pending Message deletions and unsent Messages
+myMessageManager.sendAllUnsent(myChannel.getId());
+```
+
+<h3>Message Search and Lookup</h3>
+Full-text search is available for all Messages persisted by the MessageManager. 
+
+```java
+//find my Messages containing the string "pizza" in the text field.
+OrderedMessageBatch results = messageManager.searchMessagesWithQuery(myChannel.getId(), "pizza")
+
+//Message ids mapped to MessagePlus objects, in reverse chronological order
+LinkedHashMap<String, MessagePlus> messages = results.getMessages();
+```
+
+You can also use the ``searchMessagesWithQuery(String channelId, String query, MessageFilter messageFilter)`` to filter out some of the results. 
+
+Because location annotations are not part of the Message text, the human-readable name of all display locations are indexed separately. To search by human-readable location name, use:
+
+```java
+//find MessagePlus objects that have a DisplayLocation name matching "The Mission"
+OrderedMessageBatch results = messageManager.searchMessagesWithDisplayLocationQuery(myChannel.getId(), 
+                              "The Mission");
+```
 
 License
 -------
