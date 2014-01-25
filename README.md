@@ -184,11 +184,11 @@ channelSyncManager.initChannels(new ChannelSyncManager.ChannelsInitializedHandle
 ```
 
 <h3>Loading Persisted Messages</h3>
-The MessageManager's retrieve Messages will always only retrieve Messages that it does not currently have persisted. If you want to load persisted Messages, e.g. on app launch, you should:
+The MessageManager's retrieve methods will always only retrieve Messages that it does not currently have persisted. If you want to load persisted Messages, e.g. on app launch, you should:
 
 ```java
 //load up to 50 Messages in my channel.
-LinkedHashMap<String, MessagePlus> messages = loadPersistedMessages(myChannel.getId(), 50);
+LinkedHashMap<String, MessagePlus> messages = messageManager.loadPersistedMessages(myChannel.getId(), 50);
 ```
 
 When you load persisted Messages, the Message's stay available in the MessageManager's internal Message map. This means that subsequent calls to loadPersistedMessages() will load *more* Messages (e.g. Mesasges 0-49 in first call above, then 50-99 in second call). If you don't need the Messages to be kept in memory, you should use one of the ``loadPersistedMessagesTemporarily()`` methods.
