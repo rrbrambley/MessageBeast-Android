@@ -329,7 +329,11 @@ FileManager fileManager = FileManager.getInstance(myAppDotNetClient);
 PendingFile pendingFile = fileManager.createPendingFile(photoUri, fileType, 
                           filename, mimeType, kind, false);
 
-//the message passed here has an OEmbed annotation or Attachments annotation
+//create a new PendingFileAttachment, with 'true' for isOEmbed
+//false would mean it goes in a file attachment list
+ArrayList<PendingFileAttachment> attachments = new ArrayList<PendingFileAttachment>(1);
+attachments.add(new PendingFileAttachment(pendingFile.getId(), true));
+
 myMessageManager.createUnsentMessageAndAttemptSend(myChannel.getId(), message, attachments);
 ```
 
