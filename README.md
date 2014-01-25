@@ -236,7 +236,7 @@ Using the ChannelSyncManager to perform the full sync is especially convenient w
 FullSyncState state = messageManager.getFullSyncState(myChannel.getId());
 if(state == FullSyncState.NOT_STARTED || state == FullSyncState.INCOMPLETE) {
     //maybe prompt the user before executing this
-    messageManager.retrieveAndPersistAllMessages(new MessageManager.MessageManagerMultiChannelSyncResponseHandler() {
+    messageManager.retrieveAndPersistAllMessages(myChannel.getId(), new MessageManager.MessageManagerMultiChannelSyncResponseHandler() {
         @Override
         public void onSuccess() {
             //done!
