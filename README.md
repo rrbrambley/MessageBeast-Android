@@ -124,7 +124,7 @@ If you'd like to build an app that supports mutable actions on Messages in your 
 
 ```java
 ActionMessageManager myActionMessageManager = ActionMessageManager.getInstance(MessageManagerInstance.getInstance());
-myActionMessageManager.initActionChannel.initActionChannel("com.myapp.action.highpriority", myTodoChannel, new ActionMessageManager.ActionChannelInitializedHandler() {
+myActionMessageManager.initActionChannel("com.myapp.action.highpriority", myTodoChannel, new ActionMessageManager.ActionChannelInitializedHandler() {
     @Override
     public void onInitialized(Channel channel) {
         //now we're ready to apply actions to myTodoChannel
