@@ -244,9 +244,86 @@ if(state == FullSyncState.NOT_STARTED || state == FullSyncState.INCOMPLETE) {
 ```
 It's worth noting that ``retrieveAndPersistAllMessages()`` actually will sync multiple Channels at once, just like the ChannelSyncManager, but the main difference is that the ChannelSyncManager provides feedback via the ChannelSyncStatusHandler after it internally checks the sync state.
 
-<h3>Offline Message Creation</h3>
-work in progress...
+<h3>Message Creation and Lifecycle</h3>
+The MessageManager provides a few different ways of creating Messages. The simplest way is:
 
+```java
+Message m = new Message("Check out my awesome Message!");
+myMessageManager.createMessage(myChannel.getId(), m, new MessageManager.MessageManagerResponseHandler() {
+    @Override
+    public void onSuccess(List<MessagePlus> messages, boolean appended) {
+        //messages includes our new Message, and any other Messages that may have not already been
+        //synced prior to creating this new one.
+        //
+        //appended does not apply in this case (true if the Messages are added to the end of the 
+        //Channel's Messages, false if they are prepended).
+    }
+
+    @Override
+    public void onError(Exception exception) {
+        Log.e(TAG, exception.getMessage(), exception);
+    }
+});
+```
+
+This a thin wrapper around ADNLib's createMessage() method that performs database insertion and extraction of other Message data (just as would happen when calling the retrieve methods).
+
+For applications that should enable users to create Messages regardless of having an internet connection, you can use a different method:
+
+```java
+Message m = new Message("Check out my awesome Message!");
+myMessageManager.createUnsentMessageAndAttemptSend(myChannel.getId(), m);
+```
+
+The first obvious difference between this method of creating a Message and the previous is that you do not pass a response handler when creating an unsent Message. Instead, because the Message could be sent at a later time, you should set up a BroadcastReceiver somewhere in your application to be notified when your app successfully sends a Message.
+
+```java
+//somewhere in my Activity
+registerReceiver(sentMessageReceiver, new IntentFilter(MessageManager.INTENT_ACTION_UNSENT_MESSAGES_SENT));
+
+...
+
+//elsewhere in my Activity
+private final BroadcastReceiver sentMessageReceiver = new BroadcastReceiver() {
+    @Override
+    public void onReceive(Context context, Intent intent) {
+        String channelId = intent.getStringExtra(MessageManager.EXTRA_CHANNEL_ID);
+        ArrayList<String> sentMessageIds = intent.getStringArrayListExtra(MessageManager.EXTRA_SENT_MESSAGE_IDS);
+        
+        //after the unsent messages are successfully sent, the local copies are deleted.
+        //do this to retrieve the newly sent messages:
+        myMessageManager.retrieveNewestMessages(channelId, new MessageManager.MessageManagerResponseHandler() {
+            @Override
+            public void onSuccess(List<MessagePlus> responseData, boolean appended) {
+                //we got our new messages.
+            }
+    
+            @Override
+            public void onError(Exception exception) {
+                Log.e(TAG, exception.getMessage(), exception);
+            }
+        });
+    }
+};
+```
+
+Additionally, you can register for the ``MessageManager.INTENT_ACTION_UNSENT_MESSAGE_SEND_FAILURE`` broadcast if you want to be notified of send failures. The Broadcast Intent will contain the following extras: ``MessageManager.EXTRA_CHANNEL_ID``, ``MessageManager.EXTRA_MESSAGE_ID``, and ``MessageManager.EXTRA_SEND_ATTEMPTS``. Every time the message is failed to be sent for any reason, the number of send attempts is incremented. Looking at this value is helpful if you want to eventually give up on sending a Message and delete it.
+
+If your Message depends on the existence of [File](developers.app.net/docs/resources/file/) objects for [OEmbeds](https://github.com/appdotnet/object-metadata/blob/master/annotations/net.app.core.oembed.md) or [attachments](https://github.com/appdotnet/object-metadata/blob/master/annotations/net.app.core.attachments.md), you can also create unsent Messages with pending file uploads. Pending files are created by the ``FileManager`` class and passed to an alternate version of the createUnsentMessageAndAttemptSend() method:
+
+```java
+FileManager fileManager = FileManager.getInstance(myAppDotNetClient);
+
+//create the pending file using a Uri pointing to the file location 
+//and the standard object fields.
+PendingFile pendingFile = fileManager.createPendingFile(photoUri, fileType, 
+                          filename, mimeType, kind, false);
+
+//the message passed here has an OEmbed annotation or Attachments annotation
+myMessageManager.createUnsentMessageAndAttemptSend(myChannel.getId(), message, attachments);
+```
+
+...more coming
 
 License
 -------
