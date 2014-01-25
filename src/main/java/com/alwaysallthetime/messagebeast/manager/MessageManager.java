@@ -27,6 +27,7 @@ import com.alwaysallthetime.messagebeast.ADNApplication;
 import com.alwaysallthetime.messagebeast.ADNSharedPreferences;
 import com.alwaysallthetime.messagebeast.PrivateChannelUtility;
 import com.alwaysallthetime.messagebeast.db.ADNDatabase;
+import com.alwaysallthetime.messagebeast.db.AnnotationInstances;
 import com.alwaysallthetime.messagebeast.db.DisplayLocationInstances;
 import com.alwaysallthetime.messagebeast.db.FilteredMessageBatch;
 import com.alwaysallthetime.messagebeast.db.HashtagInstances;
@@ -392,6 +393,30 @@ public class MessageManager {
         LinkedHashMap<String, DisplayLocationInstances> displayLocationInstancesMap = mDatabase.getDisplayLocationInstancesMap(channelId);
         messageFilter.filterInstances(displayLocationInstancesMap);
         return new ArrayList<DisplayLocationInstances>(displayLocationInstancesMap.values());
+    }
+
+    /**
+     * Get references to Messages that use a specific type of Annotationtype.
+     *
+     * @param channelId the id of the Channel in which the returned Messages will be contained.
+     * @param annotationType the Annotation type to look for.
+     * @return an AnnotationInstances containing message ids that correspond to Messages with
+     * the provided annotation type.
+     */
+    public AnnotationInstances getAnnotationInstances(String channelId, String annotationType) {
+        return mDatabase.getAnnotationInstances(channelId, annotationType);
+    }
+
+    /**
+     * Get Messages that use a specific type of Annotation.
+     *
+     * @param channelId the id of the Channel in which the returned Messages will be contained
+     * @param annotationType the Annotation type to look for
+     * @return a LinkedHashMap mapping Message ids to MessagePlus objects
+     */
+    public LinkedHashMap<String, MessagePlus> getMessagesWithAnnotation(String channelId, String annotationType) {
+        AnnotationInstances instances = getAnnotationInstances(channelId, annotationType);
+        return loadAndConfigureTemporaryMessages(instances.getMessageIds());
     }
 
     /**
