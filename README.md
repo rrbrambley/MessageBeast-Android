@@ -183,8 +183,66 @@ channelSyncManager.initChannels(new ChannelSyncManager.ChannelsInitializedHandle
 });
 ```
 
-<h3>Full Sync</h3>
-work in progress...
+<h3>Full Channel Sync</h3>
+Having all a user's data available on their device (versus in the cloud) might be necessary to make your app function properly. If this is the case, you might want to use one of the following methods of syncing the user's data.
+
+With ChannelSyncManager:
+```java
+
+//assume we have instantiated ChannelSyncManager as it was in the last example, above
+
+channelSyncManager.initChannels(new ChannelSyncManager.ChannelsInitializedHandler() {
+    @Override
+    public void onChannelsInitialized() {
+        //now that we've initialized our channels, we can perform a sync.
+        
+        channelSyncManager.checkFullSyncStatus(new ChannelSyncManager.ChannelSyncStatusHandler() {
+            @Override
+            public void onSyncStarted() {
+                //show progress or something (e.g. "Retrieving your data...")
+                //this will only be called if your channel hasn't already been synced once before
+            }
+            
+            @Override
+            public void onSyncComplete() {
+                //this will be called instantly if the channel has already been synced once.
+                //
+                //otherwise, onSyncStarted() will be called first, and this will eventually be called
+                //after all Messages have been downloaded and persisted.
+            }
+    }
+
+    @Override
+    public void onException() {
+        Log.e("app", "something went wrong");
+    }
+});
+
+```
+
+Using the ChannelSyncManager to perform the full sync is especially convenient when you are syncing multiple Channels (e.g. three Action Channels along with your single target Channel) – all of the Channels will be synced with a single method call. Alternatively, if you can use the MessageManager's methods to directly check the sync state of your Channel and start the sync if necessary (this is what ChannelSyncManager does under the hood):
+
+```java
+FullSyncState state = messageManager.getFullSyncState(myChannel.getId());
+if(state == FullSyncState.NOT_STARTED || state == FullSyncState.INCOMPLETE) {
+    //maybe prompt the user before executing this
+    messageManager.retrieveAndPersistAllMessages(new MessageManager.MessageManagerMultiChannelSyncResponseHandler() {
+        @Override
+        public void onSuccess() {
+            //done!
+        }
+        
+        @Override
+        public void onError(Exception exception) {
+            Log.e(TAG, exception.getMessage(), exception);
+            //sad face
+        }
+    });
+} else {
+  //we're already done, carry on by launching the app normally.
+}
+```
+It's worth noting that ``retrieveAndPersistAllMessages()`` actually will sync multiple Channels at once, just like the ChannelSyncManager, but the main difference is that the ChannelSyncManager provides feedback via the ChannelSyncStatusHandler after it internally checks the sync state.
 
 <h3>Offline Message Creation</h3>
 work in progress...
