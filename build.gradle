@@ -1,0 +1,39 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:0.6.+'
+    }
+}
+apply plugin: 'android-library'
+
+repositories {
+    mavenCentral()
+}
+
+android {
+    compileSdkVersion 18
+    buildToolsVersion "19.0.0"
+
+    defaultConfig {
+        minSdkVersion 10
+        targetSdkVersion 18
+    }
+    sourceSets {
+        main {
+            manifest {
+                srcFile 'src/main/AndroidManifest.xml'
+            }
+            java {
+                srcDir 'src/main/java'
+            }
+        }
+    }
+}
+
+dependencies {
+    compile 'com.google.code.gson:gson:2.2.4'
+    compile project(':MessageBeast-Android:ADNLib:ADNLibModule')
+    compile project(':MessageBeast-Android:AsyncGeocoder')
+}
