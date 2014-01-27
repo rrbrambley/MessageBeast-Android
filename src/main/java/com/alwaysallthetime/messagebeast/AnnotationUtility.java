@@ -59,7 +59,7 @@ public class AnnotationUtility {
         try {
             return mIso8601Format.parse(date);
         } catch(ParseException e) {
-            Log.d(TAG, e.getMessage(), e);
+            Log.e(TAG, e.getMessage(), e);
         }
         return null;
     }

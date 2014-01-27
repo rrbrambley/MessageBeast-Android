@@ -142,7 +142,7 @@ public class PrivateChannelUtility {
 
                             @Override
                             public void onError(Exception error) {
-                                Log.d(TAG, error.getMessage(), error);
+                                Log.e(TAG, error.getMessage(), error);
                                 handler.onError(error);
                             }
                         });

@@ -248,7 +248,7 @@ public class ActionMessageManager {
 
                 @Override
                 public void onError(Exception exception) {
-                    Log.d(TAG, exception.getMessage(), exception);
+                    Log.e(TAG, exception.getMessage(), exception);
                     responseHandler.onError(exception);
                 }
             });
@@ -281,7 +281,7 @@ public class ActionMessageManager {
 
             @Override
             public void onError(Exception exception) {
-                Log.d(TAG, exception.getMessage(), exception);
+                Log.e(TAG, exception.getMessage(), exception);
                 responseHandler.onError(exception);
             }
         });
@@ -350,20 +350,18 @@ public class ActionMessageManager {
 
     private synchronized void deleteActionMessages(final List<ActionMessageSpec> actionMessageSpecs, final int currentIndex, final Runnable completionRunnable) {
         final ActionMessageSpec actionMessageSpec = actionMessageSpecs.get(0);
-        final String actionChannelId = actionMessageSpec.getActionChannelId();
         MessagePlus actionMessagePlus = mDatabase.getMessage(actionMessageSpec.getActionMessageId());
 
         //the success/failure of this should not matter - on failure, it will be a pending deletion
         mMessageManager.deleteMessage(actionMessagePlus, new MessageManager.MessageDeletionResponseHandler() {
             @Override
             public void onSuccess() {
-                Log.d(TAG, "Successfully deleted action message " + actionMessageSpec.getActionMessageId() + " for target message " + actionMessageSpec.getTargetMessageId());
                 deleteNext();
             }
 
             @Override
             public void onError(Exception exception) {
-                Log.d(TAG, "Failed to delete action message " + actionMessageSpec.getActionMessageId() + " for target message " + actionMessageSpec.getTargetMessageId());
+                Log.e(TAG, "Failed to delete action message " + actionMessageSpec.getActionMessageId() + " for target message " + actionMessageSpec.getTargetMessageId());
                 deleteNext();
             }
 

@@ -1497,7 +1497,7 @@ public class MessageManager {
                     }
                 });
             } else {
-                Log.d(TAG, "no persisted Message was found for PendingMessageDeletion with id " + deletion.getMessageId());
+                Log.e(TAG, "no persisted Message was found for PendingMessageDeletion with id " + deletion.getMessageId());
                 mDatabase.deletePendingMessageDeletion(messagePlus.getMessage().getId());
                 sendPendingDeletion(index + 1, pendingMessageDeletions, responseHandler);
             }
@@ -1587,7 +1587,7 @@ public class MessageManager {
 
             @Override
             public void onError(Exception error) {
-                Log.d(TAG, error.getMessage(), error);
+                Log.e(TAG, error.getMessage(), error);
 
                 if(handler != null) {
                     handler.onError(error);

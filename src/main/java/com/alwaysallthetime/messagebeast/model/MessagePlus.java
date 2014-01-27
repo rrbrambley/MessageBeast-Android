@@ -272,7 +272,7 @@ public class MessagePlus {
                 }
                 mHtml5VideoOEmbeds.add(new Html5VideoOEmbed(value));
             } else {
-                Log.d(TAG, "Annotation type " + type + " is unsupported by MessagePlus");
+                Log.e(TAG, "Annotation type " + type + " is unsupported by MessagePlus");
             }
         }
     }

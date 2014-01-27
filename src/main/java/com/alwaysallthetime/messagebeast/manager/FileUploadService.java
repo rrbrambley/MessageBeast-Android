@@ -152,13 +152,13 @@ public class FileUploadService extends IntentService {
                 baos.write(buf, 0, n);
             }
         } catch(Exception e) {
-            Log.d(TAG, e.getMessage(), e);
+            Log.e(TAG, e.getMessage(), e);
         } finally {
             if(inputStream != null) {
                 try {
                     inputStream.close();
                 } catch(IOException e) {
-                    Log.d(TAG, e.getMessage(), e);
+                    Log.e(TAG, e.getMessage(), e);
                 }
             }
         }

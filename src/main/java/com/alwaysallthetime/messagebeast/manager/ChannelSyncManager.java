@@ -250,7 +250,7 @@ public class ChannelSyncManager {
 
             @Override
             public void onError(Exception exception) {
-                Log.d(TAG, exception.getMessage(), exception);
+                Log.e(TAG, exception.getMessage(), exception);
                 handler.onSyncException(exception);
             }
         });
@@ -471,7 +471,7 @@ public class ChannelSyncManager {
 
             @Override
             public void onError(Exception error) {
-                Log.d(TAG, error.getMessage(), error);
+                Log.e(TAG, error.getMessage(), error);
                 channelInitializedHandler.onException();
             }
         });
@@ -487,7 +487,7 @@ public class ChannelSyncManager {
 
             @Override
             public void onException(Exception exception) {
-                Log.d(TAG, exception.getMessage(), exception);
+                Log.e(TAG, exception.getMessage(), exception);
                 completionRunnable.run();
             }
         });
