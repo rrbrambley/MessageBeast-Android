@@ -292,7 +292,7 @@ public class MessageManager {
      * @param limit the maximum number of Messages to load from the database.
      * @return a LinkedHashMap mapping Message ids to MessagePlus objects
      */
-    public LinkedHashMap<String, MessagePlus> loadPersistedMessagesTemporarily(String channelId, int limit) {
+    public LinkedHashMap<String, MessagePlus> getMessages(String channelId, int limit) {
         OrderedMessageBatch orderedMessageBatch = mDatabase.getMessages(channelId, limit);
         return orderedMessageBatch.getMessages();
     }
@@ -311,13 +311,14 @@ public class MessageManager {
      *
      * @see com.alwaysallthetime.messagebeast.db.ADNDatabase#getDisplayLocationInstances(String, com.alwaysallthetime.messagebeast.model.DisplayLocation, com.alwaysallthetime.messagebeast.db.ADNDatabase.LocationPrecision)
      */
-    public LinkedHashMap<String, MessagePlus> loadPersistedMessagesTemporarily(String channelId, DisplayLocation location, ADNDatabase.LocationPrecision precision) {
+    public LinkedHashMap<String, MessagePlus> getMessages(String channelId, DisplayLocation location, ADNDatabase.LocationPrecision precision) {
         DisplayLocationInstances locationInstances = mDatabase.getDisplayLocationInstances(channelId, location, precision);
-        return loadAndConfigureTemporaryMessages(locationInstances.getMessageIds());
+        return getMessages(locationInstances.getMessageIds());
     }
 
     /**
-     * Load all persisted Messages with a hashtag entity matching the provided hashtag.
+     * Load all persisted Messages with a hashtag entity matching the provided hashtag, without keeping them in
+     * MessageManager memory.
      *
      * Messages will be returned after performing DisplayLocation and OEmbed lookup, provided those
      * features are enabled in the MessageManagerConfiguration.
@@ -326,13 +327,13 @@ public class MessageManager {
      * @param hashtagName the hashtag with which the lookup will be done
      * @return a LinkedHashMap mapping Message ids to MessagePlus objects
      */
-    public LinkedHashMap<String, MessagePlus> loadPersistedMessagesTemporarily(String channelId, String hashtagName) {
+    public LinkedHashMap<String, MessagePlus> getMessages(String channelId, String hashtagName) {
         HashtagInstances hashtagInstances = mDatabase.getHashtagInstances(channelId, hashtagName);
-        return loadAndConfigureTemporaryMessages(hashtagInstances.getMessageIds());
+        return getMessages(hashtagInstances.getMessageIds());
     }
 
     /**
-     * Load persisted Messages.
+     * Load persisted Messages without keeping them in MessageManager memory.
      *
      * Messages will be returned after performing DisplayLocation and OEmbed lookup, provided those
      * features are enabled in the MessageManagerConfiguration.
@@ -340,7 +341,7 @@ public class MessageManager {
      * @param messageIds the Message ids
      * @return a LinkedHashMap mapping Message ids to MessagePlus objects
      */
-    public LinkedHashMap<String, MessagePlus> loadAndConfigureTemporaryMessages(Collection<String> messageIds) {
+    public LinkedHashMap<String, MessagePlus> getMessages(Collection<String> messageIds) {
         OrderedMessageBatch orderedMessageBatch = mDatabase.getMessages(messageIds);
         LinkedHashMap<String, MessagePlus> messages = orderedMessageBatch.getMessages();
         performLookups(messages.values(), false);
@@ -408,7 +409,8 @@ public class MessageManager {
     }
 
     /**
-     * Get Messages that use a specific type of Annotation.
+     * Load persisted Messages that use a specific type of Annotation, without keeping them in
+     * MessageManager memory.
      *
      * @param channelId the id of the Channel in which the returned Messages will be contained
      * @param annotationType the Annotation type to look for
@@ -416,7 +418,7 @@ public class MessageManager {
      */
     public LinkedHashMap<String, MessagePlus> getMessagesWithAnnotation(String channelId, String annotationType) {
         AnnotationInstances instances = getAnnotationInstances(channelId, annotationType);
-        return loadAndConfigureTemporaryMessages(instances.getMessageIds());
+        return getMessages(instances.getMessageIds());
     }
 
     /**

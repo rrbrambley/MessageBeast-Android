@@ -212,13 +212,13 @@ public class ActionMessageManager {
      * that have had the action applied.
      */
     public synchronized List<MessagePlus> getActionedMessages(String actionChannelId) {
-        LinkedHashMap<String, MessagePlus> loadedMessagesFromActionChannel =  mMessageManager.loadPersistedMessagesTemporarily(actionChannelId, MAX_BATCH_LOAD_FROM_DISK);
+        LinkedHashMap<String, MessagePlus> loadedMessagesFromActionChannel =  mMessageManager.getMessages(actionChannelId, MAX_BATCH_LOAD_FROM_DISK);
         return getTargetMessages(loadedMessagesFromActionChannel.values());
     }
 
     private synchronized List<MessagePlus> getTargetMessages(Collection<MessagePlus> actionMessages) {
         Set<String> newTargetMessageIds = getTargetMessageIds(actionMessages);
-        LinkedHashMap<String, MessagePlus> targetMessages = mMessageManager.loadAndConfigureTemporaryMessages(newTargetMessageIds);
+        LinkedHashMap<String, MessagePlus> targetMessages = mMessageManager.getMessages(newTargetMessageIds);
         return new ArrayList<MessagePlus>(targetMessages.values());
     }
 
@@ -228,7 +228,7 @@ public class ActionMessageManager {
         LinkedHashMap<String, MessagePlus> more = mMessageManager.loadPersistedMessages(actionChannelId, MAX_BATCH_LOAD_FROM_DISK);
         if(more.size() > 0) {
             Set<String> newTargetMessageIds = getTargetMessageIds(more.values());
-            LinkedHashMap<String, MessagePlus> moreTargetMessages = mMessageManager.loadAndConfigureTemporaryMessages(newTargetMessageIds);
+            LinkedHashMap<String, MessagePlus> moreTargetMessages = mMessageManager.getMessages(newTargetMessageIds);
 
             responseHandler.setIsMore(more.size() == MAX_BATCH_LOAD_FROM_DISK);
             responseHandler.onSuccess(new ArrayList(moreTargetMessages.values()), true);
@@ -240,7 +240,7 @@ public class ActionMessageManager {
                 @Override
                 public void onSuccess(List<MessagePlus> responseData, boolean appended) {
                     Set<String> newTargetMessageIds = getTargetMessageIds(responseData);
-                    LinkedHashMap<String, MessagePlus> moreTargetMessages = mMessageManager.loadAndConfigureTemporaryMessages(newTargetMessageIds);
+                    LinkedHashMap<String, MessagePlus> moreTargetMessages = mMessageManager.getMessages(newTargetMessageIds);
 
                     responseHandler.setIsMore(isMore());
                     responseHandler.onSuccess(new ArrayList(moreTargetMessages.values()), true);
