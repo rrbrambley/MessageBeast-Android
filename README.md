@@ -193,7 +193,7 @@ The MessageManager's retrieve methods will always only retrieve Messages that it
 LinkedHashMap<String, MessagePlus> messages = messageManager.loadPersistedMessages(myChannel.getId(), 50);
 ```
 
-When you load persisted Messages, the Message's stay available in the MessageManager's internal Message map. This means that subsequent calls to loadPersistedMessages() will load *more* Messages (e.g. Mesasges 0-49 in first call above, then 50-99 in second call). If you don't need the Messages to be kept in memory, you should use one of the ``loadPersistedMessagesTemporarily()`` methods.
+When you load persisted Messages, the Message's stay available in the MessageManager's internal Message map. This means that subsequent calls to loadPersistedMessages() will load *more* Messages (e.g. Mesasges 0-49 in first call above, then 50-99 in second call). If you don't need the Messages to be kept in memory, you should use one of the ``getMessages()`` methods.
 
 <h3>Full Channel Sync</h3>
 Having all a user's data available on their device (versus in the cloud) might be necessary to make your app function properly. If this is the case, you might want to use one of the following methods of syncing the user's data.
