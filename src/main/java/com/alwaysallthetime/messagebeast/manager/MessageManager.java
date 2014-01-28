@@ -244,8 +244,6 @@ public class MessageManager {
      * @param limit the maximum number of messages to load from the database.
      * @return a LinkedHashMap containing the newly loaded messages, mapped from message id
      * to Message Object. If no messages were loaded, then an empty Map is returned.
-     *
-     * @see com.alwaysallthetime.messagebeast.manager.MessageManager.MessageManagerConfiguration#setDatabaseInsertionEnabled(boolean)
      */
     public synchronized LinkedHashMap<String, MessagePlus> loadPersistedMessages(String channelId, int limit) {
         OrderedMessageBatch batch = loadPersistedMessageBatch(channelId, limit, true);
@@ -263,7 +261,6 @@ public class MessageManager {
      * @return A FilteredMessageBatch containing the messages after a filter was applied, and additionally
      * a Map of messages containing the excluded Messages.
      *
-     * @see com.alwaysallthetime.messagebeast.manager.MessageManager.MessageManagerConfiguration#setDatabaseInsertionEnabled(boolean)
      * @see com.alwaysallthetime.messagebeast.filter.MessageFilter
      * @see com.alwaysallthetime.messagebeast.db.FilteredMessageBatch
      */
@@ -330,6 +327,19 @@ public class MessageManager {
     public LinkedHashMap<String, MessagePlus> getMessages(String channelId, String hashtagName) {
         HashtagInstances hashtagInstances = mDatabase.getHashtagInstances(channelId, hashtagName);
         return getMessages(hashtagInstances.getMessageIds());
+    }
+
+    /**
+     * Load persisted Messages that use a specific type of Annotation, without keeping them in
+     * MessageManager memory.
+     *
+     * @param channelId the id of the Channel in which the returned Messages will be contained
+     * @param annotationType the Annotation type to look for
+     * @return a LinkedHashMap mapping Message ids to MessagePlus objects
+     */
+    public LinkedHashMap<String, MessagePlus> getMessagesWithAnnotation(String channelId, String annotationType) {
+        AnnotationInstances instances = getAnnotationInstances(channelId, annotationType);
+        return getMessages(instances.getMessageIds());
     }
 
     /**
@@ -409,19 +419,6 @@ public class MessageManager {
     }
 
     /**
-     * Load persisted Messages that use a specific type of Annotation, without keeping them in
-     * MessageManager memory.
-     *
-     * @param channelId the id of the Channel in which the returned Messages will be contained
-     * @param annotationType the Annotation type to look for
-     * @return a LinkedHashMap mapping Message ids to MessagePlus objects
-     */
-    public LinkedHashMap<String, MessagePlus> getMessagesWithAnnotation(String channelId, String annotationType) {
-        AnnotationInstances instances = getAnnotationInstances(channelId, annotationType);
-        return getMessages(instances.getMessageIds());
-    }
-
-    /**
      * Search persisted Message text with a query.
      *
      * @param channelId the id of the Channel from which Messages will be retrieved
@@ -479,7 +476,7 @@ public class MessageManager {
     }
 
     private void lookupAnnotations(Collection<MessagePlus> messages) {
-        if(mConfiguration.annotationsToExtract != null && mConfiguration.isDatabaseInsertionEnabled) {
+        if(mConfiguration.annotationsToExtract != null) {
             for(MessagePlus messagePlus : messages) {
                 for(String annotationType : mConfiguration.annotationsToExtract) {
                     mDatabase.insertOrReplaceAnnotationInstances(annotationType, messagePlus);
@@ -488,7 +485,7 @@ public class MessageManager {
         }
     }
 
-    private void lookupLocation(Collection<MessagePlus> messages, boolean persistIfEnabled) {
+    private void lookupLocation(Collection<MessagePlus> messages, boolean persist) {
         for(MessagePlus messagePlus : messages) {
             Message message = messagePlus.getMessage();
 
@@ -497,7 +494,7 @@ public class MessageManager {
                 DisplayLocation displayLocation = DisplayLocation.fromCheckinAnnotation(mContext, checkin);
                 if(displayLocation != null) {
                     messagePlus.setDisplayLocation(displayLocation);
-                    if(persistIfEnabled && mConfiguration.isDatabaseInsertionEnabled) {
+                    if(persist) {
                         mDatabase.insertOrReplaceDisplayLocationInstance(messagePlus);
                     }
                     continue;
@@ -507,7 +504,7 @@ public class MessageManager {
             Annotation ohaiLocation = message.getFirstAnnotationOfType(Annotations.OHAI_LOCATION);
             if(ohaiLocation != null) {
                 messagePlus.setDisplayLocation(DisplayLocation.fromOhaiLocation(ohaiLocation));
-                if(persistIfEnabled && mConfiguration.isDatabaseInsertionEnabled) {
+                if(persist) {
                     mDatabase.insertOrReplaceDisplayLocationInstance(messagePlus);
                 }
                 continue;
@@ -528,18 +525,18 @@ public class MessageManager {
                     //doesn't mean that this message + geolocation combo has been saved.
                     //(this database lookup is merely an optimization to avoid having to fire off
                     // the async task in reverseGeocode().)
-                    if(persistIfEnabled && mConfiguration.isDatabaseInsertionEnabled) {
+                    if(persist) {
                         mDatabase.insertOrReplaceDisplayLocationInstance(messagePlus);
                     }
                     continue;
                 } else {
-                    reverseGeocode(messagePlus, latitude, longitude, persistIfEnabled);
+                    reverseGeocode(messagePlus, latitude, longitude, persist);
                 }
             }
         }
     }
 
-    private void reverseGeocode(final MessagePlus messagePlus, final double latitude, final double longitude, final boolean persistIfEnabled) {
+    private void reverseGeocode(final MessagePlus messagePlus, final double latitude, final double longitude, final boolean persist) {
         if(Geocoder.isPresent()) {
             AsyncGeocoder.getInstance(mContext).getFromLocation(latitude, longitude, 5, new AsyncGeocoderResponseHandler() {
                 @Override
@@ -548,7 +545,7 @@ public class MessageManager {
                     if(geolocation != null) {
                         messagePlus.setDisplayLocation(DisplayLocation.fromGeolocation(geolocation));
 
-                        if(persistIfEnabled && mConfiguration.isDatabaseInsertionEnabled) {
+                        if(persist) {
                             mDatabase.insertOrReplaceGeolocation(geolocation);
                             mDatabase.insertOrReplaceDisplayLocationInstance(messagePlus);
                         }
@@ -658,8 +655,8 @@ public class MessageManager {
      * Retrieve messages in the specified channel.
      *
      * The since_id and before_id used in the request are based off the ids of the messages
-     * currently loaded into memory for this channel. For this reason, if database persistence is enabled,
-     * you should probably be exhausting the results of loadPersistedMessages() before calling this method.
+     * currently loaded into memory for this channel. For this reason, you should probably be
+     * exhausting the results of loadPersistedMessages() before calling this method.
      *
      * If false is returned, there are unsent messages or pending deletions that must be sent before retrieving.
      *
@@ -682,8 +679,8 @@ public class MessageManager {
      * provided response handler.
      *
      * The since_id and before_id used in the request are based off the ids of the messages
-     * currently loaded into memory for this channel. For this reason, if database persistence is enabled,
-     * you should probably be exhausting the results of loadPersistedMessages() before calling this method.
+     * currently loaded into memory for this channel. For this reason, you should probably be
+     * exhausting the results of loadPersistedMessages() before calling this method.
      *
      * If false is returned, there are unsent messages or pending deletions that must be sent before retrieving.
      *
@@ -708,9 +705,8 @@ public class MessageManager {
      * provided response handler.
      *
      * The since_id used in this request is based off the ids of the messages
-     * currently loaded into memory for this channel. For this reason, if database persistence is enabled,
-     * you should probably be calling loadPersistedMessages() at least once so that the max message Id
-     * is known.
+     * currently loaded into memory for this channel. For this reason, you should probably be calling
+     * loadPersistedMessages() at least once so that the max message Id is known.
      *
      * If false is returned, there are unsent messages or pending deletions that must be sent before retrieving.
      *
@@ -732,9 +728,8 @@ public class MessageManager {
      * Retrieve the newest messages in the specified channel.
      *
      * The since_id used in this request is based off the ids of the messages
-     * currently loaded into memory for this channel. For this reason, if database persistence is enabled,
-     * you should probably be calling loadPersistedMessages() at least once so that the max message Id
-     * is known.
+     * currently loaded into memory for this channel. For this reason, you should probably be calling
+     * loadPersistedMessages() at least once so that the max message Id is known.
      *
      * If false is returned, there are unsent messages or pending deletions that must be sent before retrieving.
      *
@@ -757,8 +752,8 @@ public class MessageManager {
      * provided response handler.
      *
      * The before_id used in this request is based off the ids of the messages
-     * currently loaded into memory for this channel. For this reason, if database persistence is enabled,
-     * you should probably be exhausting the results of loadPersistedMessages() before calling this method.
+     * currently loaded into memory for this channel. For this reason, you should probably be
+     * exhausting the results of loadPersistedMessages() before calling this method.
      *
      * If false is returned, there are unsent messages or pending deletions that must be sent before retrieving.
      *
@@ -780,8 +775,8 @@ public class MessageManager {
      * Retrieve the more (older) messages in the specified channel.
      *
      * The before_id used in this request is based off the ids of the messages
-     * currently loaded into memory for this channel. For this reason, if database persistence is enabled,
-     * you should probably be exhausting the results of loadPersistedMessages() before calling this method.
+     * currently loaded into memory for this channel. For this reason, you should probably be exhausting
+     * the results of loadPersistedMessages() before calling this method.
      *
      * If false is returned, there are unsent messages or pending deletions that must be sent before retrieving.
      *
@@ -875,10 +870,6 @@ public class MessageManager {
      * @see com.alwaysallthetime.messagebeast.manager.MessageManager#INTENT_ACTION_UNSENT_MESSAGE_SEND_FAILURE
      */
     public synchronized MessagePlus createUnsentMessageAndAttemptSend(final String channelId, Message message, List<PendingFileAttachment> pendingFileAttachments) {
-        if(!mConfiguration.isDatabaseInsertionEnabled) {
-            throw new RuntimeException("Database insertion must be enabled in order to use the unsent messages feature");
-        }
-
         //An unsent message id is always set to the max id + 1.
         //
         //This will work because we will never allow message retrieval to happen
@@ -1256,10 +1247,9 @@ public class MessageManager {
     /**
      * Sync and persist all Messages in a Channel.
      *
-     * This is intended to be used as a one-time sync, e.g. after a user signs in. For this reason,
-     * it is required that your MessageManagerConfiguration has its isDatabaseInsertionEnabled property
-     * set to true. Typically, you should call getFullSyncState() to check whether this channel has
-     * already been synced before calling this method.
+     * This is intended to be used as a one-time sync, e.g. after a user signs in. Typically, you
+     * should call getFullSyncState() to check whether this channel has already been synced before
+     * calling this method.
      *
      * Because this could potentially result in a very large amount of Messages being obtained,
      * the provided MessageManagerResponseHandler will only be passed the first 100 Messages that are
@@ -1269,13 +1259,9 @@ public class MessageManager {
      * @param channelId The id of the Channel from which to obtain Messages.
      * @param responseHandler MessageManagerResponseHandler
      *
-     * @see com.alwaysallthetime.messagebeast.manager.MessageManager.MessageManagerConfiguration#setDatabaseInsertionEnabled(boolean)
      * @see MessageManager#loadPersistedMessages(String, int)
      */
     public synchronized void retrieveAndPersistAllMessages(String channelId, MessageManagerSyncResponseHandler responseHandler) {
-        if(!mConfiguration.isDatabaseInsertionEnabled) {
-            throw new RuntimeException("Database insertion must be enabled to use this functionality.");
-        }
         ADNSharedPreferences.setFullSyncState(channelId, FullSyncState.STARTED);
         final ArrayList<MessagePlus> messages = new ArrayList<MessagePlus>(MAX_MESSAGES_RETURNED_ON_SYNC);
         String sinceId = null;
@@ -1600,14 +1586,12 @@ public class MessageManager {
     private void adjustDateAndInsert(MessagePlus messagePlus) {
         Date adjustedDate = getAdjustedDate(messagePlus.getMessage());
         messagePlus.setDisplayDate(adjustedDate);
-        if(mConfiguration.isDatabaseInsertionEnabled) {
-            mDatabase.insertOrReplaceMessage(messagePlus);
-            mDatabase.insertOrReplaceHashtagInstances(messagePlus);
+        mDatabase.insertOrReplaceMessage(messagePlus);
+        mDatabase.insertOrReplaceHashtagInstances(messagePlus);
 
-            if(mConfiguration.annotationsToExtract != null) {
-                for(String annotationType : mConfiguration.annotationsToExtract) {
-                    mDatabase.insertOrReplaceAnnotationInstances(annotationType, messagePlus);
-                }
+        if(mConfiguration.annotationsToExtract != null) {
+            for(String annotationType : mConfiguration.annotationsToExtract) {
+                mDatabase.insertOrReplaceAnnotationInstances(annotationType, messagePlus);
             }
         }
     }
@@ -1640,9 +1624,9 @@ public class MessageManager {
         return null;
     }
 
-    private void performLookups(Collection<MessagePlus> messages, boolean persistIfEnabled) {
+    private void performLookups(Collection<MessagePlus> messages, boolean persist) {
         if(mConfiguration.isLocationLookupEnabled) {
-            lookupLocation(messages, persistIfEnabled);
+            lookupLocation(messages, persist);
         }
     }
 
@@ -1723,22 +1707,10 @@ public class MessageManager {
             public void onException(MessagePlus messagePlus, Exception exception);
         }
 
-        boolean isDatabaseInsertionEnabled;
         boolean isLocationLookupEnabled;
         MessageDisplayDateAdapter dateAdapter;
         MessageLocationLookupHandler locationLookupHandler;
         Set<String> annotationsToExtract;
-
-        /**
-         * Enable or disable automatic insertion of Messages into a sqlite database
-         * upon retrieval. By default, this feature is turned off.
-         *
-         * @param isEnabled true if all retrieved Messages should be stashed in a sqlite
-         *                  database, false otherwise.
-         */
-        public void setDatabaseInsertionEnabled(boolean isEnabled) {
-            this.isDatabaseInsertionEnabled = isEnabled;
-        }
 
         /**
          * Set a MessageDisplayDateAdapter.
