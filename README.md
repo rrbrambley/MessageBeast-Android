@@ -371,14 +371,19 @@ Other methods available for looking up Messages:
 
 ```java
 //all messages in my channel that use the oembed Annotation
-LinkedHashMap<String, MessagePlus> oembeds = messageManager.getMessagesWithAnnotation(myChannel.getId(),
+LinkedHashMap<String, MessagePlus> messages1 = messageManager.getMessagesWithAnnotation(myChannel.getId(),
                                             "net.app.core.oembed");
 
-//hashtag name : HashtagInstances; HashtagInstances contains all Message ids with a given hashtag
-LinkedHashMap<String, HashtagInstances> hashtags = messageManager.getHashtagInstances(myChannel.getId());
+//all messages in my channel that have the hashtag "food"
+LinkedHashMap<String, MessagePlus> messages2 = messageManager.getHashtagInstances(myChannel.getId(),
+                                                   "food");
 
-//DisplayLocationInstances contains ids of all Messages with a specific DisplayLocation
-List<DisplayLocationInstances> displayLocations = messageManager.getDisplayLocationInstances(myChannel.getId());
+//all messages in my channel that have a DisplayLocation with the same name as that of myMessagePlus,
+//and that lie within ~one hundred meters of that DisplayLocation (e.g. McDonald's in San Francisco is not
+//the same McDonald's in Chicago).
+LinkedHashMap<String, MessagePlus> messages3 = messageManager.getDisplayLocationInstances(myChannel.getId(),
+                                                    myMessagePlus.getDisplayLocation(),
+                                                    ADNDatabase.LocationPrecision.ONE_HUNDRED_METERS);
 ```
 
 Future Improvements, Additions, Fixes
