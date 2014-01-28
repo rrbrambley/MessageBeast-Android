@@ -94,9 +94,6 @@ public class MessageManagerInstance {
         if(sMessageManager == null) {
             MessageManager.MessageManagerConfiguration config = new MessageManager.MessageManagerConfiguration();
             
-            //all Messages will be inserted into the sqlite database
-            config.setDatabaseInsertionEnabled(true);
-              
             //location annotations will be examined and DisplayLocations will be assigned to Messages
             config.setLocationLookupEnabled(true);
               
