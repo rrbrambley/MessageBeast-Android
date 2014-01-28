@@ -286,6 +286,14 @@ public class ADNDatabase {
         return Build.VERSION.SDK_INT >= 11;
     }
 
+    public Integer getMaxMessageId() {
+        Cursor cursor = mDatabase.rawQuery("SELECT MAX(" + COL_MESSAGE_ID + ") FROM " + TABLE_MESSAGES, null);
+        if(cursor.moveToFirst()) {
+            return cursor.getInt(0);
+        }
+        return null;
+    }
+
     private ADNDatabase(Context context) {
         ADNDatabaseOpenHelper openHelper = new ADNDatabaseOpenHelper(context, DB_NAME, null, DB_VERSION);
         mDatabase = openHelper.getWritableDatabase();

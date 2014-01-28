@@ -879,12 +879,11 @@ public class MessageManager {
         //
         LinkedHashMap<String, MessagePlus> channelMessages = getChannelMessages(channelId);
         if(channelMessages.size() == 0) {
-            //we do this so that the max id is known.
+            //we do this so that the current max id for this channel is known.
             loadPersistedMessages(channelId, 1);
         }
 
-        MinMaxPair minMaxPair = getMinMaxPair(channelId);
-        Integer maxInteger = minMaxPair.getMaxAsInteger();
+        Integer maxInteger = mDatabase.getMaxMessageId();
         Integer newMessageId = maxInteger != null ? maxInteger + 1 : 1;
         String newMessageIdString = String.valueOf(newMessageId);
 
@@ -909,7 +908,7 @@ public class MessageManager {
         newChannelMessages.putAll(channelMessages);
         mMessages.put(channelId, newChannelMessages);
 
-        minMaxPair.maxId = newMessageIdString;
+        getMinMaxPair(channelId).maxId = newMessageIdString;
 
         Log.d(TAG, "Created and stored unsent message with id " + newMessageIdString);
 
@@ -1432,7 +1431,7 @@ public class MessageManager {
         if(unsentMessages.size() > 0) {
             LinkedHashMap<String, MessagePlus> channelMessages = getChannelMessages(channelId);
             if(channelMessages.size() == 0) {
-                //we do this so that the max id is known.
+                //we do this so that the max id for this channel is known.
                 loadPersistedMessages(channelId, unsentMessages.size() + 1);
             }
             ArrayList<String> sentMessageIds = new ArrayList<String>(unsentMessages.size());
