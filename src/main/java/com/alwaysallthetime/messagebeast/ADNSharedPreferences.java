@@ -129,24 +129,24 @@ public class ADNSharedPreferences {
         editor.commit();
     }
 
-    public static Channel getActionChannel(String actionType, String targetChannelId) {
-        final String json = sPrefs.getString(ACTION_CHANNEL_OBJECT + "_" + actionType + "_" + targetChannelId, null);
+    public static Channel getActionChannel(String actionType) {
+        final String json = sPrefs.getString(ACTION_CHANNEL_OBJECT + "_" + actionType, null);
         if(json != null) {
             return gson.fromJson(json, Channel.class);
         }
         return null;
     }
 
-    public static void saveActionChannel(Channel actionChannel, String actionType, String targetChannelId) {
+    public static void saveActionChannel(Channel actionChannel, String actionType) {
         final SharedPreferences.Editor editor = sPrefs.edit();
         final String json = gson.toJson(actionChannel);
-        editor.putString(ACTION_CHANNEL_OBJECT + "_" + actionType + "_" + targetChannelId, json);
+        editor.putString(ACTION_CHANNEL_OBJECT + "_" + actionType, json);
         editor.commit();
     }
 
-    public static void deleteActionChannel(Channel actionChannel, String actionType, String targetChannelId) {
+    public static void deleteActionChannel(Channel actionChannel, String actionType) {
         final SharedPreferences.Editor editor = sPrefs.edit();
-        editor.remove(ACTION_CHANNEL_OBJECT + "_" + actionType + "_" + targetChannelId);
+        editor.remove(ACTION_CHANNEL_OBJECT + "_" + actionType);
         editor.commit();
     }
 }

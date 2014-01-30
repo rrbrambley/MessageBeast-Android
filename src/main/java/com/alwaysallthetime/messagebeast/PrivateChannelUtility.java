@@ -38,14 +38,13 @@ public class PrivateChannelUtility {
     public static final String CHANNEL_TYPE_ACTION = "com.alwaysallthetime.action";
 
     public static final String CHANNEL_ANNOTATION_TYPE_METADATA = "com.alwaysallthetime.action.metadata";
-    public static final String ACTION_METADATA_KEY_TARGET_CHANNEL_ID = "channel_id";
     public static final String ACTION_METADATA_KEY_ACTION_TYPE = "action_type";
 
     public static final String MESSAGE_ANNOTATION_TARGET_MESSAGE = "com.alwaysallthetime.action.target_message";
     public static final String TARGET_MESSAGE_KEY_ID = "id";
 
     private static HashMap<String, Channel> sChannels = new HashMap<String, Channel>();
-    private static HashMap<String, HashMap<String, Channel>> sActionChannels = new HashMap<String, HashMap<String, Channel>>();
+    private static HashMap<String, Channel> sActionChannels = new HashMap<String, Channel>();
 
     public interface PrivateChannelHandler {
         public void onResponse(Channel channel);
@@ -106,35 +105,32 @@ public class PrivateChannelUtility {
     }
 
     /**
-     * Get the existing Action Channel of the specified action type for specified target Channel.
-     * If one doesn't already exist, then create a new one and return it. Rather than calling this
-     * method directly, you will probably want to use the ActionMessageManager's initActionChannel
-     * method.<br><br>
+     * Get the existing Action Channel of the specified action type. If one doesn't already exist,
+     * then create a new one and return it. Rather than calling this method directly, you will
+     * probably want to use the ActionMessageManager's initActionChannel method.<br><br>
      *
      * An Action Channel is a Channel of type com.alwaysallthetime.action. It contains a
-     * com.alwaysallthetime.action.metadata Annotation with the keys channel_id and action_type,
-     * whose values are the target Channel id and action type, respectively.<br><br>
+     * com.alwaysallthetime.action.metadata Annotation with the key action_type.<br><br>
      *
-     * In the event that the user has more than one Channel of the specified action type, pointing
-     * to the specified target Channel, the algorithm used to return the Channel is the same as that
-     * which is described in the Ohai Channel documentation.<br><br>
+     * In the event that the user has more than one Channel of the specified action type,
+     * the algorithm used to return the Channel is the same as that which is described in the Ohai
+     * Channel documentation.<br><br>
      *
      * @param client the AppDotNetClient to use for the request
      * @param actionType the action type associated with the Channel.
-     * @param targetChannel the target Channel for the Action Channel
      * @param handler the response handler to deliver the response
      *
      * @see <a href="https://github.com/appdotnet/object-metadata/blob/master/channel-types/net.app.ohai.journal.md#finding-the-journal">https://github.com/appdotnet/object-metadata/blob/master/channel-types/net.app.ohai.journal.md#finding-the-journal</a>
      * @see com.alwaysallthetime.messagebeast.manager.ActionMessageManager
      */
-    public static void getOrCreateActionChannel(final AppDotNetClient client, final String actionType, final Channel targetChannel, final PrivateChannelGetOrCreateHandler handler) {
-        Channel actionChannel = getActionChannel(actionType, targetChannel.getId());
+    public static void getOrCreateActionChannel(final AppDotNetClient client, final String actionType, final PrivateChannelGetOrCreateHandler handler) {
+        Channel actionChannel = getActionChannel(actionType);
         if(actionChannel == null) {
-            retrieveActionChannel(client, actionType, targetChannel.getId(), new PrivateChannelHandler() {
+            retrieveActionChannel(client, actionType, new PrivateChannelHandler() {
                 @Override
                 public void onResponse(Channel channel) {
                     if(channel == null) {
-                        createActionChannel(client, actionType, targetChannel.getId(), new PrivateChannelHandler() {
+                        createActionChannel(client, actionType, new PrivateChannelHandler() {
                             @Override
                             public void onResponse(Channel channel) {
                                 handler.onResponse(channel, true);
@@ -195,13 +191,12 @@ public class PrivateChannelUtility {
         return c;
     }
 
-    private static Channel getActionChannel(String actionType, String targetChannelId) {
-        HashMap<String, Channel> actionChannels = getOrCreateActionChannelsMap(targetChannelId);
-        if(actionChannels.get(actionType) == null) {
-            Channel actionChannel = ADNSharedPreferences.getActionChannel(actionType, targetChannelId);
-            actionChannels.put(actionType, actionChannel);
+    private static Channel getActionChannel(String actionType) {
+        if(sActionChannels.get(actionType) == null) {
+            Channel actionChannel = ADNSharedPreferences.getActionChannel(actionType);
+            sActionChannels.put(actionType, actionChannel);
         }
-        return actionChannels.get(actionType);
+        return sActionChannels.get(actionType);
     }
 
     private static void retrieveChannel(AppDotNetClient client, final String channelType, final PrivateChannelHandler handler) {
@@ -226,17 +221,17 @@ public class PrivateChannelUtility {
         });
     }
 
-    private static void retrieveActionChannel(AppDotNetClient client, final String actionType, final String targetChannelId, final PrivateChannelHandler handler) {
+    private static void retrieveActionChannel(AppDotNetClient client, final String actionType, final PrivateChannelHandler handler) {
         QueryParameters params = new QueryParameters(GeneralParameter.INCLUDE_CHANNEL_ANNOTATIONS);
         params.put("channel_types", CHANNEL_TYPE_ACTION);
         client.retrieveCurrentUserSubscribedChannels(params, new ChannelListResponseHandler() {
             @Override
             public void onSuccess(ChannelList responseData) {
-                Channel theChannel = getOldestActionChannel(responseData, actionType, targetChannelId);
+                Channel theChannel = getOldestActionChannel(responseData, actionType);
 
                 if(theChannel != null) {
-                    ADNSharedPreferences.saveActionChannel(theChannel, actionType, targetChannelId);
-                    getOrCreateActionChannelsMap(targetChannelId).put(actionType, theChannel);
+                    ADNSharedPreferences.saveActionChannel(theChannel, actionType);
+                    sActionChannels.put(actionType, theChannel);
                 }
                 handler.onResponse(theChannel);
             }
@@ -264,20 +259,19 @@ public class PrivateChannelUtility {
         });
     }
 
-    private static void createActionChannel(final AppDotNetClient client, final String actionType, final String targetChannelId, final PrivateChannelHandler handler) {
+    private static void createActionChannel(final AppDotNetClient client, final String actionType, final PrivateChannelHandler handler) {
         ArrayList<Annotation> channelAnnotations = new ArrayList<Annotation>(1);
         Annotation metadata = new Annotation(CHANNEL_ANNOTATION_TYPE_METADATA);
         HashMap<String, Object> value = new HashMap<String, Object>(2);
         value.put(ACTION_METADATA_KEY_ACTION_TYPE, actionType);
-        value.put(ACTION_METADATA_KEY_TARGET_CHANNEL_ID, targetChannelId);
         metadata.setValue(value);
         channelAnnotations.add(metadata);
 
         createChannel(client, CHANNEL_TYPE_ACTION, channelAnnotations, new PrivateChannelHandler() {
             @Override
             public void onResponse(Channel channel) {
-                getOrCreateActionChannelsMap(targetChannelId).put(actionType, channel);
-                ADNSharedPreferences.saveActionChannel(channel, actionType, targetChannelId);
+                sActionChannels.put(actionType, channel);
+                ADNSharedPreferences.saveActionChannel(channel, actionType);
                 handler.onResponse(channel);
             }
 
@@ -347,17 +341,17 @@ public class PrivateChannelUtility {
         return theChannel;
     }
 
-    private static Channel getOldestActionChannel(ChannelList responseData, String actionType, String targetChannelId) {
+    private static Channel getOldestActionChannel(ChannelList responseData, String actionType) {
         Channel theChannel = null;
         if(responseData.size() == 1) {
             Channel channel = responseData.get(0);
-            if(isMatchingActionChannel(channel, actionType, targetChannelId)) {
+            if(isMatchingActionChannel(channel, actionType)) {
                 theChannel = channel;
             }
         } else if(responseData.size() > 1) {
             User currentUser = ADNSharedPreferences.getToken().getUser();
             for(Channel channel : responseData) {
-                if(isMatchingActionChannel(channel, actionType, targetChannelId)) {
+                if(isMatchingActionChannel(channel, actionType)) {
                     Channel.Acl writers = channel.getWriters();
 
                     if(channel.getOwner().getId().equals(currentUser.getId()) &&
@@ -372,24 +366,14 @@ public class PrivateChannelUtility {
         return theChannel;
     }
 
-    private static boolean isMatchingActionChannel(Channel channel, String actionType, String targetChannelId) {
+    private static boolean isMatchingActionChannel(Channel channel, String actionType) {
         Annotation metadata = channel.getFirstAnnotationOfType(CHANNEL_ANNOTATION_TYPE_METADATA);
         if(metadata != null) {
             String metadataActionType = (String) metadata.getValue().get(ACTION_METADATA_KEY_ACTION_TYPE);
-            String metadataChannelId = (String) metadata.getValue().get(ACTION_METADATA_KEY_TARGET_CHANNEL_ID);
-            if(actionType.equals(metadataActionType) && targetChannelId.equals(metadataChannelId)) {
+            if(actionType.equals(metadataActionType)) {
                 return true;
             }
         }
         return false;
-    }
-
-    private static HashMap<String, Channel> getOrCreateActionChannelsMap(String targetChannelId) {
-        HashMap<String, Channel> actionChannels = sActionChannels.get(targetChannelId);
-        if(actionChannels == null) {
-            actionChannels = new HashMap<String, Channel>(1);
-            sActionChannels.put(targetChannelId, actionChannels);
-        }
-        return actionChannels;
     }
 }

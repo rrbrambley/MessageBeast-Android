@@ -119,7 +119,6 @@ public class ADNDatabase {
     public static final String COL_ACTION_MESSAGE_ID = "action_message_id";
     public static final String COL_ACTION_MESSAGE_CHANNEL_ID = "action_channel_id";
     public static final String COL_ACTION_MESSAGE_TARGET_MESSAGE_ID = "action_target_message_id";
-    public static final String COL_ACTION_MESSAGE_TARGET_CHANNEL_ID = "action_target_channel_id";
 
     /**
      * Precision values to be used when retrieving location instances.
@@ -253,10 +252,9 @@ public class ADNDatabase {
             " (" +
             COL_ACTION_MESSAGE_ID + ", " +
             COL_ACTION_MESSAGE_CHANNEL_ID + ", " +
-            COL_ACTION_MESSAGE_TARGET_MESSAGE_ID + ", " +
-            COL_ACTION_MESSAGE_TARGET_CHANNEL_ID +
+            COL_ACTION_MESSAGE_TARGET_MESSAGE_ID +
             ") " +
-            "VALUES(?, ?, ?, ?)";
+            "VALUES(?, ?, ?)";
 
     private static ADNDatabase sInstance;
 
@@ -670,7 +668,7 @@ public class ADNDatabase {
         }
     }
 
-    public void insertOrReplaceActionMessageSpec(MessagePlus actionMessagePlus, String targetMessageId, String targetChannelId) {
+    public void insertOrReplaceActionMessageSpec(MessagePlus actionMessagePlus, String targetMessageId) {
         if(mInsertOrReplaceActionMessageSpec == null) {
             mInsertOrReplaceActionMessageSpec = mDatabase.compileStatement(INSERT_OR_REPLACE_ACTION_MESSAGE_SPEC);
         }
@@ -682,7 +680,6 @@ public class ADNDatabase {
             mInsertOrReplaceActionMessageSpec.bindString(1, actionMessage.getId());
             mInsertOrReplaceActionMessageSpec.bindString(2, actionMessage.getChannelId());
             mInsertOrReplaceActionMessageSpec.bindString(3, targetMessageId);
-            mInsertOrReplaceActionMessageSpec.bindString(4, targetChannelId);
             mInsertOrReplaceActionMessageSpec.execute();
             mDatabase.setTransactionSuccessful();
         } catch(Exception e) {
@@ -809,9 +806,8 @@ public class ADNDatabase {
                 String aMessageId = cursor.getString(0);
                 String aChannelId = cursor.getString(1);
                 String tMessageId = cursor.getString(2);
-                String tChannelId = cursor.getString(3);
 
-                ActionMessageSpec actionMessageSpec = new ActionMessageSpec(aMessageId, aChannelId, tMessageId, tChannelId);
+                ActionMessageSpec actionMessageSpec = new ActionMessageSpec(aMessageId, aChannelId, tMessageId);
                 actionMessageSpecs.add(actionMessageSpec);
             }
         } catch(Exception e) {

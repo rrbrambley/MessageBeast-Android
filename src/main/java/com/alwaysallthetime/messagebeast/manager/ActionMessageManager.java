@@ -105,7 +105,6 @@ public class ActionMessageManager {
      * @see com.alwaysallthetime.messagebeast.manager.MessageManager#retrieveAndPersistAllMessages(String, com.alwaysallthetime.messagebeast.manager.MessageManager.MessageManagerSyncResponseHandler)
      */
     public void retrieveAndPersistAllActionMessages(final String actionChannelId, final MessageManager.MessageManagerSyncResponseHandler responseHandler) {
-        final String targetChannelId = getTargetChannelId(actionChannelId);
         mMessageManager.retrieveAndPersistAllMessages(actionChannelId, new MessageManager.MessageManagerSyncResponseHandler() {
             @Override
             public void onSuccess(List<MessagePlus> responseData) {
@@ -119,7 +118,7 @@ public class ActionMessageManager {
 
                 for(MessagePlus actionMessage : messages) {
                     String targetMessageId = AnnotationUtility.getTargetMessageId(actionMessage.getMessage());
-                    mDatabase.insertOrReplaceActionMessageSpec(actionMessage, targetMessageId, targetChannelId);
+                    mDatabase.insertOrReplaceActionMessageSpec(actionMessage, targetMessageId);
                 }
             }
 
@@ -176,11 +175,10 @@ public class ActionMessageManager {
      * any other ActionMessageManager methods are used on the channel.
      *
      * @param actionType The identifier for the Action Channel (e.g. com.alwaysallthetime.pizzaparty)
-     * @param targetChannel The Channel whose messages will have actions performed.
      * @param handler ActionChannelInitializedHandler
      */
-    public synchronized void initActionChannel(final String actionType, final Channel targetChannel, final ActionChannelInitializedHandler handler) {
-        PrivateChannelUtility.getOrCreateActionChannel(mMessageManager.getClient(), actionType, targetChannel, new PrivateChannelUtility.PrivateChannelGetOrCreateHandler() {
+    public synchronized void initActionChannel(final String actionType, final ActionChannelInitializedHandler handler) {
+        PrivateChannelUtility.getOrCreateActionChannel(mMessageManager.getClient(), actionType, new PrivateChannelUtility.PrivateChannelGetOrCreateHandler() {
             @Override
             public void onResponse(Channel channel, boolean createdNewChannel) {
                 mActionChannels.put(channel.getId(), channel);
@@ -208,8 +206,7 @@ public class ActionMessageManager {
      * Get all target Messages that have an action applied.
      *
      * @param actionChannelId the the id of the Action Channel associated with the action of interest
-     * @return a List consisting of MessagePlus Objects corresponding to Messages in the target Channel
-     * that have had the action applied.
+     * @return a List consisting of MessagePlus Objects corresponding to Messages that have had the action applied.
      */
     public synchronized List<MessagePlus> getActionedMessages(String actionChannelId) {
         TreeMap<Long, MessagePlus> loadedMessagesFromActionChannel =  mMessageManager.getMessages(actionChannelId, MAX_BATCH_LOAD_FROM_DISK);
@@ -224,7 +221,6 @@ public class ActionMessageManager {
 
     //TODO: does this method even make sense?
     public synchronized void getMoreActionedMessages(final String actionChannelId, final MessageManager.MessageManagerResponseHandler responseHandler) {
-        final String targetChannelId = getTargetChannelId(actionChannelId);
         TreeMap<Long, MessagePlus> more = mMessageManager.loadPersistedMessages(actionChannelId, MAX_BATCH_LOAD_FROM_DISK);
         if(more.size() > 0) {
             Set<String> newTargetMessageIds = getTargetMessageIds(more.values());
@@ -263,7 +259,6 @@ public class ActionMessageManager {
      * @return false if unsent Messages are preventing more Messages from being retrieved, true otherwise.
      */
     public synchronized boolean retrieveNewestMessages(final String actionChannelId, final MessageManager.MessageManagerResponseHandler responseHandler) {
-        final String targetChannelId = getTargetChannelId(actionChannelId);
         TreeMap<Long, MessagePlus> channelMessages = mMessageManager.getMessageMap(actionChannelId);
         if(channelMessages == null || channelMessages.size() == 0) {
             //we do this so that the max id is known.
@@ -274,7 +269,7 @@ public class ActionMessageManager {
             public void onSuccess(List<MessagePlus> responseData) {
                 for(MessagePlus actionMessage : responseData) {
                     String targetMessageId = AnnotationUtility.getTargetMessageId(actionMessage.getMessage());
-                    mDatabase.insertOrReplaceActionMessageSpec(actionMessage, targetMessageId, targetChannelId);
+                    mDatabase.insertOrReplaceActionMessageSpec(actionMessage, targetMessageId);
                 }
                 responseHandler.onSuccess(responseData);
             }
@@ -306,7 +301,7 @@ public class ActionMessageManager {
             m.addAnnotation(a);
 
             MessagePlus unsentActionMessage = mMessageManager.createUnsentMessageAndAttemptSend(actionChannelId, m);
-            mDatabase.insertOrReplaceActionMessageSpec(unsentActionMessage, targetMessageId, message.getChannelId());
+            mDatabase.insertOrReplaceActionMessageSpec(unsentActionMessage, targetMessageId);
         }
     }
 
@@ -335,17 +330,6 @@ public class ActionMessageManager {
         } else {
             Log.e(TAG, "Calling removeChannelAction, but actionChannelId " + actionChannelId + " and targetMessageId " + targetMessageId + " yielded 0 db results. wtf.");
         }
-    }
-
-    private String getTargetChannelId(String actionChannelId) {
-        Channel actionChannel = mActionChannels.get(actionChannelId);
-        String targetChannelId = null;
-        if(actionChannel == null) {
-            throw new RuntimeException("The specified Action Channel is unknown. Make sure you have called initActionChannel() before trying to use an Action Channel");
-        } else if((targetChannelId = AnnotationUtility.getTargetChannelId(actionChannel)) == null) {
-            throw new RuntimeException("The specified Channel does not have the proper Action Channel metadata Annotation; no target Channel is known.");
-        }
-        return targetChannelId;
     }
 
     private synchronized void deleteActionMessages(final List<ActionMessageSpec> actionMessageSpecs, final int currentIndex, final Runnable completionRunnable) {
@@ -396,9 +380,6 @@ public class ActionMessageManager {
                     //it's an action channel
                     //delete the action messages in the database with the sent message ids,
                     //retrieve the new ones
-
-                    Channel actionChannel = mActionChannels.get(channelId);
-                    final String targetChannelId = AnnotationUtility.getTargetChannelId(actionChannel);
                     mMessageManager.retrieveNewestMessages(channelId, new MessageManager.MessageManagerResponseHandler() {
                         @Override
                         public void onSuccess(List<MessagePlus> responseData) {
@@ -407,7 +388,7 @@ public class ActionMessageManager {
                             }
                             for(MessagePlus mp : responseData) {
                                 String targetMessageId = AnnotationUtility.getTargetMessageId(mp.getMessage());
-                                mDatabase.insertOrReplaceActionMessageSpec(mp, targetMessageId, targetChannelId);
+                                mDatabase.insertOrReplaceActionMessageSpec(mp, targetMessageId);
                             }
                         }
 

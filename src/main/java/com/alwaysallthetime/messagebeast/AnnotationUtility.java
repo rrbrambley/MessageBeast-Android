@@ -156,21 +156,6 @@ public class AnnotationUtility {
     }
 
     /**
-     * Get the channel_id value from a Channel's com.alwaysallthetime.action.metadata Annotation.
-     *
-     * @param actionChannel the Channel from which the target channel id should be obtained
-     * @return the channel_id value from a Channel's com.alwaysallthetime.action.metadata Annotation,
-     * or null if no such Annotation exists
-     */
-    public static String getTargetChannelId(Channel actionChannel) {
-        Annotation a = actionChannel.getFirstAnnotationOfType(PrivateChannelUtility.CHANNEL_ANNOTATION_TYPE_METADATA);
-        if(a != null) {
-            return (String) a.getValue().get(PrivateChannelUtility.ACTION_METADATA_KEY_TARGET_CHANNEL_ID);
-        }
-        return null;
-    }
-
-    /**
      * Get the id value from the provided Message's com.alwaysallthetime.action.target_message Annotation.
      *
      * @param actionMessage the Message from which the target Message id should be obtained

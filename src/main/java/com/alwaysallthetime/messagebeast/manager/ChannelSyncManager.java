@@ -448,7 +448,7 @@ public class ChannelSyncManager {
             ADNApplication.getContext().sendBroadcast(new Intent(INTENT_ACTION_CHANNELS_INITIALIZED));
         } else {
             final String actionType = mTargetWithActionChannelsSpecSet.getActionChannelActionTypeAtIndex(index);
-            initActionChannel(actionType, mTargetChannel, new Runnable() {
+            initActionChannel(actionType, new Runnable() {
                 @Override
                 public void run() {
                     if(mActionChannels.get(actionType) != null) {
@@ -477,8 +477,8 @@ public class ChannelSyncManager {
         });
     }
 
-    private void initActionChannel(final String actionType, Channel targetChannel, final Runnable completionRunnable) {
-        mActionMessageManager.initActionChannel(actionType, targetChannel, new ActionMessageManager.ActionChannelInitializedHandler() {
+    private void initActionChannel(final String actionType, final Runnable completionRunnable) {
+        mActionMessageManager.initActionChannel(actionType, new ActionMessageManager.ActionChannelInitializedHandler() {
             @Override
             public void onInitialized(Channel channel) {
                 mActionChannels.put(actionType, channel);
