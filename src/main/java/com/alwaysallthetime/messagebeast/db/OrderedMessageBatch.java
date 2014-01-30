@@ -17,8 +17,8 @@ public class OrderedMessageBatch {
     /**
      * Construct an OrderedMessageBatch.
      *
-     * @param messages a Map whose keys are Message ids mapped to values that are MessagePlus objects.
-     * @param minMaxPair a MinMaxPair containing the min and max Message ids in the Set of Map keys.
+     * @param messages a Map whose keys are Message times in millis, mapped to values that are MessagePlus objects.
+     * @param minMaxPair a MinMaxDatePair containing the min and max Message times associated with the Message in this batch
      */
     public OrderedMessageBatch(TreeMap<Long, MessagePlus> messages, MinMaxDatePair minMaxPair) {
         mMessages = messages;
@@ -26,7 +26,7 @@ public class OrderedMessageBatch {
     }
 
     /**
-     * Get the Message Map, with keys that are Message ids mapped to values that are MessagePlus objects.
+     * Get the Message Map, with keys that are Message times in millis, mapped to values that are MessagePlus objects.
      *
      * @return the Map of Messages
      */
