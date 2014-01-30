@@ -380,6 +380,20 @@ TreeMap<Long, MessagePlus> messages3 = messageManager.getMessages(myChannel.getI
                                                     ADNDatabase.LocationPrecision.ONE_HUNDRED_METERS);
 ```
 
+<h3>Other Goodies</h3>
+Use the ConfigurationUtility on every launch to update the Configuration as per the [App.net Configuration guidelines](http://developers.app.net/docs/resources/config/#how-to-use-the-configuration-object):
+
+```java
+//executed somewhere when app launches. This will update at most once per day.
+ConfigurationUtility.updateConfiguration(myAppDotNetClient);
+
+...
+
+//elsewhere, when configuration is needed
+Configuration configuration = ADNSharedPreferences.getConfiguration();
+
+```
+
 Future Improvements, Additions, Fixes
 ------
 See [Issues](https://github.com/rrbrambley/MessageBeast-Android/issues).
