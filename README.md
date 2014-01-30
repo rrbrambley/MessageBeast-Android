@@ -187,7 +187,7 @@ The MessageManager's retrieve methods will always only retrieve Messages that it
 
 ```java
 //load up to 50 Messages in my channel.
-LinkedHashMap<String, MessagePlus> messages = messageManager.loadPersistedMessages(myChannel.getId(), 50);
+TreeMap<Long, MessagePlus> messages = messageManager.loadPersistedMessages(myChannel.getId(), 50);
 ```
 
 When you load persisted Messages, the Message's stay available in the MessageManager's internal Message map. This means that subsequent calls to loadPersistedMessages() will load *more* Messages (e.g. Mesasges 0-49 in first call above, then 50-99 in second call). If you don't need the Messages to be kept in memory, you should use one of the ``getMessages()`` methods.
@@ -350,8 +350,8 @@ Full-text search is available for all Messages persisted by the MessageManager.
 //find my Messages containing the string "pizza" in the text field.
 OrderedMessageBatch results = messageManager.searchMessagesWithQuery(myChannel.getId(), "pizza")
 
-//Message ids mapped to MessagePlus objects, in reverse chronological order
-LinkedHashMap<String, MessagePlus> messages = results.getMessages();
+//Message times (in millis) mapped to MessagePlus objects, in reverse chronological order
+TreeMap<Long, MessagePlus> messages = results.getMessages();
 ```
 
 You can also use the ``searchMessagesWithQuery(String channelId, String query, MessageFilter messageFilter)`` to filter out some of the results. 
@@ -368,7 +368,7 @@ Other methods available for looking up Messages:
 
 ```java
 //all messages in my channel that use the oembed Annotation
-LinkedHashMap<String, MessagePlus> messages1 = messageManager.getMessagesWithAnnotation(myChannel.getId(),
+TreeMap<Long, MessagePlus> messages1 = messageManager.getMessagesWithAnnotation(myChannel.getId(),
                                             "net.app.core.oembed");
 
 //all messages in my channel that have the hashtag "food"
