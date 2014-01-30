@@ -57,7 +57,7 @@ public class MinMaxDatePair {
      * @param newDate
      */
     public void expandIfMinOrMax(Long newDate) {
-        minDate = Math.min(minDate, newDate);
-        maxDate = Math.max(maxDate, newDate);
+        minDate = minDate == null ? newDate : Math.min(minDate, newDate);
+        maxDate = maxDate == null ? newDate : Math.max(maxDate, newDate);
     }
 }
