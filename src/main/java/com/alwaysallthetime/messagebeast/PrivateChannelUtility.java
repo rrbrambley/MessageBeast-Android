@@ -172,7 +172,7 @@ public class PrivateChannelUtility {
     }
 
     /**
-     * Deactivate a Channel and remove the persisted copy.
+     * Deactivate a private Channel (may be an Action Channel) and remove the persisted copy.
      *
      * @param client the AppDotNetClient to use for the request
      * @param channel the Channel to deactivate
@@ -182,32 +182,16 @@ public class PrivateChannelUtility {
         client.deactivateChannel(channel.getId(), new ChannelResponseHandler() {
             @Override
             public void onSuccess(Channel responseData) {
-                sChannels.remove(channel.getType());
-                ADNSharedPreferences.deletePrivateChannel(channel);
-                handler.onResponse(responseData);
-            }
-
-            @Override
-            public void onError(Exception error) {
-                super.onError(error);
-                handler.onError(error);
-            }
-        });
-    }
-
-    /**
-     * Deactivate an Action Channel and remove the persisted copy.
-     *
-     * @param client the AppDotNetClient to use for the request
-     * @param actionChannel the Channel to deactivate
-     * @param handler the response handler
-     */
-    public static void deactivateActionChannel(final AppDotNetClient client, final Channel actionChannel, final PrivateChannelHandler handler) {
-        client.deactivateChannel(actionChannel.getId(), new ChannelResponseHandler() {
-            @Override
-            public void onSuccess(Channel responseData) {
-                sActionChannels.remove(actionChannel.getType());
-                ADNSharedPreferences.deleteActionChannel(AnnotationUtility.getActionChannelType(actionChannel), AnnotationUtility.getTargetChannelId(actionChannel));
+                String actionChannelType = AnnotationUtility.getActionChannelType(channel);
+                String targetChannelId = AnnotationUtility.getTargetChannelId(channel);
+                if(actionChannelType == null || targetChannelId == null) {
+                    sChannels.remove(channel.getType());
+                    ADNSharedPreferences.deletePrivateChannel(channel);
+                } else {
+                    getOrCreateActionChannelsMap(targetChannelId).remove(actionChannelType);
+                    ADNSharedPreferences.deleteActionChannel(actionChannelType, targetChannelId);
+                    handler.onResponse(responseData);
+                }
                 handler.onResponse(responseData);
             }
 
