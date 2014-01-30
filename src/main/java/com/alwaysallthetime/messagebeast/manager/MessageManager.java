@@ -213,6 +213,23 @@ public class MessageManager {
         mContext.registerReceiver(fileUploadReceiver, intentFilter);
     }
 
+    /**
+     * Purge all Message and Channel-related data from memory. This will leave the MessageManager
+     * in the initial state – as it was upon construction. Note that this does not delete any
+     * persisted data from the sqlite database.
+     *
+     * @see com.alwaysallthetime.messagebeast.db.ADNDatabase#deleteAll() 
+     */
+    public synchronized void clear() {
+        mMessages.clear();
+        mUnsentMessages.clear();
+        mMessagesNeedingPendingFiles.clear();
+        mParameters.clear();
+        mMinMaxPairs.clear();
+        mMinMaxDatePairs.clear();
+        mMessagesNeedingPendingFiles.clear();
+    }
+
     private synchronized OrderedMessageBatch loadPersistedMessageBatch(String channelId, int limit, boolean performLookups) {
         Date beforeDate = null;
         MinMaxDatePair minMaxDatePair = getMinMaxDatePair(channelId);
