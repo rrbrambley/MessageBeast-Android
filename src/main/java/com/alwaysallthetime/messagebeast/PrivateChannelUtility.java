@@ -58,6 +58,15 @@ public class PrivateChannelUtility {
     }
 
     /**
+     * Clear Channels and Channel state from in-memory maps and persistence.
+     */
+    public static void clearChannels() {
+        sChannels.clear();
+        sActionChannels.clear();
+        ADNSharedPreferences.clear();
+    }
+
+    /**
      * Get the existing Channel of the provided type, or create and return a new one if one hasn't already
      * been created.<br><br>
      *
