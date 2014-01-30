@@ -172,18 +172,42 @@ public class PrivateChannelUtility {
     }
 
     /**
-     * Unsubscribe from a Channel and remove the persisted copy.
+     * Deactivate a Channel and remove the persisted copy.
      *
      * @param client the AppDotNetClient to use for the request
-     * @param channel the Channel to unsubscribe from
+     * @param channel the Channel to deactivate
      * @param handler the response handler
      */
-    public static void unsubscribe(final AppDotNetClient client, final Channel channel, final PrivateChannelHandler handler) {
-        client.unsubscribeChannel(channel, new ChannelResponseHandler() {
+    public static void deactivateChannel(final AppDotNetClient client, final Channel channel, final PrivateChannelHandler handler) {
+        client.deactivateChannel(channel.getId(), new ChannelResponseHandler() {
             @Override
             public void onSuccess(Channel responseData) {
                 sChannels.remove(channel.getType());
                 ADNSharedPreferences.deletePrivateChannel(channel);
+                handler.onResponse(responseData);
+            }
+
+            @Override
+            public void onError(Exception error) {
+                super.onError(error);
+                handler.onError(error);
+            }
+        });
+    }
+
+    /**
+     * Deactivate an Action Channel and remove the persisted copy.
+     *
+     * @param client the AppDotNetClient to use for the request
+     * @param actionChannel the Channel to deactivate
+     * @param handler the response handler
+     */
+    public static void deactivateActionChannel(final AppDotNetClient client, final Channel actionChannel, final PrivateChannelHandler handler) {
+        client.deactivateChannel(actionChannel.getId(), new ChannelResponseHandler() {
+            @Override
+            public void onSuccess(Channel responseData) {
+                sActionChannels.remove(actionChannel.getType());
+                ADNSharedPreferences.deleteActionChannel(AnnotationUtility.getActionChannelType(actionChannel), AnnotationUtility.getTargetChannelId(actionChannel));
                 handler.onResponse(responseData);
             }
 
