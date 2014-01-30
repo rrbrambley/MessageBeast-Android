@@ -260,12 +260,9 @@ The MessageManager provides a few different ways of creating Messages. The simpl
 Message m = new Message("Check out my awesome Message!");
 myMessageManager.createMessage(myChannel.getId(), m, new MessageManager.MessageManagerResponseHandler() {
     @Override
-    public void onSuccess(List<MessagePlus> messages, boolean appended) {
+    public void onSuccess(List<MessagePlus> messages) {
         //messages includes our new Message, and any other Messages that may have not already been
         //synced prior to creating this new one.
-        //
-        //appended does not apply in this case (true if the Messages are added to the end of the 
-        //Channel's Messages, false if they are prepended).
     }
 
     @Override
@@ -303,7 +300,7 @@ private final BroadcastReceiver sentMessageReceiver = new BroadcastReceiver() {
         //do this to retrieve the newly sent messages:
         myMessageManager.retrieveNewestMessages(channelId, new MessageManager.MessageManagerResponseHandler() {
             @Override
-            public void onSuccess(List<MessagePlus> responseData, boolean appended) {
+            public void onSuccess(List<MessagePlus> responseData) {
                 //we got our new messages.
             }
     
