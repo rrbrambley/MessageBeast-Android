@@ -271,8 +271,8 @@ public class ChannelSyncManager {
                     MessageFilter messageFilter = mTargetWithActionChannelsSpecSet.getTargetChannelSpec().getMessageFilter();
                     boolean canRetrieve = mMessageManager.retrieveNewestMessages(mTargetChannel.getId(), messageFilter, new MessageManager.MessageManagerResponseHandler() {
                         @Override
-                        public void onSuccess(List<MessagePlus> responseData, boolean appended) {
-                            ChannelRefreshResult refreshResult = new ChannelRefreshResult(mTargetChannel, responseData, appended, getExcludedResults());
+                        public void onSuccess(List<MessagePlus> responseData) {
+                            ChannelRefreshResult refreshResult = new ChannelRefreshResult(mTargetChannel, responseData, getExcludedResults());
                             refreshResultSet.addRefreshResult(refreshResult);
                             if(refreshHandler != null) {
                                 refreshHandler.onComplete(refreshResultSet);
@@ -311,8 +311,8 @@ public class ChannelSyncManager {
             final Channel channel = mChannels.get(spec);
             boolean canRetrieve = mMessageManager.retrieveNewestMessages(channel.getId(), spec.getMessageFilter(), new MessageManager.MessageManagerResponseHandler() {
                 @Override
-                public void onSuccess(List<MessagePlus> responseData, boolean appended) {
-                    ChannelRefreshResult refreshResult = new ChannelRefreshResult(channel, responseData, appended);
+                public void onSuccess(List<MessagePlus> responseData) {
+                    ChannelRefreshResult refreshResult = new ChannelRefreshResult(channel, responseData);
                     refreshResultSet.addRefreshResult(refreshResult);
                     retrieveNewestMessagesInChannelsList(index + 1, refreshResultSet, refreshHandler);
                 }
@@ -341,8 +341,8 @@ public class ChannelSyncManager {
             final Channel actionChannel = mActionChannels.get(mTargetWithActionChannelsSpecSet.getActionChannelActionTypeAtIndex(index));
             boolean canRetrieve = mActionMessageManager.retrieveNewestMessages(actionChannel.getId(), new MessageManager.MessageManagerResponseHandler() {
                 @Override
-                public void onSuccess(List<MessagePlus> responseData, boolean appended) {
-                    ChannelRefreshResult refreshResult = new ChannelRefreshResult(actionChannel, responseData, appended);
+                public void onSuccess(List<MessagePlus> responseData) {
+                    ChannelRefreshResult refreshResult = new ChannelRefreshResult(actionChannel, responseData);
                     refreshResultSet.addRefreshResult(refreshResult);
                     retrieveNewestActionChannelMessages(index + 1, refreshResultSet, refreshHandler);
                 }

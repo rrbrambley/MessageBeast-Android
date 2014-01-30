@@ -1,17 +1,18 @@
 package com.alwaysallthetime.messagebeast.db;
 
-import com.alwaysallthetime.messagebeast.manager.MinMaxPair;
+import com.alwaysallthetime.messagebeast.manager.MinMaxDatePair;
 import com.alwaysallthetime.messagebeast.model.MessagePlus;
 
-import java.util.LinkedHashMap;
+import java.util.TreeMap;
 
 /**
  * An OrderedMessageBatch consists of an ordered Map of MessagePlus objects whose keys are
- * Message ids, as well as a MinMaxPair representing the min and max ids of the Messages in the Map.
+ * Message times in millis, as well as a MinMaxDatePair representing the min and max times
+ * of the Messages in the Map.
  */
 public class OrderedMessageBatch {
-    private LinkedHashMap<String, MessagePlus> mMessages;
-    private MinMaxPair mMinMaxPair;
+    private TreeMap<Long, MessagePlus> mMessages;
+    private MinMaxDatePair mMinMaxDatePair;
 
     /**
      * Construct an OrderedMessageBatch.
@@ -19,9 +20,9 @@ public class OrderedMessageBatch {
      * @param messages a Map whose keys are Message ids mapped to values that are MessagePlus objects.
      * @param minMaxPair a MinMaxPair containing the min and max Message ids in the Set of Map keys.
      */
-    public OrderedMessageBatch(LinkedHashMap<String, MessagePlus> messages, MinMaxPair minMaxPair) {
+    public OrderedMessageBatch(TreeMap<Long, MessagePlus> messages, MinMaxDatePair minMaxPair) {
         mMessages = messages;
-        mMinMaxPair = minMaxPair;
+        mMinMaxDatePair = minMaxPair;
     }
 
     /**
@@ -29,16 +30,16 @@ public class OrderedMessageBatch {
      *
      * @return the Map of Messages
      */
-    public LinkedHashMap<String, MessagePlus> getMessages() {
+    public TreeMap<Long, MessagePlus> getMessages() {
         return mMessages;
     }
 
     /**
-     * Get the MinMaxPair containing the min and max Message ids associated with the Message in this batch
+     * Get the MinMaxDatePair containing the min and max Message times associated with the Message in this batch
      *
-     * @return the MinMaxPair containing the min and max Message ids associated with the Message in this batch
+     * @return the MinMaxDatePair containing the min and max Message times associated with the Message in this batch
      */
-    public MinMaxPair getMinMaxPair() {
-        return mMinMaxPair;
+    public MinMaxDatePair getMinMaxDatePair() {
+        return mMinMaxDatePair;
     }
 }

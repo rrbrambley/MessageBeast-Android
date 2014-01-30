@@ -14,7 +14,9 @@ import com.alwaysallthetime.adnlib.data.Entities;
 import com.alwaysallthetime.adnlib.data.Message;
 import com.alwaysallthetime.adnlib.data.Place;
 import com.alwaysallthetime.adnlib.gson.AppDotNetGson;
+import com.alwaysallthetime.messagebeast.manager.MinMaxDatePair;
 import com.alwaysallthetime.messagebeast.manager.MinMaxPair;
+import com.alwaysallthetime.messagebeast.manager.ReverseChronologicalComparator;
 import com.alwaysallthetime.messagebeast.model.DisplayLocation;
 import com.alwaysallthetime.messagebeast.model.Geolocation;
 import com.alwaysallthetime.messagebeast.model.MessagePlus;
@@ -32,6 +34,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 public class ADNDatabase {
 
@@ -290,6 +293,26 @@ public class ADNDatabase {
         Cursor cursor = mDatabase.rawQuery("SELECT MAX(" + COL_MESSAGE_ID + ") FROM " + TABLE_MESSAGES, null);
         if(cursor.moveToFirst()) {
             return cursor.getInt(0);
+        }
+        return null;
+    }
+
+    public MinMaxPair getMinMaxPair(String channelId) {
+        return new MinMaxPair(getMinMessageId(channelId), getMaxMessageId(channelId));
+    }
+
+    public String getMaxMessageId(String channelId) {
+        Cursor cursor = mDatabase.rawQuery("SELECT MAX(" + COL_MESSAGE_ID + ") FROM " + TABLE_MESSAGES + " WHERE " + COL_MESSAGE_CHANNEL_ID + " = " + channelId, null);
+        if(cursor.moveToFirst()) {
+            return String.valueOf(cursor.getInt(0));
+        }
+        return null;
+    }
+
+    public String getMinMessageId(String channelId) {
+        Cursor cursor = mDatabase.rawQuery("SELECT MIN(" + COL_MESSAGE_ID + ") FROM " + TABLE_MESSAGES + " WHERE " + COL_MESSAGE_CHANNEL_ID + " = " + channelId, null);
+        if(cursor.moveToFirst()) {
+            return String.valueOf(cursor.getInt(0));
         }
         return null;
     }
@@ -1276,7 +1299,7 @@ public class ADNDatabase {
         HashSet<String> ids = new HashSet<String>(1);
         ids.add(messageId);
         OrderedMessageBatch messages = getMessages(ids);
-        LinkedHashMap<String, MessagePlus> orderedMessages = messages.getMessages();
+        TreeMap<Long, MessagePlus> orderedMessages = messages.getMessages();
         if(orderedMessages.size() == 1) {
             return orderedMessages.values().iterator().next();
         }
@@ -1328,10 +1351,10 @@ public class ADNDatabase {
     }
 
     private OrderedMessageBatch getMessages(String where, String[] args, String orderBy, String limit) {
-        LinkedHashMap<String, MessagePlus> messages = new LinkedHashMap<String, MessagePlus>();
+        TreeMap<Long, MessagePlus> messages = new TreeMap<Long, MessagePlus>(new ReverseChronologicalComparator());
         ArrayList<MessagePlus> messagePlusses = new ArrayList<MessagePlus>();
-        String maxId = null;
-        String minId = null;
+        Long maxDate = null, minDate = null;
+
         Cursor cursor = null;
         try {
             cursor = mDatabase.query(TABLE_MESSAGES, null, where, args, null, null, orderBy, limit);
@@ -1351,10 +1374,14 @@ public class ADNDatabase {
                 messagePlus.setDisplayDate(new Date(date));
                 messagePlus.setIsUnsent(isUnsent);
                 messagePlus.setNumSendAttempts(numSendAttempts);
-                messages.put(messageId, messagePlus);
+                messages.put(date, messagePlus);
 
-                if(maxId == null) {
-                    maxId = messageId;
+                if(maxDate == null) {
+                    maxDate = date;
+                    minDate = date;
+                } else {
+                    maxDate = Math.max(maxDate, date);
+                    minDate = Math.min(minDate, date);
                 }
                 //this is just for efficiency
                 //if it is already sent, then we don't need to try to populate pending
@@ -1364,9 +1391,6 @@ public class ADNDatabase {
                 }
             }
 
-            if(message != null) {
-                minId = message.getId();
-            }
         } catch(Exception e) {
             Log.e(TAG, e.getMessage(), e);
         } finally {
@@ -1375,7 +1399,7 @@ public class ADNDatabase {
             }
         }
         populatePendingFileAttachments(messagePlusses);
-        return new OrderedMessageBatch(messages, new MinMaxPair(minId, maxId));
+        return new OrderedMessageBatch(messages, new MinMaxDatePair(minDate, maxDate));
     }
 
     /**
@@ -1386,10 +1410,10 @@ public class ADNDatabase {
      * to the server.
      *
      * @param channelId
-     * @return a LinkedHashMap with message ids as keys, mapped to MessagePlus objects.
+     * @return a TreeMap with message times in millis as keys, mapped to MessagePlus objects.
      */
-    public LinkedHashMap<String, MessagePlus> getUnsentMessages(String channelId) {
-        LinkedHashMap<String, MessagePlus> unsentMessages = new LinkedHashMap<String, MessagePlus>();
+    public TreeMap<Long, MessagePlus> getUnsentMessages(String channelId) {
+        TreeMap<Long, MessagePlus> unsentMessages = new TreeMap<Long, MessagePlus>();
 
         Cursor cursor = null;
         try {
@@ -1413,7 +1437,7 @@ public class ADNDatabase {
                 messagePlus.setDisplayDate(new Date(date));
                 messagePlus.setIsUnsent(true);
                 messagePlus.setNumSendAttempts(sendAttempts);
-                unsentMessages.put(messageId, messagePlus);
+                unsentMessages.put(date, messagePlus);
             }
         } catch(Exception e) {
             Log.e(TAG, e.getMessage(), e);

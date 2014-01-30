@@ -2,8 +2,8 @@ package com.alwaysallthetime.messagebeast.model;
 
 import com.alwaysallthetime.adnlib.data.Channel;
 
-import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.TreeMap;
 
 /**
  * A ChannelRefreshResult is used to describe the results when retrieving Messages with the ChannelSyncManager.
@@ -14,8 +14,7 @@ public class ChannelRefreshResult {
 
     private Channel mChannel;
     private List<MessagePlus> mResponseData;
-    private boolean mAppended;
-    private LinkedHashMap<String, MessagePlus> mExcludedResults;
+    private TreeMap<Long, MessagePlus> mExcludedResults;
 
     private Exception mException;
 
@@ -24,13 +23,10 @@ public class ChannelRefreshResult {
      *
      * @param channel the Channel from which Messages were obtained
      * @param messages the Messages obtained
-     * @param appended true if the Messages were appended to the end of the existing Messages in
-     *                 the MessageManager, false if they were prepended.
      */
-    public ChannelRefreshResult(Channel channel, List<MessagePlus> messages, boolean appended) {
+    public ChannelRefreshResult(Channel channel, List<MessagePlus> messages) {
         mChannel = channel;
         mResponseData = messages;
-        mAppended = appended;
         mSuccess = true;
     }
 
@@ -39,12 +35,10 @@ public class ChannelRefreshResult {
      *
      * @param channel the Channel from which Messages were obtained
      * @param messages the Messages obtained
-     * @param appended true if the Messages were appended to the end of the existing Messages in
-     *                 the MessageManager, false if they were prepended.
      * @param excludedResults an ordered Map of results that were already removed from the provided Messsages
      */
-    public ChannelRefreshResult(Channel channel, List<MessagePlus> messages, boolean appended, LinkedHashMap<String, MessagePlus> excludedResults) {
-        this(channel, messages, appended);
+    public ChannelRefreshResult(Channel channel, List<MessagePlus> messages, TreeMap<Long, MessagePlus> excludedResults) {
+        this(channel, messages);
         mExcludedResults = excludedResults;
     }
 
@@ -112,16 +106,8 @@ public class ChannelRefreshResult {
      * @return the ordered Map of excluded Messages that were removed prior to constructing this
      * ChannelRefreshResult, or null if none exists.
      */
-    public LinkedHashMap<String, MessagePlus> getExcludedResults() {
+    public TreeMap<Long, MessagePlus> getExcludedResults() {
         return mExcludedResults;
-    }
-
-    /**
-     * @return true if this was a successful result in which Messages were appended to the end of
-     * the Message Map maintained by the MessageManager, false otherwise
-     */
-    public boolean appended() {
-        return mAppended;
     }
 
     /**

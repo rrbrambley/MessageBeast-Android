@@ -52,6 +52,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 /**
  * MessageManager is used to retrieve, create, and delete Messages in any number of channels.<br><br>
@@ -119,9 +120,9 @@ public class MessageManager {
 
     public static abstract class MessageManagerResponseHandler {
         private boolean isMore;
-        private LinkedHashMap<String, MessagePlus> excludedResults;
+        private TreeMap<Long, MessagePlus> excludedResults;
 
-        public abstract void onSuccess(final List<MessagePlus> responseData, final boolean appended);
+        public abstract void onSuccess(final List<MessagePlus> messages);
         public abstract void onError(Exception exception);
 
         public void setIsMore(boolean isMore) {
@@ -131,11 +132,11 @@ public class MessageManager {
             return this.isMore;
         }
 
-        public void setExcludedResults(LinkedHashMap<String, MessagePlus> excludedResults) {
+        public void setExcludedResults(TreeMap<Long, MessagePlus> excludedResults) {
             this.excludedResults = excludedResults;
         }
 
-        public LinkedHashMap<String, MessagePlus> getExcludedResults() {
+        public TreeMap<Long, MessagePlus> getExcludedResults() {
             return excludedResults;
         }
     }
@@ -187,11 +188,13 @@ public class MessageManager {
     private AppDotNetClient mClient;
     private MessageManagerConfiguration mConfiguration;
 
-    private HashMap<String, LinkedHashMap<String, MessagePlus>> mMessages;
-    private HashMap<String, LinkedHashMap<String, MessagePlus>> mUnsentMessages;
+    private HashMap<String, TreeMap<Long, MessagePlus>> mMessages;
+    private HashMap<String, TreeMap<Long, MessagePlus>> mUnsentMessages;
+
     private HashMap<String, Set<String>> mMessagesNeedingPendingFiles;
     private HashMap<String, QueryParameters> mParameters;
     private HashMap<String, MinMaxPair> mMinMaxPairs;
+    private HashMap<String, MinMaxDatePair> mMinMaxDatePairs;
 
     public MessageManager(AppDotNetClient client, MessageManagerConfiguration configuration) {
         mContext = ADNApplication.getContext();
@@ -199,9 +202,10 @@ public class MessageManager {
         mConfiguration = configuration;
         mDatabase = ADNDatabase.getInstance(mContext);
 
-        mMessages = new HashMap<String, LinkedHashMap<String, MessagePlus>>();
-        mUnsentMessages = new HashMap<String, LinkedHashMap<String, MessagePlus>>();
+        mMessages = new HashMap<String, TreeMap<Long, MessagePlus>>();
+        mUnsentMessages = new HashMap<String, TreeMap<Long, MessagePlus>>();
         mMinMaxPairs = new HashMap<String, MinMaxPair>();
+        mMinMaxDatePairs = new HashMap<String, MinMaxDatePair>();
         mParameters = new HashMap<String, QueryParameters>();
         mMessagesNeedingPendingFiles = new HashMap<String, Set<String>>();
 
@@ -211,24 +215,21 @@ public class MessageManager {
 
     private synchronized OrderedMessageBatch loadPersistedMessageBatch(String channelId, int limit, boolean performLookups) {
         Date beforeDate = null;
-        MinMaxPair minMaxPair = getMinMaxPair(channelId);
-        if(minMaxPair.minId != null) {
-            MessagePlus message = mMessages.get(channelId).get(minMaxPair.minId);
-            beforeDate = message.getDisplayDate();
+        MinMaxDatePair minMaxDatePair = getMinMaxDatePair(channelId);
+        if(minMaxDatePair.minDate != null) {
+            beforeDate = new Date(minMaxDatePair.minDate);
         }
         OrderedMessageBatch orderedMessageBatch = mDatabase.getMessages(channelId, beforeDate, limit);
-        LinkedHashMap<String, MessagePlus> messages = orderedMessageBatch.getMessages();
-        MinMaxPair dbMinMaxPair = orderedMessageBatch.getMinMaxPair();
-        minMaxPair = minMaxPair.combine(dbMinMaxPair);
+        TreeMap<Long, MessagePlus> messages = orderedMessageBatch.getMessages();
+        MinMaxDatePair dbMinMaxDatePair = orderedMessageBatch.getMinMaxDatePair();
+        minMaxDatePair.updateWithCombinedValues(dbMinMaxDatePair);
 
-        LinkedHashMap<String, MessagePlus> channelMessages = mMessages.get(channelId);
+        TreeMap<Long, MessagePlus> channelMessages = mMessages.get(channelId);
         if(channelMessages != null) {
             channelMessages.putAll(messages);
         } else {
             mMessages.put(channelId, messages);
         }
-
-        mMinMaxPairs.put(channelId, minMaxPair);
 
         if(performLookups) {
             performLookups(messages.values(), false);
@@ -242,10 +243,10 @@ public class MessageManager {
      *
      * @param channelId the id of the channel for which messages should be loaded.
      * @param limit the maximum number of messages to load from the database.
-     * @return a LinkedHashMap containing the newly loaded messages, mapped from message id
-     * to Message Object. If no messages were loaded, then an empty Map is returned.
+     * @return a TreeMap containing the newly loaded messages, mapped from message time in millis
+     * to MessagePlus Object. If no Messages were loaded, then an empty Map is returned.
      */
-    public synchronized LinkedHashMap<String, MessagePlus> loadPersistedMessages(String channelId, int limit) {
+    public synchronized TreeMap<Long, MessagePlus> loadPersistedMessages(String channelId, int limit) {
         OrderedMessageBatch batch = loadPersistedMessageBatch(channelId, limit, true);
         return batch.getMessages();
     }
@@ -267,10 +268,10 @@ public class MessageManager {
     public synchronized FilteredMessageBatch loadPersistedMessages(String channelId, int limit, MessageFilter filter) {
         OrderedMessageBatch batch = loadPersistedMessageBatch(channelId, limit, false);
         FilteredMessageBatch filteredBatch = FilteredMessageBatch.getFilteredMessageBatch(batch, filter);
-        LinkedHashMap<String, MessagePlus> excludedMessages = filteredBatch.getExcludedMessages();
+        TreeMap<Long, MessagePlus> excludedMessages = filteredBatch.getExcludedMessages();
 
         //remove the filtered messages from the main channel message map.
-        LinkedHashMap<String, MessagePlus> channelMessages = mMessages.get(channelId);
+        TreeMap<Long, MessagePlus> channelMessages = mMessages.get(channelId);
         removeExcludedMessages(channelMessages, excludedMessages);
 
         //do this after we have successfully filtered out stuff,
@@ -287,9 +288,9 @@ public class MessageManager {
      *
      * @param channelId the Channel id
      * @param limit the maximum number of Messages to load from the database.
-     * @return a LinkedHashMap mapping Message ids to MessagePlus objects
+     * @return a TreeMap mapping Message times in millis to MessagePlus objects
      */
-    public LinkedHashMap<String, MessagePlus> getMessages(String channelId, int limit) {
+    public TreeMap<Long, MessagePlus> getMessages(String channelId, int limit) {
         OrderedMessageBatch orderedMessageBatch = mDatabase.getMessages(channelId, limit);
         return orderedMessageBatch.getMessages();
     }
@@ -304,11 +305,11 @@ public class MessageManager {
      * @param channelId the Channel id
      * @param location the DisplayLocation
      * @param precision the precision to use when obtaining location instances.
-     * @return a LinkedHashMap mapping Message ids to MessagePlus objects
+     * @return a TreeMap mapping Message times in millis to MessagePlus objects
      *
      * @see com.alwaysallthetime.messagebeast.db.ADNDatabase#getDisplayLocationInstances(String, com.alwaysallthetime.messagebeast.model.DisplayLocation, com.alwaysallthetime.messagebeast.db.ADNDatabase.LocationPrecision)
      */
-    public LinkedHashMap<String, MessagePlus> getMessages(String channelId, DisplayLocation location, ADNDatabase.LocationPrecision precision) {
+    public TreeMap<Long, MessagePlus> getMessages(String channelId, DisplayLocation location, ADNDatabase.LocationPrecision precision) {
         DisplayLocationInstances locationInstances = mDatabase.getDisplayLocationInstances(channelId, location, precision);
         return getMessages(locationInstances.getMessageIds());
     }
@@ -322,9 +323,9 @@ public class MessageManager {
      *
      * @param channelId the Channel id
      * @param hashtagName the hashtag with which the lookup will be done
-     * @return a LinkedHashMap mapping Message ids to MessagePlus objects
+     * @return a TreeMap mapping Message times in millis to MessagePlus objects
      */
-    public LinkedHashMap<String, MessagePlus> getMessages(String channelId, String hashtagName) {
+    public TreeMap<Long, MessagePlus> getMessages(String channelId, String hashtagName) {
         HashtagInstances hashtagInstances = mDatabase.getHashtagInstances(channelId, hashtagName);
         return getMessages(hashtagInstances.getMessageIds());
     }
@@ -335,9 +336,9 @@ public class MessageManager {
      *
      * @param channelId the id of the Channel in which the returned Messages will be contained
      * @param annotationType the Annotation type to look for
-     * @return a LinkedHashMap mapping Message ids to MessagePlus objects
+     * @return a TreeMap mapping Message times in millis to MessagePlus objects
      */
-    public LinkedHashMap<String, MessagePlus> getMessagesWithAnnotation(String channelId, String annotationType) {
+    public TreeMap<Long, MessagePlus> getMessagesWithAnnotation(String channelId, String annotationType) {
         AnnotationInstances instances = getAnnotationInstances(channelId, annotationType);
         return getMessages(instances.getMessageIds());
     }
@@ -349,11 +350,11 @@ public class MessageManager {
      * features are enabled in the MessageManagerConfiguration.
      *
      * @param messageIds the Message ids
-     * @return a LinkedHashMap mapping Message ids to MessagePlus objects
+     * @return a TreeMap mapping Message times in millis to MessagePlus objects
      */
-    public LinkedHashMap<String, MessagePlus> getMessages(Collection<String> messageIds) {
+    public TreeMap<Long, MessagePlus> getMessages(Collection<String> messageIds) {
         OrderedMessageBatch orderedMessageBatch = mDatabase.getMessages(messageIds);
-        LinkedHashMap<String, MessagePlus> messages = orderedMessageBatch.getMessages();
+        TreeMap<Long, MessagePlus> messages = orderedMessageBatch.getMessages();
         performLookups(messages.values(), false);
         return messages;
     }
@@ -582,7 +583,7 @@ public class MessageManager {
      * @return a List of MessagePlus objects
      */
     public List<MessagePlus> getMessageList(String channelId) {
-        Map<String, MessagePlus> messageMap = mMessages.get(channelId);
+        Map<Long, MessagePlus> messageMap = mMessages.get(channelId);
         if(messageMap == null) {
             return null;
         }
@@ -591,17 +592,17 @@ public class MessageManager {
     }
 
     /**
-     * Get a LinkedHashMap that maps Message ids to MessagePlus objects, containing
+     * Get a TreeMap that maps Message times in millis to MessagePlus objects, containing
      * entries for all Messages currently loaded into memory in a specific Channel.
      *
      * Note that modifications to this Map can alter the functionality of the MessageManager,
      * so in most cases you probably should be using getMessageList()
      *
      * @param channelId the Channel id
-     * @return the LinkedHashMap of MessagePlus objects currently loaded into memory for the
+     * @return the TreeMap of MessagePlus objects currently loaded into memory for the
      * specified channel
      */
-    public LinkedHashMap<String, MessagePlus> getMessageMap(String channelId) {
+    public TreeMap<Long, MessagePlus> getMessageMap(String channelId) {
         return mMessages.get(channelId);
     }
 
@@ -618,23 +619,32 @@ public class MessageManager {
     private synchronized MinMaxPair getMinMaxPair(String channelId) {
         MinMaxPair minMaxPair = mMinMaxPairs.get(channelId);
         if(minMaxPair == null) {
-            minMaxPair = new MinMaxPair();
+            minMaxPair = mDatabase.getMinMaxPair(channelId);
             mMinMaxPairs.put(channelId, minMaxPair);
         }
         return minMaxPair;
     }
 
-    private synchronized LinkedHashMap<String, MessagePlus> getChannelMessages(String channelId) {
-        LinkedHashMap<String, MessagePlus> channelMessages = mMessages.get(channelId);
+    private synchronized MinMaxDatePair getMinMaxDatePair(String channelId) {
+        MinMaxDatePair minMaxDatePair = mMinMaxDatePairs.get(channelId);
+        if(minMaxDatePair == null) {
+            minMaxDatePair = new MinMaxDatePair();
+            mMinMaxDatePairs.put(channelId, minMaxDatePair);
+        }
+        return minMaxDatePair;
+    }
+
+    private synchronized TreeMap<Long, MessagePlus> getChannelMessages(String channelId) {
+        TreeMap<Long, MessagePlus> channelMessages = mMessages.get(channelId);
         if(channelMessages == null) {
-            channelMessages = new LinkedHashMap<String, MessagePlus>(10);
+            channelMessages = new TreeMap<Long, MessagePlus>(new ReverseChronologicalComparator());
             mMessages.put(channelId, channelMessages);
         }
         return channelMessages;
     }
 
-    private synchronized LinkedHashMap<String, MessagePlus> getUnsentMessages(String channelId) {
-        LinkedHashMap<String, MessagePlus> unsentMessages = mUnsentMessages.get(channelId);
+    private synchronized TreeMap<Long, MessagePlus> getUnsentMessages(String channelId) {
+        TreeMap<Long, MessagePlus> unsentMessages = mUnsentMessages.get(channelId);
         if(unsentMessages == null) {
             unsentMessages = mDatabase.getUnsentMessages(channelId);
             mUnsentMessages.put(channelId, unsentMessages);
@@ -877,9 +887,9 @@ public class MessageManager {
         //message id. After they reach the server, we will delete them from existence
         //on the client and retrieve them from the server.
         //
-        LinkedHashMap<String, MessagePlus> channelMessages = getChannelMessages(channelId);
+        TreeMap<Long, MessagePlus> channelMessages = getChannelMessages(channelId);
         if(channelMessages.size() == 0) {
-            //we do this so that the current max id for this channel is known.
+            //we do this so that the current max date for this channel is known.
             loadPersistedMessages(channelId, 1);
         }
 
@@ -900,14 +910,15 @@ public class MessageManager {
             lookupLocation(mp, true);
         }
 
-        LinkedHashMap<String, MessagePlus> channelUnsentMessages = getUnsentMessages(channelId);
-        channelUnsentMessages.put(newMessageIdString, messagePlus);
+        TreeMap<Long, MessagePlus> channelUnsentMessages = getUnsentMessages(channelId);
+        channelUnsentMessages.put(messagePlus.getDisplayDate().getTime(), messagePlus);
 
-        LinkedHashMap<String, MessagePlus> newChannelMessages = new LinkedHashMap<String, MessagePlus>(channelMessages.size() + 1);
-        newChannelMessages.put(newMessageIdString, messagePlus);
+        TreeMap<Long, MessagePlus> newChannelMessages = new TreeMap<Long, MessagePlus>(new ReverseChronologicalComparator());
+        newChannelMessages.put(messagePlus.getDisplayDate().getTime(), messagePlus);
         newChannelMessages.putAll(channelMessages);
         mMessages.put(channelId, newChannelMessages);
 
+        getMinMaxDatePair(channelId).expandIfMinOrMax(messagePlus.getDisplayDate().getTime());
         getMinMaxPair(channelId).maxId = newMessageIdString;
 
         Log.d(TAG, "Created and stored unsent message with id " + newMessageIdString);
@@ -950,13 +961,12 @@ public class MessageManager {
     public synchronized void deleteMessage(final MessagePlus messagePlus, boolean deleteAssociatedFiles, final MessageDeletionResponseHandler handler) {
         if(messagePlus.isUnsent()) {
             Message message = messagePlus.getMessage();
-            String messageId = message.getId();
             String channelId = message.getChannelId();
 
             mDatabase.deleteMessage(messagePlus);
-            getUnsentMessages(channelId).remove(messageId);
+            getUnsentMessages(channelId).remove(messagePlus.getDisplayDate().getTime());
 
-            onMessageDeleted(messageId, channelId);
+            onMessageDeleted(messagePlus);
 
             if(handler != null) {
                 handler.onSuccess();
@@ -990,7 +1000,7 @@ public class MessageManager {
 
                         private void delete() {
                             mDatabase.deleteMessage(messagePlus); //this one because the deleted one doesn't have the entities.
-                            onMessageDeleted(messagePlus.getMessage().getId(), messagePlus.getMessage().getChannelId());
+                            onMessageDeleted(messagePlus);
                         }
                     });
                 }
@@ -1083,27 +1093,42 @@ public class MessageManager {
         }
     }
 
-    private synchronized void onMessageDeleted(String messageId, String channelId) {
-        LinkedHashMap<String, MessagePlus> channelMessages = getChannelMessages(channelId);
-        channelMessages.remove(messageId);
+    private synchronized void onMessageDeleted(MessagePlus messagePlus) {
+        String channelId = messagePlus.getMessage().getChannelId();
+        Long removedTime = messagePlus.getDisplayDate().getTime();
 
-        MinMaxPair minMaxPair = getMinMaxPair(channelId);
-        if(channelMessages.size() > 0) {
-            minMaxPair.maxId = channelMessages.keySet().iterator().next();
-        } else {
-            minMaxPair.maxId = null;
-        }
+        //
+        //modify the MinMaxDatePair if the removed message was at the min or max date
+        //
+        MinMaxDatePair minMaxDatePair = getMinMaxDatePair(channelId);
+        TreeMap<Long, MessagePlus> channelMessages = getChannelMessages(channelId);
+        Iterator<Long> timeIterator = channelMessages.keySet().iterator();
+        Long firstTime = timeIterator.next();
 
-        if(messageId.equals(minMaxPair.minId)) {
-            //this looks weird, but this is basically the only way
-            //to get the last id in the keyset #java #holla
-            Iterator<String> iterator = channelMessages.keySet().iterator();
-            String lastId = null;
-            while(iterator.hasNext()) {
-                lastId = iterator.next();
+        if(firstTime.equals(removedTime)) {
+            if(timeIterator.hasNext()) {
+                minMaxDatePair.maxDate = timeIterator.next();
+            } else {
+                minMaxDatePair.maxDate = null;
+                minMaxDatePair.minDate = null;
             }
-            minMaxPair.minId = lastId;
         }
+
+        //this looks weird, but this is basically the only way
+        //to get the last item in the key set
+        timeIterator = channelMessages.keySet().iterator();
+        Long secondToLastTime = null;
+        Long lastTime = null;
+        while(timeIterator.hasNext()) {
+            secondToLastTime = lastTime;
+            lastTime = timeIterator.next();
+        }
+        if(removedTime.equals(lastTime)) {
+            minMaxDatePair.minDate = secondToLastTime;
+        }
+
+        channelMessages.remove(removedTime);
+        mMinMaxPairs.put(channelId, mDatabase.getMinMaxPair(channelId));
     }
 
     /**
@@ -1120,12 +1145,13 @@ public class MessageManager {
             @Override
             public void onSuccess(Message responseData) {
                 MessagePlus mPlus = new MessagePlus(responseData);
-                LinkedHashMap<String, MessagePlus> channelMessages = mMessages.get(channelId);
-                if(channelMessages != null) { //could be null of channel messages weren't loaded first, etc.
-                    channelMessages.put(responseData.getId(), mPlus);
-                }
+                adjustDate(mPlus);
+                insertIntoDatabase(mPlus);
 
-                adjustDateAndInsert(mPlus);
+                TreeMap<Long, MessagePlus> channelMessages = mMessages.get(channelId);
+                if(channelMessages != null) { //could be null of channel messages weren't loaded first, etc.
+                    channelMessages.put(mPlus.getDisplayDate().getTime(), mPlus);
+                }
 
                 HashSet<MessagePlus> messagePlusses = new HashSet<MessagePlus>(1);
                 messagePlusses.add(mPlus);
@@ -1215,7 +1241,7 @@ public class MessageManager {
     private synchronized void retrieveAndPersistAllMessages(final Channel[] channels, final int currentChannelIndex, final MessageManagerMultiChannelSyncResponseHandler responseHandler) {
         MessageManagerSyncResponseHandler currentChannelSyncHandler = new MessageManagerSyncResponseHandler() {
             @Override
-            public void onSuccess(List<MessagePlus> responseData, boolean appended) {
+            public void onSuccess(List<MessagePlus> responseData) {
                 int i = currentChannelIndex + 1;
                 while(i < channels.length && getFullSyncState(channels[i].getId()) == FullSyncState.COMPLETE) {
                     i++;
@@ -1277,7 +1303,7 @@ public class MessageManager {
         boolean keepInMemory = messages.size() == 0;
         retrieveMessages(params, null, channelId, keepInMemory, new MessageManagerResponseHandler() {
             @Override
-            public void onSuccess(List<MessagePlus> responseData, boolean appended) {
+            public void onSuccess(List<MessagePlus> responseData) {
                 if(messages.size() == 0) {
                     messages.addAll(responseData);
                 }
@@ -1293,7 +1319,7 @@ public class MessageManager {
                 } else {
                     ADNSharedPreferences.setFullSyncState(channelId, FullSyncState.COMPLETE);
                     Log.d(TAG, "Num messages synced: " + responseHandler.getNumMessagesSynced());
-                    responseHandler.onSuccess(messages, true);
+                    responseHandler.onSuccess(messages);
                 }
             }
 
@@ -1312,7 +1338,7 @@ public class MessageManager {
         return retrieveMessages(params, messageFilter, channelId, true, handler);
     }
 
-    private synchronized void sendUnsentMessages(final LinkedHashMap<String, MessagePlus> unsentMessages, final ArrayList<String> sentMessageIds) {
+    private synchronized void sendUnsentMessages(final TreeMap<Long, MessagePlus> unsentMessages, final ArrayList<String> sentMessageIds) {
         final MessagePlus messagePlus = unsentMessages.get(unsentMessages.keySet().iterator().next());
         if(messagePlus.hasPendingFileAttachments()) {
             String pendingFileId = messagePlus.getPendingFileAttachments().keySet().iterator().next();
@@ -1333,36 +1359,31 @@ public class MessageManager {
             public void onSuccess(Message responseData) {
                 Log.d(TAG, "Successfully sent unsent message with id " + message.getId());
 
-                unsentMessages.remove(message.getId());
+                long sentMessageTime = messagePlus.getDisplayDate().getTime();
+
+                unsentMessages.remove(sentMessageTime);
                 sentMessageIds.add(message.getId());
 
                 mDatabase.deleteMessage(messagePlus);
 
                 //remove the message from in-memory message map.
-                LinkedHashMap<String, MessagePlus> channelMessages = getChannelMessages(message.getChannelId());
-                channelMessages.remove(message.getId());
+                TreeMap<Long, MessagePlus> channelMessages = getChannelMessages(message.getChannelId());
+                channelMessages.remove(sentMessageTime);
 
-                MinMaxPair minMaxPair = getMinMaxPair(message.getChannelId());
+                String channelId = message.getChannelId();
+                if(channelMessages.size() > 0) {
+                    mMinMaxPairs.put(channelId, mDatabase.getMinMaxPair(channelId));
+
+                    Long nextMaxDate = channelMessages.keySet().iterator().next();
+                    getMinMaxDatePair(channelId).maxDate = nextMaxDate;
+                } else {
+                    getMinMaxPair(channelId).maxId = null;
+                    getMinMaxDatePair(channelId).maxDate = null;
+                }
+
                 if(unsentMessages.size() > 0) {
-                    String nextId = unsentMessages.keySet().iterator().next();
-                    minMaxPair.maxId = nextId;
                     sendUnsentMessages(unsentMessages, sentMessageIds);
                 } else {
-                    if(channelMessages.size() > 0) {
-                        //step back in time until we find the first message that was NOT one
-                        //of the unsent messages. this will be the max id.
-                        Iterator<String> channelMessagesIterator = channelMessages.keySet().iterator();
-                        while(channelMessagesIterator.hasNext()) {
-                            String next = channelMessagesIterator.next();
-                            if(!sentMessageIds.contains(next)) {
-                                minMaxPair.maxId = next;
-                                break;
-                            }
-                        }
-                    } else {
-                        minMaxPair.maxId = null;
-                    }
-
                     Intent i = new Intent(INTENT_ACTION_UNSENT_MESSAGES_SENT);
                     i.putExtra(EXTRA_CHANNEL_ID, message.getChannelId());
                     i.putStringArrayListExtra(EXTRA_SENT_MESSAGE_IDS, sentMessageIds);
@@ -1427,9 +1448,9 @@ public class MessageManager {
      * @return true if unsent Messages are being sent, false if none exist
      */
     public synchronized boolean sendUnsentMessages(final String channelId) {
-        LinkedHashMap<String, MessagePlus> unsentMessages = getUnsentMessages(channelId);
+        TreeMap<Long, MessagePlus> unsentMessages = getUnsentMessages(channelId);
         if(unsentMessages.size() > 0) {
-            LinkedHashMap<String, MessagePlus> channelMessages = getChannelMessages(channelId);
+            TreeMap<Long, MessagePlus> channelMessages = getChannelMessages(channelId);
             if(channelMessages.size() == 0) {
                 //we do this so that the max id for this channel is known.
                 loadPersistedMessages(channelId, unsentMessages.size() + 1);
@@ -1494,7 +1515,7 @@ public class MessageManager {
                                                   final String channelId,
                                                   final boolean keepInMemory,
                                                   final MessageManagerResponseHandler handler) {
-        LinkedHashMap<String, MessagePlus> unsentMessages = getUnsentMessages(channelId);
+        TreeMap<Long, MessagePlus> unsentMessages = getUnsentMessages(channelId);
         HashMap<String, PendingMessageDeletion> pendingMessageDeletions = mDatabase.getPendingMessageDeletions(channelId);
         if(unsentMessages.size() > 0 || pendingMessageDeletions.size() > 0) {
             return false;
@@ -1502,58 +1523,40 @@ public class MessageManager {
         mClient.retrieveMessagesInChannel(channelId, queryParameters, new MessageListResponseHandler() {
             @Override
             public void onSuccess(final MessageList responseData) {
-                boolean appended = true;
-                String beforeId = queryParameters.get("before_id");
-                String sinceId = queryParameters.get("since_id");
-
                 MinMaxPair minMaxPair = getMinMaxPair(channelId);
-                if(beforeId != null && sinceId == null && keepInMemory) {
-                    String newMinId = getMinId();
-                    if(newMinId != null) {
-                        minMaxPair.minId = newMinId;
-                    }
-                } else if(beforeId == null && sinceId != null) {
-                    appended = false;
-                    if(keepInMemory) {
-                        String newMaxId = getMaxId();
-                        if(newMaxId != null) {
-                            minMaxPair.maxId = newMaxId;
-                        }
-                    }
-                } else if(beforeId == null && sinceId == null && keepInMemory) {
-                    minMaxPair.minId = getMinId();
-                    minMaxPair.maxId = getMaxId();
-                }
+                mMinMaxPairs.put(channelId, minMaxPair.combine(new MinMaxPair(getMinId(), getMaxId())));
 
-                LinkedHashMap<String, MessagePlus> channelMessages = getChannelMessages(channelId);
+                TreeMap<Long, MessagePlus> channelMessages = getChannelMessages(channelId);
+                TreeMap<Long, MessagePlus> newestMessagesMap = new TreeMap<Long, MessagePlus>(new ReverseChronologicalComparator());
+                TreeMap<Long, MessagePlus> newFullChannelMessagesMap = new TreeMap<Long, MessagePlus>(new ReverseChronologicalComparator());
 
-                LinkedHashMap<String, MessagePlus> newestMessagesMap = new LinkedHashMap<String, MessagePlus>(responseData.size());
-                LinkedHashMap<String, MessagePlus> newFullChannelMessagesMap = new LinkedHashMap<String, MessagePlus>(channelMessages.size() + responseData.size());
+                newFullChannelMessagesMap.putAll(channelMessages);
 
-                if(appended) {
-                    newFullChannelMessagesMap.putAll(channelMessages);
-                }
                 for(Message m : responseData) {
                     MessagePlus messagePlus = new MessagePlus(m);
-                    newestMessagesMap.put(m.getId(), messagePlus);
-                    newFullChannelMessagesMap.put(m.getId(), messagePlus);
-                }
-                if(!appended) {
-                    newFullChannelMessagesMap.putAll(channelMessages);
+                    Date date = adjustDate(messagePlus);
+                    newestMessagesMap.put(date.getTime(), messagePlus);
+                    newFullChannelMessagesMap.put(date.getTime(), messagePlus);
                 }
 
                 if(filter != null) {
-                    LinkedHashMap<String, MessagePlus> excludedResults = filter.getExcludedResults(newestMessagesMap);
+                    TreeMap<Long, MessagePlus> excludedResults = filter.getExcludedResults(newestMessagesMap);
                     removeExcludedMessages(newFullChannelMessagesMap, excludedResults);
                     if(handler != null) {
                         handler.setExcludedResults(excludedResults);
                     }
                 }
 
+                MinMaxDatePair minMaxDatePair = getMinMaxDatePair(channelId);
+
                 //this needs to happen after filtering.
                 //damn. not as efficient as doing it in the loop above.
                 for(MessagePlus messagePlus : newestMessagesMap.values()) {
-                    adjustDateAndInsert(messagePlus);
+                    insertIntoDatabase(messagePlus);
+
+                    if(keepInMemory) {
+                        minMaxDatePair.expandIfMinOrMax(messagePlus.getDisplayDate().getTime());
+                    }
                 }
 
                 if(keepInMemory) {
@@ -1566,7 +1569,7 @@ public class MessageManager {
 
                 if(handler != null) {
                     handler.setIsMore(isMore());
-                    handler.onSuccess(newestMessages, appended);
+                    handler.onSuccess(newestMessages);
                 }
             }
 
@@ -1582,9 +1585,13 @@ public class MessageManager {
         return true;
     }
 
-    private void adjustDateAndInsert(MessagePlus messagePlus) {
+    private Date adjustDate(MessagePlus messagePlus) {
         Date adjustedDate = getAdjustedDate(messagePlus.getMessage());
         messagePlus.setDisplayDate(adjustedDate);
+        return adjustedDate;
+    }
+
+    private void insertIntoDatabase(MessagePlus messagePlus) {
         mDatabase.insertOrReplaceMessage(messagePlus);
         mDatabase.insertOrReplaceHashtagInstances(messagePlus);
 
@@ -1629,10 +1636,10 @@ public class MessageManager {
         }
     }
 
-    private void removeExcludedMessages(LinkedHashMap<String, MessagePlus> fromMap, LinkedHashMap<String, MessagePlus> removedEntries) {
-        Iterator<String> filteredIdIterator = removedEntries.keySet().iterator();
-        while(filteredIdIterator.hasNext()) {
-            fromMap.remove(filteredIdIterator.next());
+    private void removeExcludedMessages(TreeMap<Long, MessagePlus> fromMap, TreeMap<Long, MessagePlus> removedEntries) {
+        Iterator<Long> filteredTimeIterator = removedEntries.keySet().iterator();
+        while(filteredTimeIterator.hasNext()) {
+            fromMap.remove(filteredTimeIterator.next());
         }
     }
 
@@ -1649,7 +1656,7 @@ public class MessageManager {
 
                         Set<String> messagesIdsNeedingFile = getMessageIdsNeedingPendingFile(pendingFileId);
                         if(messagesIdsNeedingFile != null) {
-                            LinkedHashMap<String, MessagePlus> messagesNeedingFile = mDatabase.getMessages(messagesIdsNeedingFile).getMessages();
+                            TreeMap<Long, MessagePlus> messagesNeedingFile = mDatabase.getMessages(messagesIdsNeedingFile).getMessages();
 
                             //always add the associated channel Id so that we can finish the
                             //sending of the unsent message in the channel that triggered the upload.
@@ -1669,13 +1676,14 @@ public class MessageManager {
                                 //are held on to in memory.
                                 String messageId = message.getId();
                                 String channelId = message.getChannelId();
-                                LinkedHashMap<String, MessagePlus> channelMessages = getChannelMessages(channelId);
-                                if(channelMessages.containsKey(messageId)) {
-                                    channelMessages.put(messageId, messagePlus);
+                                long time = messagePlus.getDisplayDate().getTime();
+                                TreeMap<Long, MessagePlus> channelMessages = getChannelMessages(channelId);
+                                if(channelMessages.containsKey(time)) {
+                                    channelMessages.put(time, messagePlus);
                                 }
-                                LinkedHashMap<String, MessagePlus> unsentMessages = getUnsentMessages(channelId);
-                                if(unsentMessages.containsKey(messageId)) {
-                                    unsentMessages.put(messageId, messagePlus);
+                                TreeMap<Long, MessagePlus> unsentMessages = getUnsentMessages(channelId);
+                                if(unsentMessages.containsKey(time)) {
+                                    unsentMessages.put(time, messagePlus);
                                 }
 
                                 mDatabase.insertOrReplaceMessage(messagePlus);

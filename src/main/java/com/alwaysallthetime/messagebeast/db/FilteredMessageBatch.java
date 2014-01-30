@@ -4,7 +4,7 @@ import com.alwaysallthetime.messagebeast.filter.MessageFilter;
 import com.alwaysallthetime.messagebeast.model.MessagePlus;
 
 import java.util.Iterator;
-import java.util.LinkedHashMap;
+import java.util.TreeMap;
 
 /**
  * A FilteredMessageBatch is an OrderedMessageBatch with a MessageFilter applied.
@@ -12,10 +12,10 @@ import java.util.LinkedHashMap;
  * removed, while getExcludedMessages() returns a Map of all entries that were removed.
  */
 public class FilteredMessageBatch extends OrderedMessageBatch {
-    private LinkedHashMap<String, MessagePlus> mExcludedMessages;
+    private TreeMap<Long, MessagePlus> mExcludedMessages;
 
-    private FilteredMessageBatch(OrderedMessageBatch batch, LinkedHashMap<String, MessagePlus> filteredMessages) {
-        super(batch.getMessages(), batch.getMinMaxPair());
+    private FilteredMessageBatch(OrderedMessageBatch batch, TreeMap<Long, MessagePlus> filteredMessages) {
+        super(batch.getMessages(), batch.getMinMaxDatePair());
         mExcludedMessages = filteredMessages;
     }
 
@@ -27,10 +27,10 @@ public class FilteredMessageBatch extends OrderedMessageBatch {
      * @return a FilteredMessageBatch
      */
     public static FilteredMessageBatch getFilteredMessageBatch(OrderedMessageBatch batch, MessageFilter filter) {
-        LinkedHashMap<String, MessagePlus> excludedResults = filter.getExcludedResults(batch.getMessages());
+        TreeMap<Long, MessagePlus> excludedResults = filter.getExcludedResults(batch.getMessages());
 
-        LinkedHashMap<String, MessagePlus> results = batch.getMessages();
-        Iterator<String> iterator = excludedResults.keySet().iterator();
+        TreeMap<Long, MessagePlus> results = batch.getMessages();
+        Iterator<Long> iterator = excludedResults.keySet().iterator();
         while(iterator.hasNext()) {
             results.remove(iterator.next());
         }
@@ -42,7 +42,7 @@ public class FilteredMessageBatch extends OrderedMessageBatch {
      *
      * @return an ordered Map of Messages that were removed from the batch's messages Map
      */
-    public LinkedHashMap<String, MessagePlus> getExcludedMessages() {
+    public TreeMap<Long, MessagePlus> getExcludedMessages() {
         return mExcludedMessages;
     }
 }

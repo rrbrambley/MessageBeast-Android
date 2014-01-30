@@ -2,7 +2,7 @@ package com.alwaysallthetime.messagebeast.filter;
 
 import com.alwaysallthetime.messagebeast.model.MessagePlus;
 
-import java.util.LinkedHashMap;
+import java.util.TreeMap;
 
 /**
  * A MessageFilter can be used to exclude Messages from a Map of Messages
@@ -15,8 +15,8 @@ public abstract class MessageFilter {
      * that is passed to it.
      *
      * @param messages an ordered Map of message id keys mapped to MessagePlus objects
-     * @return a LinkedHashMap message id keys mapped to MessagePlus objects that should be excluded
+     * @return a TreeMap with message times in millis as keys, mapped to MessagePlus objects that should be excluded
      * with this filter.
      */
-    public abstract LinkedHashMap<String, MessagePlus> getExcludedResults(LinkedHashMap<String, MessagePlus> messages);
+    public abstract TreeMap<Long, MessagePlus> getExcludedResults(TreeMap<Long, MessagePlus> messages);
 }

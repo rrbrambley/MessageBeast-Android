@@ -24,9 +24,9 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeMap;
 
 /**
  * The ActionMessageManager is used to perform mutable actions on Messages.<br><br>
@@ -108,8 +108,8 @@ public class ActionMessageManager {
         final String targetChannelId = getTargetChannelId(actionChannelId);
         mMessageManager.retrieveAndPersistAllMessages(actionChannelId, new MessageManager.MessageManagerSyncResponseHandler() {
             @Override
-            public void onSuccess(List<MessagePlus> responseData, boolean appended) {
-                responseHandler.onSuccess(responseData, appended);
+            public void onSuccess(List<MessagePlus> responseData) {
+                responseHandler.onSuccess(responseData);
                 Log.d(TAG, "Synced " + getNumMessagesSynced() + " messages for action channel " + actionChannelId);
             }
 
@@ -212,38 +212,38 @@ public class ActionMessageManager {
      * that have had the action applied.
      */
     public synchronized List<MessagePlus> getActionedMessages(String actionChannelId) {
-        LinkedHashMap<String, MessagePlus> loadedMessagesFromActionChannel =  mMessageManager.getMessages(actionChannelId, MAX_BATCH_LOAD_FROM_DISK);
+        TreeMap<Long, MessagePlus> loadedMessagesFromActionChannel =  mMessageManager.getMessages(actionChannelId, MAX_BATCH_LOAD_FROM_DISK);
         return getTargetMessages(loadedMessagesFromActionChannel.values());
     }
 
     private synchronized List<MessagePlus> getTargetMessages(Collection<MessagePlus> actionMessages) {
         Set<String> newTargetMessageIds = getTargetMessageIds(actionMessages);
-        LinkedHashMap<String, MessagePlus> targetMessages = mMessageManager.getMessages(newTargetMessageIds);
+        TreeMap<Long, MessagePlus> targetMessages = mMessageManager.getMessages(newTargetMessageIds);
         return new ArrayList<MessagePlus>(targetMessages.values());
     }
 
     //TODO: does this method even make sense?
     public synchronized void getMoreActionedMessages(final String actionChannelId, final MessageManager.MessageManagerResponseHandler responseHandler) {
         final String targetChannelId = getTargetChannelId(actionChannelId);
-        LinkedHashMap<String, MessagePlus> more = mMessageManager.loadPersistedMessages(actionChannelId, MAX_BATCH_LOAD_FROM_DISK);
+        TreeMap<Long, MessagePlus> more = mMessageManager.loadPersistedMessages(actionChannelId, MAX_BATCH_LOAD_FROM_DISK);
         if(more.size() > 0) {
             Set<String> newTargetMessageIds = getTargetMessageIds(more.values());
-            LinkedHashMap<String, MessagePlus> moreTargetMessages = mMessageManager.getMessages(newTargetMessageIds);
+            TreeMap<Long, MessagePlus> moreTargetMessages = mMessageManager.getMessages(newTargetMessageIds);
 
             responseHandler.setIsMore(more.size() == MAX_BATCH_LOAD_FROM_DISK);
-            responseHandler.onSuccess(new ArrayList(moreTargetMessages.values()), true);
+            responseHandler.onSuccess(new ArrayList(moreTargetMessages.values()));
         } else {
             //
             //load more action messages, then get the target messages
             //
             mMessageManager.retrieveMoreMessages(actionChannelId, new MessageManager.MessageManagerResponseHandler() {
                 @Override
-                public void onSuccess(List<MessagePlus> responseData, boolean appended) {
+                public void onSuccess(List<MessagePlus> responseData) {
                     Set<String> newTargetMessageIds = getTargetMessageIds(responseData);
-                    LinkedHashMap<String, MessagePlus> moreTargetMessages = mMessageManager.getMessages(newTargetMessageIds);
+                    TreeMap<Long, MessagePlus> moreTargetMessages = mMessageManager.getMessages(newTargetMessageIds);
 
                     responseHandler.setIsMore(isMore());
-                    responseHandler.onSuccess(new ArrayList(moreTargetMessages.values()), true);
+                    responseHandler.onSuccess(new ArrayList(moreTargetMessages.values()));
                 }
 
                 @Override
@@ -264,19 +264,19 @@ public class ActionMessageManager {
      */
     public synchronized boolean retrieveNewestMessages(final String actionChannelId, final MessageManager.MessageManagerResponseHandler responseHandler) {
         final String targetChannelId = getTargetChannelId(actionChannelId);
-        LinkedHashMap<String, MessagePlus> channelMessages = mMessageManager.getMessageMap(actionChannelId);
+        TreeMap<Long, MessagePlus> channelMessages = mMessageManager.getMessageMap(actionChannelId);
         if(channelMessages == null || channelMessages.size() == 0) {
             //we do this so that the max id is known.
             mMessageManager.loadPersistedMessages(actionChannelId, 1);
         }
         boolean canRetrieve = mMessageManager.retrieveNewestMessages(actionChannelId, new MessageManager.MessageManagerResponseHandler() {
             @Override
-            public void onSuccess(List<MessagePlus> responseData, boolean appended) {
+            public void onSuccess(List<MessagePlus> responseData) {
                 for(MessagePlus actionMessage : responseData) {
                     String targetMessageId = AnnotationUtility.getTargetMessageId(actionMessage.getMessage());
                     mDatabase.insertOrReplaceActionMessageSpec(actionMessage, targetMessageId, targetChannelId);
                 }
-                responseHandler.onSuccess(responseData, appended);
+                responseHandler.onSuccess(responseData);
             }
 
             @Override
@@ -401,7 +401,7 @@ public class ActionMessageManager {
                     final String targetChannelId = AnnotationUtility.getTargetChannelId(actionChannel);
                     mMessageManager.retrieveNewestMessages(channelId, new MessageManager.MessageManagerResponseHandler() {
                         @Override
-                        public void onSuccess(List<MessagePlus> responseData, boolean appended) {
+                        public void onSuccess(List<MessagePlus> responseData) {
                             for(String sentMessageId : sentMessageIds) {
                                 mDatabase.deleteActionMessageSpec(sentMessageId);
                             }
