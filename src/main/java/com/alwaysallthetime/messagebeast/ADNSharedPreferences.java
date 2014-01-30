@@ -144,7 +144,7 @@ public class ADNSharedPreferences {
         editor.commit();
     }
 
-    public static void deleteActionChannel(Channel actionChannel, String actionType, String targetChannelId) {
+    public static void deleteActionChannel(String actionType, String targetChannelId) {
         final SharedPreferences.Editor editor = sPrefs.edit();
         editor.remove(ACTION_CHANNEL_OBJECT + "_" + actionType + "_" + targetChannelId);
         editor.commit();
