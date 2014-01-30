@@ -476,16 +476,6 @@ public class MessageManager {
         return orderedMessageBatch;
     }
 
-    private void lookupAnnotations(Collection<MessagePlus> messages) {
-        if(mConfiguration.annotationsToExtract != null) {
-            for(MessagePlus messagePlus : messages) {
-                for(String annotationType : mConfiguration.annotationsToExtract) {
-                    mDatabase.insertOrReplaceAnnotationInstances(annotationType, messagePlus);
-                }
-            }
-        }
-    }
-
     private void lookupLocation(Collection<MessagePlus> messages, boolean persist) {
         for(MessagePlus messagePlus : messages) {
             Message message = messagePlus.getMessage();
