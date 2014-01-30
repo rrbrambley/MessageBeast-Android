@@ -1531,6 +1531,25 @@ public class ADNDatabase {
         return deletions;
     }
 
+    /**
+     * Delete all rows from all tables.
+     */
+    public void deleteAll() {
+        mDatabase.delete(TABLE_ACTION_MESSAGES, null, null);
+        mDatabase.delete(TABLE_ANNOTATION_INSTANCES, null, null);
+        mDatabase.delete(TABLE_GEOLOCATIONS, null, null);
+        mDatabase.delete(TABLE_HASHTAG_INSTANCES, null, null);
+        mDatabase.delete(TABLE_LOCATION_INSTANCES, null, null);
+        mDatabase.delete(TABLE_LOCATION_INSTANCES_SEARCH, null, null);
+        mDatabase.delete(TABLE_MESSAGES, null, null);
+        mDatabase.delete(TABLE_MESSAGES_SEARCH, null, null);
+        mDatabase.delete(TABLE_PENDING_FILE_ATTACHMENTS, null, null);
+        mDatabase.delete(TABLE_PENDING_FILE_DELETIONS, null, null);
+        mDatabase.delete(TABLE_PENDING_FILES, null, null);
+        mDatabase.delete(TABLE_PENDING_MESSAGE_DELETIONS, null, null);
+        mDatabase.delete(TABLE_PLACES, null, null);
+    }
+
     public void deleteMessage(MessagePlus messagePlus) {
         mDatabase.beginTransaction();
 
