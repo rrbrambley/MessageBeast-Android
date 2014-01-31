@@ -194,7 +194,6 @@ public class MessageManager {
     private HashMap<String, Set<String>> mMessagesNeedingPendingFiles;
     private HashMap<String, QueryParameters> mParameters;
     private HashMap<String, MinMaxPair> mMinMaxPairs;
-    private HashMap<String, MinMaxDatePair> mMinMaxDatePairs;
 
     public MessageManager(AppDotNetClient client, MessageManagerConfiguration configuration) {
         mContext = ADNApplication.getContext();
@@ -205,7 +204,6 @@ public class MessageManager {
         mMessages = new HashMap<String, TreeMap<Long, MessagePlus>>();
         mUnsentMessages = new HashMap<String, TreeMap<Long, MessagePlus>>();
         mMinMaxPairs = new HashMap<String, MinMaxPair>();
-        mMinMaxDatePairs = new HashMap<String, MinMaxDatePair>();
         mParameters = new HashMap<String, QueryParameters>();
         mMessagesNeedingPendingFiles = new HashMap<String, Set<String>>();
 
@@ -226,20 +224,19 @@ public class MessageManager {
         mMessagesNeedingPendingFiles.clear();
         mParameters.clear();
         mMinMaxPairs.clear();
-        mMinMaxDatePairs.clear();
         mMessagesNeedingPendingFiles.clear();
     }
 
     private synchronized OrderedMessageBatch loadPersistedMessageBatch(String channelId, int limit, boolean performLookups) {
         Date beforeDate = null;
-        MinMaxDatePair minMaxDatePair = getMinMaxDatePair(channelId);
-        if(minMaxDatePair.minDate != null) {
-            beforeDate = new Date(minMaxDatePair.minDate);
+        MinMaxPair minMaxPair = getMinMaxPair(channelId);
+        if(minMaxPair.minDate != null) {
+            beforeDate = new Date(minMaxPair.minDate);
         }
         OrderedMessageBatch orderedMessageBatch = mDatabase.getMessages(channelId, beforeDate, limit);
         TreeMap<Long, MessagePlus> messages = orderedMessageBatch.getMessages();
-        MinMaxDatePair dbMinMaxDatePair = orderedMessageBatch.getMinMaxDatePair();
-        minMaxDatePair.updateWithCombinedValues(dbMinMaxDatePair);
+        MinMaxPair dbMinMaxPair = orderedMessageBatch.getMinMaxPair();
+        minMaxPair.updateWithCombinedValues(dbMinMaxPair);
 
         TreeMap<Long, MessagePlus> channelMessages = mMessages.get(channelId);
         if(channelMessages != null) {
@@ -626,19 +623,10 @@ public class MessageManager {
     private synchronized MinMaxPair getMinMaxPair(String channelId) {
         MinMaxPair minMaxPair = mMinMaxPairs.get(channelId);
         if(minMaxPair == null) {
-            minMaxPair = mDatabase.getMinMaxPair(channelId);
+            minMaxPair = new MinMaxPair();
             mMinMaxPairs.put(channelId, minMaxPair);
         }
         return minMaxPair;
-    }
-
-    private synchronized MinMaxDatePair getMinMaxDatePair(String channelId) {
-        MinMaxDatePair minMaxDatePair = mMinMaxDatePairs.get(channelId);
-        if(minMaxDatePair == null) {
-            minMaxDatePair = new MinMaxDatePair();
-            mMinMaxDatePairs.put(channelId, minMaxDatePair);
-        }
-        return minMaxDatePair;
     }
 
     private synchronized TreeMap<Long, MessagePlus> getChannelMessages(String channelId) {
@@ -925,8 +913,12 @@ public class MessageManager {
         newChannelMessages.putAll(channelMessages);
         mMessages.put(channelId, newChannelMessages);
 
-        getMinMaxDatePair(channelId).expandIfMinOrMax(messagePlus.getDisplayDate().getTime());
-        getMinMaxPair(channelId).maxId = newMessageIdString;
+        //update the MinMaxPair
+        //we can assume the new id is the max (that's how we generated it)
+        //but we have to check to see if the time is min or max
+        MinMaxPair minMaxPair = getMinMaxPair(channelId);
+        minMaxPair.expandDateIfMinOrMax(messagePlus.getDisplayDate().getTime());
+        minMaxPair.maxId = newMessageIdString;
 
         Log.d(TAG, "Created and stored unsent message with id " + newMessageIdString);
 
@@ -973,7 +965,7 @@ public class MessageManager {
             mDatabase.deleteMessage(messagePlus);
             getUnsentMessages(channelId).remove(messagePlus.getDisplayDate().getTime());
 
-            onMessageDeleted(messagePlus);
+            deleteMessageFromChannelMapAndUpdateMinMaxPair(messagePlus);
 
             if(handler != null) {
                 handler.onSuccess();
@@ -1007,7 +999,7 @@ public class MessageManager {
 
                         private void delete() {
                             mDatabase.deleteMessage(messagePlus); //this one because the deleted one doesn't have the entities.
-                            onMessageDeleted(messagePlus);
+                            deleteMessageFromChannelMapAndUpdateMinMaxPair(messagePlus);
                         }
                     });
                 }
@@ -1100,42 +1092,72 @@ public class MessageManager {
         }
     }
 
-    private synchronized void onMessageDeleted(MessagePlus messagePlus) {
+    private synchronized void deleteMessageFromChannelMapAndUpdateMinMaxPair(MessagePlus messagePlus) {
+        //
+        //modify the MinMaxPair if the removed message was at the min or max date/id.
+        //we know the channel messages are ordered by date, but the ids are not necessarily ordered.
+        //
         String channelId = messagePlus.getMessage().getChannelId();
+        MinMaxPair minMaxPair = getMinMaxPair(channelId);
+        TreeMap<Long, MessagePlus> channelMessages = getChannelMessages(channelId);
+
+        String deletedMessageId = messagePlus.getMessage().getId();
+        boolean adjustMax = deletedMessageId.equals(minMaxPair.maxId);
+        boolean adjustMin = deletedMessageId.equals(minMaxPair.minId);
+        Integer maxIdAsInteger = minMaxPair.getMaxIdAsInteger();
+        Integer minIdAsInteger = minMaxPair.getMinIdAsInteger();
+        Integer newMaxId = null;
+        Integer newMinId = null;
         Long removedTime = messagePlus.getDisplayDate().getTime();
 
-        //
-        //modify the MinMaxDatePair if the removed message was at the min or max date
-        //
-        MinMaxDatePair minMaxDatePair = getMinMaxDatePair(channelId);
-        TreeMap<Long, MessagePlus> channelMessages = getChannelMessages(channelId);
+        //we have to iterate for these reasons:
+        //1. ids are not in order in map, need to find new min/max
+        //2. need to get to the second to last date (if the deleted message was the last)
+
         Iterator<Long> timeIterator = channelMessages.keySet().iterator();
-        Long firstTime = timeIterator.next();
+        Long secondToLastDate = null;
+        Long lastDate = null;
 
-        if(firstTime.equals(removedTime)) {
-            if(timeIterator.hasNext()) {
-                minMaxDatePair.maxDate = timeIterator.next();
-            } else {
-                minMaxDatePair.maxDate = null;
-                minMaxDatePair.minDate = null;
-            }
-        }
-
-        //this looks weird, but this is basically the only way
-        //to get the last item in the key set
-        timeIterator = channelMessages.keySet().iterator();
-        Long secondToLastTime = null;
-        Long lastTime = null;
         while(timeIterator.hasNext()) {
-            secondToLastTime = lastTime;
-            lastTime = timeIterator.next();
+            Long nextTime = timeIterator.next();
+
+            //so this is the second date, and the first date was the one that was removed
+            //the new max date is the second key.
+            if(lastDate != null && secondToLastDate == null && lastDate.equals(removedTime) ) {
+                minMaxPair.maxDate = nextTime;
+            }
+
+            Integer nextId = Integer.parseInt(channelMessages.get(nextTime).getMessage().getId());
+            if(adjustMax && maxIdAsInteger > nextId && (newMaxId == null || nextId > newMaxId)) {
+                newMaxId = nextId;
+            }
+            if(adjustMin && minIdAsInteger < nextId && (newMinId == null || nextId < newMinId)) {
+                newMinId = nextId;
+            }
+            secondToLastDate = lastDate;
+            lastDate = nextTime;
         }
-        if(removedTime.equals(lastTime)) {
-            minMaxDatePair.minDate = secondToLastTime;
+
+        //the last date was the removed one, so the new min date is the second to last date.
+        if(removedTime.equals(lastDate)) {
+            minMaxPair.minDate = secondToLastDate;
+        }
+        if(newMaxId != null) {
+            minMaxPair.maxId = String.valueOf(newMaxId);
+        }
+        if(newMinId != null) {
+            minMaxPair.minId = String.valueOf(newMinId);
+        }
+
+        //handle the edge case where there is only one item in the map, about to get removed
+        if(channelMessages.size() == 1) {
+            minMaxPair.maxId = null;
+            minMaxPair.minId = null;
+            minMaxPair.maxDate = null;
+            minMaxPair.minDate = null;
         }
 
         channelMessages.remove(removedTime);
-        mMinMaxPairs.put(channelId, mDatabase.getMinMaxPair(channelId));
     }
 
     /**
@@ -1373,20 +1395,7 @@ public class MessageManager {
 
                 mDatabase.deleteMessage(messagePlus);
 
-                //remove the message from in-memory message map.
-                TreeMap<Long, MessagePlus> channelMessages = getChannelMessages(message.getChannelId());
-                channelMessages.remove(sentMessageTime);
-
-                String channelId = message.getChannelId();
-                if(channelMessages.size() > 0) {
-                    mMinMaxPairs.put(channelId, mDatabase.getMinMaxPair(channelId));
-
-                    Long nextMaxDate = channelMessages.keySet().iterator().next();
-                    getMinMaxDatePair(channelId).maxDate = nextMaxDate;
-                } else {
-                    getMinMaxPair(channelId).maxId = null;
-                    getMinMaxDatePair(channelId).maxDate = null;
-                }
+                deleteMessageFromChannelMapAndUpdateMinMaxPair(messagePlus);
 
                 if(unsentMessages.size() > 0) {
                     sendUnsentMessages(unsentMessages, sentMessageIds);
@@ -1530,9 +1539,6 @@ public class MessageManager {
         mClient.retrieveMessagesInChannel(channelId, queryParameters, new MessageListResponseHandler() {
             @Override
             public void onSuccess(final MessageList responseData) {
-                MinMaxPair minMaxPair = getMinMaxPair(channelId);
-                mMinMaxPairs.put(channelId, minMaxPair.combine(new MinMaxPair(getMinId(), getMaxId())));
-
                 TreeMap<Long, MessagePlus> channelMessages = getChannelMessages(channelId);
                 TreeMap<Long, MessagePlus> newestMessagesMap = new TreeMap<Long, MessagePlus>(new ReverseChronologicalComparator());
                 TreeMap<Long, MessagePlus> newFullChannelMessagesMap = new TreeMap<Long, MessagePlus>(new ReverseChronologicalComparator());
@@ -1554,20 +1560,27 @@ public class MessageManager {
                     }
                 }
 
-                MinMaxDatePair minMaxDatePair = getMinMaxDatePair(channelId);
+                Long minDate = null, maxDate = null;
 
                 //this needs to happen after filtering.
                 //damn. not as efficient as doing it in the loop above.
                 for(MessagePlus messagePlus : newestMessagesMap.values()) {
                     insertIntoDatabase(messagePlus);
 
-                    if(keepInMemory) {
-                        minMaxDatePair.expandIfMinOrMax(messagePlus.getDisplayDate().getTime());
+                    Long time = messagePlus.getDisplayDate().getTime();
+                    if(minDate == null || time < minDate) {
+                        minDate = time;
+                    }
+                    if(maxDate == null || time > maxDate) {
+                        maxDate = time;
                     }
                 }
 
                 if(keepInMemory) {
                     mMessages.put(channelId, newFullChannelMessagesMap);
+
+                    MinMaxPair minMaxPair = getMinMaxPair(channelId);
+                    minMaxPair.updateWithCombinedValues(new MinMaxPair(getMinId(), getMaxId(), minDate, maxDate));
                 }
 
                 ArrayList<MessagePlus> newestMessages = new ArrayList<MessagePlus>(responseData.size());

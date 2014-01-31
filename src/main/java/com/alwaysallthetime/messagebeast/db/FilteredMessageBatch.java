@@ -15,7 +15,7 @@ public class FilteredMessageBatch extends OrderedMessageBatch {
     private TreeMap<Long, MessagePlus> mExcludedMessages;
 
     private FilteredMessageBatch(OrderedMessageBatch batch, TreeMap<Long, MessagePlus> filteredMessages) {
-        super(batch.getMessages(), batch.getMinMaxDatePair());
+        super(batch.getMessages(), batch.getMinMaxPair());
         mExcludedMessages = filteredMessages;
     }
 

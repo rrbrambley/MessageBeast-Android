@@ -14,7 +14,6 @@ import com.alwaysallthetime.adnlib.data.Entities;
 import com.alwaysallthetime.adnlib.data.Message;
 import com.alwaysallthetime.adnlib.data.Place;
 import com.alwaysallthetime.adnlib.gson.AppDotNetGson;
-import com.alwaysallthetime.messagebeast.manager.MinMaxDatePair;
 import com.alwaysallthetime.messagebeast.manager.MinMaxPair;
 import com.alwaysallthetime.messagebeast.manager.ReverseChronologicalComparator;
 import com.alwaysallthetime.messagebeast.model.DisplayLocation;
@@ -289,30 +288,11 @@ public class ADNDatabase {
         return Build.VERSION.SDK_INT >= 11;
     }
 
+    //http://www.sqlite.org/optoverview.html#minmax
     public Integer getMaxMessageId() {
         Cursor cursor = mDatabase.rawQuery("SELECT MAX(" + COL_MESSAGE_ID + ") FROM " + TABLE_MESSAGES, null);
         if(cursor.moveToFirst()) {
             return cursor.getInt(0);
-        }
-        return null;
-    }
-
-    public MinMaxPair getMinMaxPair(String channelId) {
-        return new MinMaxPair(getMinMessageId(channelId), getMaxMessageId(channelId));
-    }
-
-    public String getMaxMessageId(String channelId) {
-        Cursor cursor = mDatabase.rawQuery("SELECT MAX(" + COL_MESSAGE_ID + ") FROM " + TABLE_MESSAGES + " WHERE " + COL_MESSAGE_CHANNEL_ID + " = " + channelId, null);
-        if(cursor.moveToFirst()) {
-            return String.valueOf(cursor.getInt(0));
-        }
-        return null;
-    }
-
-    public String getMinMessageId(String channelId) {
-        Cursor cursor = mDatabase.rawQuery("SELECT MIN(" + COL_MESSAGE_ID + ") FROM " + TABLE_MESSAGES + " WHERE " + COL_MESSAGE_CHANNEL_ID + " = " + channelId, null);
-        if(cursor.moveToFirst()) {
-            return String.valueOf(cursor.getInt(0));
         }
         return null;
     }
@@ -1354,20 +1334,23 @@ public class ADNDatabase {
         TreeMap<Long, MessagePlus> messages = new TreeMap<Long, MessagePlus>(new ReverseChronologicalComparator());
         ArrayList<MessagePlus> messagePlusses = new ArrayList<MessagePlus>();
         Long maxDate = null, minDate = null;
+        Integer maxId = null, minId = null;
 
         Cursor cursor = null;
         try {
             cursor = mDatabase.query(TABLE_MESSAGES, null, where, args, null, null, orderBy, limit);
 
-            Message message = null;
+            Integer messageId = null;
+            Long date = null;
+
             while(cursor.moveToNext()) {
-                String messageId = cursor.getString(0);
-                long date = cursor.getLong(2);
+                messageId = cursor.getInt(0);
+                date = cursor.getLong(2);
                 String messageJson = cursor.getString(3);
                 String messageText = cursor.getString(4);
                 boolean isUnsent = cursor.getInt(5) == 1;
                 int numSendAttempts = cursor.getInt(6);
-                message = mGson.fromJson(messageJson, Message.class);
+                Message message = mGson.fromJson(messageJson, Message.class);
                 message.setText(messageText);
 
                 MessagePlus messagePlus = new MessagePlus(message);
@@ -1378,11 +1361,15 @@ public class ADNDatabase {
 
                 if(maxDate == null) {
                     maxDate = date;
-                    minDate = date;
+                    maxId = messageId;
+                    minId = messageId;
                 } else {
-                    maxDate = Math.max(maxDate, date);
-                    minDate = Math.min(minDate, date);
+                    //this must happen because id order is not necessarily same as date order
+                    //(and we know the results are ordered by date)
+                    maxId = Math.max(messageId, maxId);
+                    minId = Math.min(messageId, minId);
                 }
+
                 //this is just for efficiency
                 //if it is already sent, then we don't need to try to populate pending
                 //file attachments.
@@ -1390,6 +1377,9 @@ public class ADNDatabase {
                     messagePlusses.add(messagePlus);
                 }
             }
+
+            //because they're ordered by recency, we know the last one will be the minDate
+            minDate = date;
 
         } catch(Exception e) {
             Log.e(TAG, e.getMessage(), e);
@@ -1399,7 +1389,9 @@ public class ADNDatabase {
             }
         }
         populatePendingFileAttachments(messagePlusses);
-        return new OrderedMessageBatch(messages, new MinMaxDatePair(minDate, maxDate));
+        String minIdString = minId != null ? String.valueOf(minId) : null;
+        String maxIdString = maxId != null ? String.valueOf(maxId) : null;
+        return new OrderedMessageBatch(messages, new MinMaxPair(minIdString, maxIdString, minDate, maxDate));
     }
 
     /**
