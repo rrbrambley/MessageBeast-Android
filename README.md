@@ -394,6 +394,16 @@ Configuration configuration = ADNSharedPreferences.getConfiguration();
 
 ```
 
+If you're building UI that would benefit from the styling of entities of any type, you can use ``EntityStyler`` to easily apply CharacterStyles to a Message:
+
+```java
+ArrayList<CharacterStyle> hashtagStyles = new ArrayList<CharacterStyle>(2);
+hashtagStyles.add(new StyleSpan(Typeface.BOLD | Typeface.ITALIC));
+hashtagStyles.add(new ForegroundColorSpan(getResources().getColor(R.color.my_hashtag_color)));
+
+myTextView.setText(EntityStyler.getStyledHashtags(myMessage, hashtagStyles));
+```
+
 Future Improvements, Additions, Fixes
 ------
 See [Issues](https://github.com/rrbrambley/MessageBeast-Android/issues).
