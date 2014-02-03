@@ -1093,71 +1093,75 @@ public class MessageManager {
     }
 
     private synchronized void deleteMessageFromChannelMapAndUpdateMinMaxPair(MessagePlus messagePlus) {
-        //
-        //modify the MinMaxPair if the removed message was at the min or max date/id.
-        //we know the channel messages are ordered by date, but the ids are not necessarily ordered.
-        //
+        Long removedTime = messagePlus.getDisplayDate().getTime();
         String channelId = messagePlus.getMessage().getChannelId();
-        MinMaxPair minMaxPair = getMinMaxPair(channelId);
         TreeMap<Long, MessagePlus> channelMessages = getChannelMessages(channelId);
 
-        String deletedMessageId = messagePlus.getMessage().getId();
-        boolean adjustMax = deletedMessageId.equals(minMaxPair.maxId);
-        boolean adjustMin = deletedMessageId.equals(minMaxPair.minId);
-        Integer maxIdAsInteger = minMaxPair.getMaxIdAsInteger();
-        Integer minIdAsInteger = minMaxPair.getMinIdAsInteger();
-        Integer newMaxId = null;
-        Integer newMinId = null;
-        Long removedTime = messagePlus.getDisplayDate().getTime();
+        if(channelMessages.containsKey(removedTime)) {
+            //
+            //modify the MinMaxPair if the removed message was at the min or max date/id.
+            //we know the channel messages are ordered by date, but the ids are not necessarily ordered.
+            //
 
-        //we have to iterate for these reasons:
-        //1. ids are not in order in map, need to find new min/max
-        //2. need to get to the second to last date (if the deleted message was the last)
+            MinMaxPair minMaxPair = getMinMaxPair(channelId);
 
-        Iterator<Long> timeIterator = channelMessages.keySet().iterator();
-        Long secondToLastDate = null;
-        Long lastDate = null;
+            String deletedMessageId = messagePlus.getMessage().getId();
+            boolean adjustMax = deletedMessageId.equals(minMaxPair.maxId);
+            boolean adjustMin = deletedMessageId.equals(minMaxPair.minId);
+            Integer maxIdAsInteger = minMaxPair.getMaxIdAsInteger();
+            Integer minIdAsInteger = minMaxPair.getMinIdAsInteger();
+            Integer newMaxId = null;
+            Integer newMinId = null;
 
-        while(timeIterator.hasNext()) {
-            Long nextTime = timeIterator.next();
+            //we have to iterate for these reasons:
+            //1. ids are not in order in map, need to find new min/max
+            //2. need to get to the second to last date (if the deleted message was the last)
 
-            //so this is the second date, and the first date was the one that was removed
-            //the new max date is the second key.
-            if(lastDate != null && secondToLastDate == null && lastDate.equals(removedTime) ) {
-                minMaxPair.maxDate = nextTime;
+            Iterator<Long> timeIterator = channelMessages.keySet().iterator();
+            Long secondToLastDate = null;
+            Long lastDate = null;
+
+            while(timeIterator.hasNext()) {
+                Long nextTime = timeIterator.next();
+
+                //so this is the second date, and the first date was the one that was removed
+                //the new max date is the second key.
+                if(lastDate != null && secondToLastDate == null && lastDate.equals(removedTime) ) {
+                    minMaxPair.maxDate = nextTime;
+                }
+
+                Integer nextId = Integer.parseInt(channelMessages.get(nextTime).getMessage().getId());
+                if(adjustMax && maxIdAsInteger > nextId && (newMaxId == null || nextId > newMaxId)) {
+                    newMaxId = nextId;
+                }
+                if(adjustMin && minIdAsInteger < nextId && (newMinId == null || nextId < newMinId)) {
+                    newMinId = nextId;
+                }
+                secondToLastDate = lastDate;
+                lastDate = nextTime;
             }
 
-            Integer nextId = Integer.parseInt(channelMessages.get(nextTime).getMessage().getId());
-            if(adjustMax && maxIdAsInteger > nextId && (newMaxId == null || nextId > newMaxId)) {
-                newMaxId = nextId;
+            //the last date was the removed one, so the new min date is the second to last date.
+            if(removedTime.equals(lastDate)) {
+                minMaxPair.minDate = secondToLastDate;
             }
-            if(adjustMin && minIdAsInteger < nextId && (newMinId == null || nextId < newMinId)) {
-                newMinId = nextId;
+            if(newMaxId != null) {
+                minMaxPair.maxId = String.valueOf(newMaxId);
             }
-            secondToLastDate = lastDate;
-            lastDate = nextTime;
-        }
+            if(newMinId != null) {
+                minMaxPair.minId = String.valueOf(newMinId);
+            }
 
-        //the last date was the removed one, so the new min date is the second to last date.
-        if(removedTime.equals(lastDate)) {
-            minMaxPair.minDate = secondToLastDate;
-        }
-        if(newMaxId != null) {
-            minMaxPair.maxId = String.valueOf(newMaxId);
-        }
-        if(newMinId != null) {
-            minMaxPair.minId = String.valueOf(newMinId);
-        }
+            //handle the edge case where there is only one item in the map, about to get removed
+            if(channelMessages.size() == 1) {
+                minMaxPair.maxId = null;
+                minMaxPair.minId = null;
+                minMaxPair.maxDate = null;
+                minMaxPair.minDate = null;
+            }
 
-        //handle the edge case where there is only one item in the map, about to get removed
-        if(channelMessages.size() == 1) {
-            minMaxPair.maxId = null;
-            minMaxPair.minId = null;
-            minMaxPair.maxDate = null;
-            minMaxPair.minDate = null;
+            channelMessages.remove(removedTime);
         }
-
-        channelMessages.remove(removedTime);
     }
 
     /**
