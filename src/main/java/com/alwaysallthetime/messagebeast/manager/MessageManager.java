@@ -162,11 +162,6 @@ public class MessageManager {
         public void onError(Exception exception);
     }
 
-    public interface MessageRefreshResponseHandler {
-        public void onSuccess(final MessagePlus responseData);
-        public void onError(Exception exception);
-    }
-
     public interface MessageDeletionResponseHandler {
         public void onSuccess();
         public void onError(Exception exception);
@@ -1172,7 +1167,7 @@ public class MessageManager {
      * @param message the Message to refresh.
      * @param handler The handler that will act as a callback upon refresh completion.
      */
-    public synchronized void refreshMessage(final Message message, final MessageRefreshResponseHandler handler) {
+    public synchronized void refreshMessage(final Message message, final MessageManagerResponseHandler handler) {
         final String channelId = message.getChannelId();
         mClient.retrieveMessage(channelId, message.getId(), mParameters.get(channelId), new MessageResponseHandler() {
             @Override
@@ -1186,12 +1181,44 @@ public class MessageManager {
                     channelMessages.put(mPlus.getDisplayDate().getTime(), mPlus);
                 }
 
-                HashSet<MessagePlus> messagePlusses = new HashSet<MessagePlus>(1);
-                messagePlusses.add(mPlus);
+                ArrayList<MessagePlus> messagePlusList = new ArrayList<MessagePlus>(1);
+                messagePlusList.add(mPlus);
+                performLookups(messagePlusList, true);
 
+                handler.onSuccess(messagePlusList);
+            }
+
+            @Override
+            public void onError(Exception error) {
+                super.onError(error);
+                handler.onError(error);
+            }
+        });
+    }
+
+    public synchronized void refreshMessages(Collection<String> messageIds, final String channelId, final MessageManagerResponseHandler handler) {
+        mClient.retrieveMessagesById(messageIds, mParameters.get(channelId), new MessageListResponseHandler() {
+            @Override
+            public void onSuccess(MessageList responseData) {
+                TreeMap<Long, MessagePlus> messagePlusMap = new TreeMap<Long, MessagePlus>(new ReverseChronologicalComparator());
+                TreeMap<Long, MessagePlus> channelMessages = mMessages.get(channelId);
+
+                for(Message message : responseData) {
+                    MessagePlus mPlus = new MessagePlus(message);
+                    Date date = adjustDate(mPlus);
+
+                    insertIntoDatabase(mPlus);
+
+                    if(channelMessages != null) { //could be null of channel messages weren't loaded first, etc.
+                        channelMessages.put(mPlus.getDisplayDate().getTime(), mPlus);
+                    }
+
+                    messagePlusMap.put(mPlus.getDisplayDate().getTime(), mPlus);
+                }
+
+                ArrayList<MessagePlus> messagePlusses = new ArrayList<MessagePlus>(messagePlusMap.values());
                 performLookups(messagePlusses, true);
-
-                handler.onSuccess(mPlus);
+                handler.onSuccess(messagePlusses);
             }
 
             @Override
