@@ -305,7 +305,7 @@ public class MessageManager {
     }
 
     /**
-     * Load all persisted Messages with an associated DisplayLocation without keeping them in
+     * Load persisted Messages with an associated DisplayLocation without keeping them in
      * MessageManager memory.
      *
      * Messages will be returned after performing DisplayLocation and OEmbed lookup, provided those
@@ -314,12 +314,33 @@ public class MessageManager {
      * @param channelId the Channel id
      * @param location the DisplayLocation
      * @param precision the precision to use when obtaining location instances.
+     * @param limit the maximum number of Messages to load from the database.
      * @return a TreeMap mapping Message times in millis to MessagePlus objects
      *
      * @see com.alwaysallthetime.messagebeast.db.ADNDatabase#getDisplayLocationInstances(String, com.alwaysallthetime.messagebeast.model.DisplayLocation, com.alwaysallthetime.messagebeast.db.ADNDatabase.LocationPrecision)
      */
-    public TreeMap<Long, MessagePlus> getMessages(String channelId, DisplayLocation location, ADNDatabase.LocationPrecision precision) {
-        DisplayLocationInstances locationInstances = mDatabase.getDisplayLocationInstances(channelId, location, precision);
+    public TreeMap<Long, MessagePlus> getMessages(String channelId, DisplayLocation location, ADNDatabase.LocationPrecision precision, int limit) {
+        return getMessages(channelId, location, precision, null, limit);
+    }
+
+    /**
+     * Load persisted Messages with an associated DisplayLocation without keeping them in
+     * MessageManager memory.
+     *
+     * Messages will be returned after performing DisplayLocation and OEmbed lookup, provided those
+     * features are enabled in the MessageManagerConfiguration.
+     *
+     * @param channelId the Channel id
+     * @param location the DisplayLocation
+     * @param precision the precision to use when obtaining location instances.
+     * @param beforeDate the the date before the display date of all returned messages. Can be null.
+     * @param limit the maximum number of Messages to load from the database.
+     * @return a TreeMap mapping Message times in millis to MessagePlus objects
+     *
+     * @see com.alwaysallthetime.messagebeast.db.ADNDatabase#getDisplayLocationInstances(String, com.alwaysallthetime.messagebeast.model.DisplayLocation, com.alwaysallthetime.messagebeast.db.ADNDatabase.LocationPrecision)
+     */
+    public TreeMap<Long, MessagePlus> getMessages(String channelId, DisplayLocation location, ADNDatabase.LocationPrecision precision, Date beforeDate, int limit) {
+        DisplayLocationInstances locationInstances = mDatabase.getDisplayLocationInstances(channelId, location, precision, beforeDate, limit);
         return getMessages(locationInstances.getMessageIds());
     }
 

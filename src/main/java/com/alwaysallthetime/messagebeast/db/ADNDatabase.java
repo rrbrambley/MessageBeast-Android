@@ -1020,12 +1020,39 @@ public class ADNDatabase {
      * @return DisplayLocationInstances
      */
     public DisplayLocationInstances getDisplayLocationInstances(String channelId, DisplayLocation location, LocationPrecision precision) {
+        return getDisplayLocationInstances(channelId, location, precision, null, null);
+    }
+
+    /**
+     * Get a DisplayLocationInstances object representing a set of messages with which
+     * the specified DisplayLocation is associated. Because DisplayLocations might have names that
+     * represent larger geographic areas, this method accepts a LocationPrecision that acts as
+     * a filter. For example, if a location was simply, "Mission District, San Francisco," you might want
+     * to provide a wider LocationPrecision so that a location that has the same name, but slightly different
+     * coordinates are returned.
+     *
+     * Display locations are unique by name + latitude + longitude, where latitude and longitude are
+     * always rounded to three decimal places. So, by providing a less precise LocationPrecision, you
+     * can lookup by locations that match, e.g. 2 or 1 decimal places.
+     *
+     * @param channelId The id of the channel
+     * @param location the DisplayLocation
+     * @param precision The precision to use when obtaining location instances.
+     * @param beforeDate a date that all display dates associated with the display location instances must
+     *                   come after. This is useful for paging. A null value is the same as passing
+     *                   the current date.
+     * @param limit The maximum number of instances to obtain. A null value means all will be returned.
+     * @return DisplayLocationInstances
+     */
+    public DisplayLocationInstances getDisplayLocationInstances(String channelId, DisplayLocation location, LocationPrecision precision, Date beforeDate, Integer limit) {
         Cursor cursor = null;
         DisplayLocationInstances instances = new DisplayLocationInstances(location);
         try {
             String where = COL_LOCATION_INSTANCE_CHANNEL_ID + " = ? AND " + COL_LOCATION_INSTANCE_NAME + " = ? AND " +
-                           COL_LOCATION_INSTANCE_LATITUDE + " LIKE ? AND " + COL_LOCATION_INSTANCE_LONGITUDE + " LIKE ?";
+                    COL_LOCATION_INSTANCE_LATITUDE + " LIKE ? AND " + COL_LOCATION_INSTANCE_LONGITUDE + " LIKE ?";
+            String limitTo = limit != null ? String.valueOf(limit) : null;
 
+            String args[] = null;
             String latArg = null;
             String longArg = null;
             int precisionDigits = LocationPrecision.getNumPrecisionDigits(precision);
@@ -1033,10 +1060,17 @@ public class ADNDatabase {
             latArg = String.format("%s%%", String.valueOf(getRoundedValue(location.getLatitude(), precisionDigits)));
             longArg = String.format("%s%%", String.valueOf(getRoundedValue(location.getLongitude(), precisionDigits)));
 
+            if(beforeDate != null) {
+                where += " AND " + "CAST(" + COL_LOCATION_INSTANCE_DATE + " AS INTEGER) < ?";
+                args = new String[] { channelId, location.getName(), latArg, longArg, String.valueOf(beforeDate.getTime()) };
+            } else {
+                args = new String[] { channelId, location.getName(), latArg, longArg };
+            }
+
             String orderBy = COL_LOCATION_INSTANCE_DATE + " DESC";
-            String[] args = new String[] { channelId, location.getName(), latArg, longArg };
+
             String[] cols = new String[] { COL_LOCATION_INSTANCE_MESSAGE_ID };
-            cursor = mDatabase.query(TABLE_LOCATION_INSTANCES, cols, where, args, null, null, orderBy, null);
+            cursor = mDatabase.query(TABLE_LOCATION_INSTANCES, cols, where, args, null, null, orderBy, limitTo);
             while(cursor.moveToNext()) {
                 String messageId = cursor.getString(0);
                 instances.addInstance(messageId);
@@ -1243,7 +1277,7 @@ public class ADNDatabase {
     }
 
     /**
-     * Get a HashtagInstances object representing all Messages in which the specified
+     * Get a HashtagInstances object representing Messages in which the specified
      * hashtag was used.
      *
      * @param channelId The id of the channel
