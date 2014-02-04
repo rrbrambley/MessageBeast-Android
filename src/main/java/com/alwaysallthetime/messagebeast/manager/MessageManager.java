@@ -305,6 +305,21 @@ public class MessageManager {
     }
 
     /**
+     * Load persisted Messages without keeping them in MessageManager memory.
+     *
+     * No DisplayLocation or OEmbed lookup will be performed on these Messages.
+     *
+     * @param channelId the Channel id
+     * @param beforeDate the the date before the display date of all returned messages. Can be null.
+     * @param limit the maximum number of Messages to load from the database.
+     * @return a TreeMap mapping Message times in millis to MessagePlus objects
+     */
+    public TreeMap<Long, MessagePlus> getMessages(String channelId, Date beforeDate, int limit) {
+        OrderedMessageBatch orderedMessageBatch = mDatabase.getMessages(channelId, beforeDate, limit);
+        return orderedMessageBatch.getMessages();
+    }
+
+    /**
      * Load persisted Messages with an associated DisplayLocation without keeping them in
      * MessageManager memory.
      *
