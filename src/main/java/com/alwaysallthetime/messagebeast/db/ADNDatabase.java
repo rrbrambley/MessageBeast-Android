@@ -875,8 +875,10 @@ public class ADNDatabase {
      *
      * @param channelId the Channel id
      * @param type The Annotation type
-     * @param beforeDate a date that all display dates
-     * @param limit The maximum number of instances to obtain
+     * @param beforeDate a date that all display dates associated with the annotation instances must
+     *                   come after. This is useful for paging. A null value is the same as passing
+     *                   the current date.
+     * @param limit The maximum number of instances to obtain. A null value means all will be returned.
      *
      * @return AnnotationInstances
      */
