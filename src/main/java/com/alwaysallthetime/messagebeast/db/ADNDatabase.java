@@ -866,12 +866,39 @@ public class ADNDatabase {
      * @return AnnotationInstances
      */
     public AnnotationInstances getAnnotationInstances(String channelId, String type) {
+        return getAnnotationInstances(channelId, type, null, null);
+    }
+
+    /**
+     * Get an AnnotationInstances object representing the complete set of messages with an
+     * Annotation of the specified type.
+     *
+     * @param channelId the Channel id
+     * @param type The Annotation type
+     * @param beforeDate a date that all display dates
+     * @param limit The maximum number of instances to obtain
+     *
+     * @return AnnotationInstances
+     */
+    public AnnotationInstances getAnnotationInstances(String channelId, String type, Date beforeDate, Integer limit) {
         Cursor cursor = null;
         AnnotationInstances instances = new AnnotationInstances(type);
         try {
             String where = COL_ANNOTATION_INSTANCE_CHANNEL_ID + " = ? AND " + COL_ANNOTATION_INSTANCE_TYPE + " = ?";
-            String[] args = new String[] { channelId, type };
-            cursor = mDatabase.query(TABLE_ANNOTATION_INSTANCES, new String[] {COL_ANNOTATION_INSTANCE_MESSAGE_ID}, where, args, null, null, null, null);
+            String[] args = null;
+            String limitTo = null;
+
+            if(beforeDate != null) {
+                where += " AND " + "CAST(" + COL_ANNOTATION_INSTANCE_DATE + " AS INTEGER) < ?";
+                args = new String[] { channelId, type, String.valueOf(beforeDate.getTime()) };
+            } else {
+                args = new String[] { channelId, type };
+            }
+            if(limit != null) {
+                limitTo = String.valueOf(limit);
+            }
+            String orderBy = COL_ANNOTATION_INSTANCE_DATE + " DESC";
+            cursor = mDatabase.query(TABLE_ANNOTATION_INSTANCES, new String[] {COL_ANNOTATION_INSTANCE_MESSAGE_ID}, where, args, null, null, orderBy, limitTo);
 
             while(cursor.moveToNext()) {
                 String messageId = cursor.getString(0);

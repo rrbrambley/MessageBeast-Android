@@ -345,10 +345,25 @@ public class MessageManager {
      *
      * @param channelId the id of the Channel in which the returned Messages will be contained
      * @param annotationType the Annotation type to look for
+     * @param limit the maximum number of Messages to load from the database.
      * @return a TreeMap mapping Message times in millis to MessagePlus objects
      */
-    public TreeMap<Long, MessagePlus> getMessagesWithAnnotation(String channelId, String annotationType) {
-        AnnotationInstances instances = getAnnotationInstances(channelId, annotationType);
+    public TreeMap<Long, MessagePlus> getMessagesWithAnnotation(String channelId, String annotationType, int limit) {
+        return getMessagesWithAnnotation(channelId, annotationType, null, limit);
+    }
+
+    /**
+     * Load persisted Messages that use a specific type of Annotation, without keeping them in
+     * MessageManager memory.
+     *
+     * @param channelId the id of the Channel in which the returned Messages will be contained
+     * @param annotationType the Annotation type to look for
+     * @param beforeDate the date before the display date of all associated messages. Can be null.
+     * @param limit the maximum number of Messages to load from the database.
+     * @return a TreeMap mapping Message times in millis to MessagePlus objects
+     */
+    public TreeMap<Long, MessagePlus> getMessagesWithAnnotation(String channelId, String annotationType, Date beforeDate, int limit) {
+        AnnotationInstances instances = getAnnotationInstances(channelId, annotationType, beforeDate, limit);
         return getMessages(instances.getMessageIds());
     }
 
@@ -421,11 +436,26 @@ public class MessageManager {
      *
      * @param channelId the id of the Channel in which the returned Messages will be contained.
      * @param annotationType the Annotation type to look for.
+     * @param limit the maximum number of Messages to load from the database.
      * @return an AnnotationInstances containing message ids that correspond to Messages with
      * the provided annotation type.
      */
-    public AnnotationInstances getAnnotationInstances(String channelId, String annotationType) {
-        return mDatabase.getAnnotationInstances(channelId, annotationType);
+    public AnnotationInstances getAnnotationInstances(String channelId, String annotationType, int limit) {
+        return getAnnotationInstances(channelId, annotationType, limit);
+    }
+
+    /**
+     * Get references to Messages that use a specific type of Annotationtype.
+     *
+     * @param channelId the id of the Channel in which the returned Messages will be contained.
+     * @param annotationType the Annotation type to look for.
+     * @param beforeDate the date before the display date of all associated messages. Can be null.
+     * @param limit the maximum number of Messages to load from the database.
+     * @return an AnnotationInstances containing message ids that correspond to Messages with
+     * the provided annotation type.
+     */
+    public AnnotationInstances getAnnotationInstances(String channelId, String annotationType, Date beforeDate, int limit) {
+        return mDatabase.getAnnotationInstances(channelId, annotationType, beforeDate, limit);
     }
 
     /**
