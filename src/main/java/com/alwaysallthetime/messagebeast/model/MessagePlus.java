@@ -452,6 +452,14 @@ public class MessagePlus {
         public String getVersion() {
             return version;
         }
+
+        public boolean isThumbnailUrlExpired() {
+            return thumbnailUrlExpires != null && thumbnailUrlExpires.before(new Date());
+        }
+
+        public boolean isThumbnailLargeUrlExpired() {
+            return thumbnailLargeUrlExpires != null && thumbnailLargeUrlExpires.before(new Date());
+        }
     }
 
     public static class PhotoOEmbed extends OEmbed {
