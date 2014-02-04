@@ -324,7 +324,7 @@ public class MessageManager {
     }
 
     /**
-     * Load all persisted Messages with a hashtag entity matching the provided hashtag, without keeping them in
+     * Load persisted Messages with a hashtag entity matching the provided hashtag, without keeping them in
      * MessageManager memory.
      *
      * Messages will be returned after performing DisplayLocation and OEmbed lookup, provided those
@@ -332,10 +332,28 @@ public class MessageManager {
      *
      * @param channelId the Channel id
      * @param hashtagName the hashtag with which the lookup will be done
+     * @param limit the maximum number of Messages to load from the database.
      * @return a TreeMap mapping Message times in millis to MessagePlus objects
      */
-    public TreeMap<Long, MessagePlus> getMessages(String channelId, String hashtagName) {
-        HashtagInstances hashtagInstances = mDatabase.getHashtagInstances(channelId, hashtagName);
+    public TreeMap<Long, MessagePlus> getMessages(String channelId, String hashtagName, int limit) {
+        return getMessages(channelId, hashtagName, null, limit);
+    }
+
+    /**
+     * Load persisted Messages with a hashtag entity matching the provided hashtag, without keeping them in
+     * MessageManager memory.
+     *
+     * Messages will be returned after performing DisplayLocation and OEmbed lookup, provided those
+     * features are enabled in the MessageManagerConfiguration.
+     *
+     * @param channelId the Channel id
+     * @param hashtagName the hashtag with which the lookup will be done
+     * @param beforeDate the date before the display date of all associated messages. Can be null.
+     * @param limit the maximum number of Messages to load from the database.
+     * @return a TreeMap mapping Message times in millis to MessagePlus objects
+     */
+    public TreeMap<Long, MessagePlus> getMessages(String channelId, String hashtagName, Date beforeDate, int limit) {
+        HashtagInstances hashtagInstances = mDatabase.getHashtagInstances(channelId, hashtagName, beforeDate, limit);
         return getMessages(hashtagInstances.getMessageIds());
     }
 

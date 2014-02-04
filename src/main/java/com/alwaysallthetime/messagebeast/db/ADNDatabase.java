@@ -888,7 +888,7 @@ public class ADNDatabase {
         try {
             String where = COL_ANNOTATION_INSTANCE_CHANNEL_ID + " = ? AND " + COL_ANNOTATION_INSTANCE_TYPE + " = ?";
             String[] args = null;
-            String limitTo = null;
+            String limitTo = limit != null ? limitTo = String.valueOf(limit) : null;
 
             if(beforeDate != null) {
                 where += " AND " + "CAST(" + COL_ANNOTATION_INSTANCE_DATE + " AS INTEGER) < ?";
@@ -896,9 +896,7 @@ public class ADNDatabase {
             } else {
                 args = new String[] { channelId, type };
             }
-            if(limit != null) {
-                limitTo = String.valueOf(limit);
-            }
+
             String orderBy = COL_ANNOTATION_INSTANCE_DATE + " DESC";
             cursor = mDatabase.query(TABLE_ANNOTATION_INSTANCES, new String[] {COL_ANNOTATION_INSTANCE_MESSAGE_ID}, where, args, null, null, orderBy, limitTo);
 
@@ -1241,12 +1239,38 @@ public class ADNDatabase {
      * @return HashtagInstances
      */
     public HashtagInstances getHashtagInstances(String channelId, String hashtagName) {
+        return getHashtagInstances(channelId, hashtagName, null, null);
+    }
+
+    /**
+     * Get a HashtagInstances object representing all Messages in which the specified
+     * hashtag was used.
+     *
+     * @param channelId The id of the channel
+     * @param hashtagName the hashtag for which instances should be retrieved.
+     * @param beforeDate a date that all display dates associated with the hashtag instances must
+     *                   come after. This is useful for paging. A null value is the same as passing
+     *                   the current date.
+     * @param limit The maximum number of instances to obtain. A null value means all will be returned.
+     * @return HashtagInstances
+     */
+    public HashtagInstances getHashtagInstances(String channelId, String hashtagName, Date beforeDate, Integer limit) {
         Cursor cursor = null;
         HashtagInstances instances = new HashtagInstances(hashtagName);
         try {
             String where = COL_HASHTAG_INSTANCE_CHANNEL_ID + " =? AND " + COL_HASHTAG_INSTANCE_NAME + " = ?";
-            String[] args = new String[] { channelId, hashtagName };
-            cursor = mDatabase.query(TABLE_HASHTAG_INSTANCES, new String[] { COL_HASHTAG_INSTANCE_MESSAGE_ID }, where, args, null, null, null, null);
+            String[] args = null;
+            String theLimit = limit != null ? String.valueOf(limit) : null;
+
+            if(beforeDate != null) {
+                where += " AND " + "CAST(" + COL_HASHTAG_INSTANCE_DATE + " AS INTEGER) < ?";
+                args = new String[] { channelId, hashtagName, String.valueOf(beforeDate.getTime()) };
+            } else {
+                args = new String[] { channelId, hashtagName };
+            }
+
+            String orderBy = COL_HASHTAG_INSTANCE_DATE + " DESC";
+            cursor = mDatabase.query(TABLE_HASHTAG_INSTANCES, new String[] { COL_HASHTAG_INSTANCE_MESSAGE_ID }, where, args, null, null, orderBy, theLimit);
 
             while(cursor.moveToNext()) {
                 String messageId = cursor.getString(0);
