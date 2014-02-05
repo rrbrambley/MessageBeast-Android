@@ -438,6 +438,23 @@ public class MessageManager {
     }
 
     /**
+     * Load a persisted Message without keeping it in MessageManager memory.
+     *
+     * The Message will be returned after performing DisplayLocation and OEmbed lookup, provided those
+     * features are enabled in the MessageManagerConfiguration.
+     *
+     * @param messageId the Message id
+     * @return a MessagePlus, or null if no MessagePlus with the provided id exists.
+     */
+    public MessagePlus getMessage(String messageId) {
+        MessagePlus messagePlus = mDatabase.getMessage(messageId);
+        if(messagePlus != null) {
+            performLookups(messagePlus, false);
+        }
+        return messagePlus;
+    }
+
+    /**
      * Get all HashtagInstances in a Channel.
      *
      * @param channelId the id of the Channel
@@ -1763,6 +1780,12 @@ public class MessageManager {
         }
 
         return null;
+    }
+
+    private void performLookups(MessagePlus message, boolean persist) {
+        ArrayList<MessagePlus> messagePlusses = new ArrayList<MessagePlus>(1);
+        messagePlusses.add(message);
+        performLookups(messagePlusses, persist);
     }
 
     private void performLookups(Collection<MessagePlus> messages, boolean persist) {
