@@ -22,6 +22,7 @@ import com.alwaysallthetime.messagebeast.model.MessagePlus;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -105,7 +106,6 @@ public class ActionMessageManager {
      * @see com.alwaysallthetime.messagebeast.manager.MessageManager#retrieveAndPersistAllMessages(String, com.alwaysallthetime.messagebeast.manager.MessageManager.MessageManagerSyncResponseHandler)
      */
     public void retrieveAndPersistAllActionMessages(final String actionChannelId, final MessageManager.MessageManagerSyncResponseHandler responseHandler) {
-        final String targetChannelId = getTargetChannelId(actionChannelId);
         mMessageManager.retrieveAndPersistAllMessages(actionChannelId, new MessageManager.MessageManagerSyncResponseHandler() {
             @Override
             public void onSuccess(List<MessagePlus> responseData) {
@@ -116,11 +116,7 @@ public class ActionMessageManager {
             @Override
             public void onBatchSynced(List<MessagePlus> messages) {
                 super.onBatchSynced(messages);
-
-                for(MessagePlus actionMessage : messages) {
-                    String targetMessageId = AnnotationUtility.getTargetMessageId(actionMessage.getMessage());
-                    mDatabase.insertOrReplaceActionMessageSpec(actionMessage, targetMessageId, targetChannelId);
-                }
+                processNewActionMessages(messages);
             }
 
             @Override
@@ -272,10 +268,7 @@ public class ActionMessageManager {
         boolean canRetrieve = mMessageManager.retrieveNewestMessages(actionChannelId, new MessageManager.MessageManagerResponseHandler() {
             @Override
             public void onSuccess(List<MessagePlus> responseData) {
-                for(MessagePlus actionMessage : responseData) {
-                    String targetMessageId = AnnotationUtility.getTargetMessageId(actionMessage.getMessage());
-                    mDatabase.insertOrReplaceActionMessageSpec(actionMessage, targetMessageId, targetChannelId);
-                }
+                processNewActionMessages(responseData);
                 responseHandler.onSuccess(responseData);
             }
 
@@ -306,7 +299,7 @@ public class ActionMessageManager {
             m.addAnnotation(a);
 
             MessagePlus unsentActionMessage = mMessageManager.createUnsentMessageAndAttemptSend(actionChannelId, m);
-            mDatabase.insertOrReplaceActionMessageSpec(unsentActionMessage, targetMessageId, message.getChannelId());
+            mDatabase.insertOrReplaceActionMessageSpec(unsentActionMessage, targetMessageId, message.getChannelId(), targetMessagePlus.getDisplayDate());
         }
     }
 
@@ -376,6 +369,28 @@ public class ActionMessageManager {
         });
     }
 
+    private synchronized void processNewActionMessages(List<MessagePlus> actionMessages) {
+        HashMap<String, MessagePlus> targetMessageIdToActionMessage = new HashMap<String, MessagePlus>(actionMessages.size());
+
+        for(MessagePlus actionMessage : actionMessages) {
+            String targetMessageId = AnnotationUtility.getTargetMessageId(actionMessage.getMessage());
+            if(targetMessageId != null) {
+                targetMessageIdToActionMessage.put(targetMessageId, actionMessage);
+            } else {
+                Log.e(TAG, "action message " + actionMessage.getMessage().getId() + " is missing target message metadata!");
+            }
+        }
+
+        TreeMap<Long, MessagePlus> targetMessages = mMessageManager.getMessages(targetMessageIdToActionMessage.keySet());
+        for(MessagePlus targetMessage : targetMessages.values()) {
+            String targetMessageId = targetMessage.getMessage().getId();
+            String targetChannelId = targetMessage.getMessage().getChannelId();
+            MessagePlus actionMessage = targetMessageIdToActionMessage.get(targetMessageId);
+            Date targetMessageDisplayDate = targetMessage.getDisplayDate();
+            mDatabase.insertOrReplaceActionMessageSpec(actionMessage, targetMessageId, targetChannelId, targetMessageDisplayDate);
+        }
+    }
+
     private final BroadcastReceiver sentMessageReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -407,7 +422,10 @@ public class ActionMessageManager {
                             }
                             for(MessagePlus mp : responseData) {
                                 String targetMessageId = AnnotationUtility.getTargetMessageId(mp.getMessage());
-                                mDatabase.insertOrReplaceActionMessageSpec(mp, targetMessageId, targetChannelId);
+                                MessagePlus targetMessage = mMessageManager.getMessage(targetMessageId);
+                                if(targetMessage != null) {
+                                    mDatabase.insertOrReplaceActionMessageSpec(mp, targetMessageId, targetChannelId, targetMessage.getDisplayDate());
+                                }
                             }
                         }
 

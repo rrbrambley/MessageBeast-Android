@@ -105,7 +105,8 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
             ADNDatabase.COL_ACTION_MESSAGE_ID + " TEXT PRIMARY KEY, " +
             ADNDatabase.COL_ACTION_MESSAGE_CHANNEL_ID + " TEXT NOT NULL, " +
             ADNDatabase.COL_ACTION_MESSAGE_TARGET_MESSAGE_ID + " TEXT NOT NULL, " +
-            ADNDatabase.COL_ACTION_MESSAGE_TARGET_CHANNEL_ID + " TEXT NOT NULL " +
+            ADNDatabase.COL_ACTION_MESSAGE_TARGET_CHANNEL_ID + " TEXT NOT NULL, " +
+            ADNDatabase.COL_ACTION_MESSAGE_TARGET_MESSAGE_DISPLAY_DATE + " INTEGER NOT NULL " +
             ")";
 
     public ADNDatabaseOpenHelper(Context context, String name, SQLiteDatabase.CursorFactory factory, int version) {
