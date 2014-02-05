@@ -54,8 +54,6 @@ public class ActionMessageManager {
     public static final QueryParameters ACTION_MESSAGE_QUERY_PARAMETERS = new QueryParameters(GeneralParameter.INCLUDE_MACHINE,
             GeneralParameter.INCLUDE_MESSAGE_ANNOTATIONS, GeneralParameter.EXCLUDE_DELETED);
 
-    private static final int MAX_BATCH_LOAD_FROM_DISK = 40;
-
     private MessageManager mMessageManager;
     private ADNDatabase mDatabase;
 
@@ -201,54 +199,40 @@ public class ActionMessageManager {
     }
 
     /**
-     * Get all target Messages that have an action applied.
+     * Get persisted Messages that have an action applied.
      *
      * @param actionChannelId the the id of the Action Channel associated with the action of interest
+     * @param limit the maximum number of Messages to get
      * @return a List consisting of MessagePlus Objects corresponding to Messages in the target Channel
      * that have had the action applied.
      */
-    public synchronized List<MessagePlus> getActionedMessages(String actionChannelId) {
-        TreeMap<Long, MessagePlus> loadedMessagesFromActionChannel =  mMessageManager.getMessages(actionChannelId, MAX_BATCH_LOAD_FROM_DISK);
-        return getTargetMessages(loadedMessagesFromActionChannel.values());
+    public synchronized List<MessagePlus> getActionedMessages(String actionChannelId, int limit) {
+        return getActionedMessages(actionChannelId, null, limit);
+    }
+
+    /**
+     * Get persisted Messages that have an action applied.
+     *
+     * @param actionChannelId the the id of the Action Channel associated with the action of interest
+     * @param beforeDate a date before the display date of all returned messages. Can be null.
+     * @param limit the maximum number of Messages to get
+     * @return a List consisting of MessagePlus Objects corresponding to Messages in the target Channel
+     * that have had the action applied.
+     */
+    public synchronized List<MessagePlus> getActionedMessages(String actionChannelId, Date beforeDate, int limit) {
+        List<ActionMessageSpec> actionMessageSpecs = mDatabase.getActionMessageSpecsOrderedByTargetMessageDisplayDate(actionChannelId, beforeDate, limit);
+        HashSet<String> targetMessageIds = new HashSet<String>(actionMessageSpecs.size());
+        for(ActionMessageSpec spec : actionMessageSpecs) {
+            targetMessageIds.add(spec.getTargetMessageId());
+        }
+        TreeMap<Long, MessagePlus> targetMessages = mMessageManager.getMessages(targetMessageIds);
+        return new ArrayList<MessagePlus>(targetMessages.values());
     }
 
     private synchronized List<MessagePlus> getTargetMessages(Collection<MessagePlus> actionMessages) {
         Set<String> newTargetMessageIds = getTargetMessageIds(actionMessages);
         TreeMap<Long, MessagePlus> targetMessages = mMessageManager.getMessages(newTargetMessageIds);
         return new ArrayList<MessagePlus>(targetMessages.values());
-    }
-
-    //TODO: does this method even make sense?
-    public synchronized void getMoreActionedMessages(final String actionChannelId, final MessageManager.MessageManagerResponseHandler responseHandler) {
-        final String targetChannelId = getTargetChannelId(actionChannelId);
-        TreeMap<Long, MessagePlus> more = mMessageManager.loadPersistedMessages(actionChannelId, MAX_BATCH_LOAD_FROM_DISK);
-        if(more.size() > 0) {
-            Set<String> newTargetMessageIds = getTargetMessageIds(more.values());
-            TreeMap<Long, MessagePlus> moreTargetMessages = mMessageManager.getMessages(newTargetMessageIds);
-
-            responseHandler.setIsMore(more.size() == MAX_BATCH_LOAD_FROM_DISK);
-            responseHandler.onSuccess(new ArrayList(moreTargetMessages.values()));
-        } else {
-            //
-            //load more action messages, then get the target messages
-            //
-            mMessageManager.retrieveMoreMessages(actionChannelId, new MessageManager.MessageManagerResponseHandler() {
-                @Override
-                public void onSuccess(List<MessagePlus> responseData) {
-                    Set<String> newTargetMessageIds = getTargetMessageIds(responseData);
-                    TreeMap<Long, MessagePlus> moreTargetMessages = mMessageManager.getMessages(newTargetMessageIds);
-
-                    responseHandler.setIsMore(isMore());
-                    responseHandler.onSuccess(new ArrayList(moreTargetMessages.values()));
-                }
-
-                @Override
-                public void onError(Exception exception) {
-                    Log.e(TAG, exception.getMessage(), exception);
-                    responseHandler.onError(exception);
-                }
-            });
-        }
     }
 
     /**

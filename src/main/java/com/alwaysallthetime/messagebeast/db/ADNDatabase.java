@@ -757,36 +757,60 @@ public class ADNDatabase {
     }
 
     public List<ActionMessageSpec> getActionMessageSpecsForTargetMessages(String actionChannelId, List<String> targetMessageIds) {
+        String where = "";
+        String[] args = null;
+        int inStartIndex = 0;
+        if(actionChannelId != null) {
+            args = new String[targetMessageIds.size() + 1];
+            args[0] = actionChannelId;
+            where += COL_ACTION_MESSAGE_CHANNEL_ID + " = ? AND ";
+            inStartIndex = 1;
+        } else {
+            args = new String[targetMessageIds.size()];
+        }
+
+        where += COL_ACTION_MESSAGE_TARGET_MESSAGE_ID + " IN (";
+
+        int index = inStartIndex;
+        Iterator<String> iterator = targetMessageIds.iterator();
+        while(iterator.hasNext()) {
+            args[index] = iterator.next();
+            if(index > inStartIndex) {
+                where += ", ?";
+            } else {
+                where += " ?";
+            }
+            index++;
+        }
+        where += ")";
+        return getActionMessageSpecs(where, args, null, null);
+    }
+
+    public List<ActionMessageSpec> getActionMessageSpecsOrderedByTargetMessageDisplayDate(String actionChannelId, Integer limit) {
+        return getActionMessageSpecsOrderedByTargetMessageDisplayDate(actionChannelId, null, limit);
+    }
+
+    public List<ActionMessageSpec> getActionMessageSpecsOrderedByTargetMessageDisplayDate(String actionChannelId, Date beforeDate, Integer limit) {
+        String where = COL_ACTION_MESSAGE_CHANNEL_ID + " = ?";
+
+        String[] args = null;
+        String limitTo = limit != null ? limitTo = String.valueOf(limit) : null;
+
+        if(beforeDate != null) {
+            where += " AND " + "CAST(" + COL_ACTION_MESSAGE_TARGET_MESSAGE_DISPLAY_DATE + " AS INTEGER) < ?";
+            args = new String[] { actionChannelId, String.valueOf(beforeDate.getTime()) };
+        } else {
+            args = new String[] { actionChannelId };
+        }
+        String orderBy = COL_ACTION_MESSAGE_TARGET_MESSAGE_DISPLAY_DATE + " DESC";
+        return getActionMessageSpecs(where, args, orderBy, limitTo);
+    }
+
+    private List<ActionMessageSpec> getActionMessageSpecs(String where, String[] args, String orderBy, String limit) {
         ArrayList<ActionMessageSpec> actionMessageSpecs = new ArrayList<ActionMessageSpec>();
         Cursor cursor = null;
         try {
-            String where = "";
-            String[] args = null;
-            int inStartIndex = 0;
-            if(actionChannelId != null) {
-                args = new String[targetMessageIds.size() + 1];
-                args[0] = actionChannelId;
-                where += COL_ACTION_MESSAGE_CHANNEL_ID + " = ? AND ";
-                inStartIndex = 1;
-            } else {
-                args = new String[targetMessageIds.size()];
-            }
-
-            where += COL_ACTION_MESSAGE_TARGET_MESSAGE_ID + " IN (";
-
-            int index = inStartIndex;
-            Iterator<String> iterator = targetMessageIds.iterator();
-            while(iterator.hasNext()) {
-                args[index] = iterator.next();
-                if(index > inStartIndex) {
-                    where += ", ?";
-                } else {
-                    where += " ?";
-                }
-                index++;
-            }
-            where += ")";
-            cursor = mDatabase.query(TABLE_ACTION_MESSAGES, null, where, args, null, null, null, null);
+            cursor = mDatabase.query(TABLE_ACTION_MESSAGES, null, where, args, null, null, orderBy, limit);
 
             while(cursor.moveToNext()) {
                 String aMessageId = cursor.getString(0);
