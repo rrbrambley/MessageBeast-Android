@@ -1,21 +1,15 @@
 package com.alwaysallthetime.messagebeast.manager;
 
 import android.app.IntentService;
-import android.content.ContentResolver;
 import android.content.Intent;
 import android.net.Uri;
-import android.util.Log;
-import android.webkit.MimeTypeMap;
 
 import com.alwaysallthetime.adnlib.AppDotNetClient;
 import com.alwaysallthetime.adnlib.data.File;
 import com.alwaysallthetime.adnlib.gson.AppDotNetGson;
 import com.alwaysallthetime.adnlib.response.FileResponseHandler;
+import com.alwaysallthetime.messagebeast.FileUtility;
 import com.alwaysallthetime.messagebeast.db.PendingFile;
-
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
 
 public class FileUploadService extends IntentService {
 
@@ -56,11 +50,16 @@ public class FileUploadService extends IntentService {
             String pendingFileId = intent.getStringExtra(EXTRA_PENDING_FILE_ID);
             String channelId = intent.getStringExtra(EXTRA_ASSOCIATED_CHANNEL_ID);
             PendingFile pf = FileManager.getExistingInstance().getPendingFile(pendingFileId);
-            byte[] fileBytes = getBytes(pf.getUri());
-            if(fileBytes != null) {
-                createFile(fileBytes, pf.getType(), pf.getName(), pf.getMimeType(), pf.getKind(), pf.isPublic(), pendingFileId, channelId);
+            if(pf != null) {
+                byte[] fileBytes = FileUtility.getBytes(this, pf.getUri());
+                if(fileBytes != null) {
+                    createFile(fileBytes, pf.getType(), pf.getName(), pf.getMimeType(), pf.getKind(), pf.isPublic(), pendingFileId, channelId);
+                } else {
+                    sendFileNotFoundBroadcast(null);
+                }
             } else {
-                sendFileNotFoundBroadcast(null);
+                //TODO
+                //https://github.com/rrbrambley/MessageBeast-Android/issues/35
             }
         } else {
             Uri fileUri = intent.getParcelableExtra(EXTRA_FILE_URI);
@@ -69,8 +68,8 @@ public class FileUploadService extends IntentService {
             String fileKind = intent.getStringExtra(EXTRA_FILE_KIND);
             boolean isFilePublic = intent.getBooleanExtra(EXTRA_PUBLIC, false);
 
-            String mimeType = getMimeType(fileUri);
-            byte[] fileBytes = getBytes(fileUri);
+            String mimeType = FileUtility.getMimeType(this, fileUri);
+            byte[] fileBytes = FileUtility.getBytes(this, fileUri);
             if(fileBytes != null) {
                 createFile(fileBytes, fileType, filename, mimeType, fileKind, isFilePublic, null, null);
             } else {
@@ -122,46 +121,5 @@ public class FileUploadService extends IntentService {
                 sendBroadcast(i);
             }
         });
-    }
-
-    public String getMimeType(Uri fileUri) {
-        String mimeType = getContentResolver().getType(fileUri);
-        if(mimeType != null) {
-            return mimeType;
-        } else {
-            String type = null;
-            String uri = fileUri.toString();
-            String extension = MimeTypeMap.getFileExtensionFromUrl(uri);
-            if (extension != null) {
-                MimeTypeMap mime = MimeTypeMap.getSingleton();
-                type = mime.getMimeTypeFromExtension(extension);
-            }
-            return type;
-        }
-    }
-
-    private byte[] getBytes(Uri uri) {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        InputStream inputStream = null;
-        try {
-            ContentResolver cr = getBaseContext().getContentResolver();
-            inputStream = cr.openInputStream(uri);
-            byte[] buf = new byte[1024];
-            int n;
-            while (-1 != (n = inputStream.read(buf))) {
-                baos.write(buf, 0, n);
-            }
-        } catch(Exception e) {
-            Log.e(TAG, e.getMessage(), e);
-        } finally {
-            if(inputStream != null) {
-                try {
-                    inputStream.close();
-                } catch(IOException e) {
-                    Log.e(TAG, e.getMessage(), e);
-                }
-            }
-        }
-        return baos != null ? baos.toByteArray() : null;
     }
 }
