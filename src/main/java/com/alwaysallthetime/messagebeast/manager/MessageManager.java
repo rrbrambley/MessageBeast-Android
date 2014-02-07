@@ -642,7 +642,7 @@ public class MessageManager {
             AsyncGeocoder.getInstance(mContext).getFromLocation(latitude, longitude, 5, new AsyncGeocoderResponseHandler() {
                 @Override
                 public void onSuccess(final List<Address> addresses) {
-                    Geolocation geolocation = getGeoLocation(addresses, latitude, longitude);
+                    Geolocation geolocation = Geolocation.getGeolocation(addresses, latitude, longitude);
                     if(geolocation != null) {
                         messagePlus.setDisplayLocation(DisplayLocation.fromGeolocation(geolocation));
 
@@ -1756,30 +1756,6 @@ public class MessageManager {
 
     private Date getAdjustedDate(Message message) {
         return mConfiguration.dateAdapter == null ? message.getCreatedAt() : mConfiguration.dateAdapter.getDisplayDate(message);
-    }
-
-    private Geolocation getGeoLocation(List<Address> addresses, double latitude, double longitude) {
-        String locality = null;
-        String subLocality = null;
-
-        for(Address address : addresses) {
-            if(subLocality == null) {
-                subLocality = address.getSubLocality();
-            }
-            if(subLocality != null || locality == null) {
-                locality = address.getLocality();
-            }
-
-            if(subLocality != null && locality != null) {
-                break;
-            }
-        }
-
-        if(subLocality != null && locality != null) {
-            return new Geolocation(locality, subLocality, latitude, longitude);
-        }
-
-        return null;
     }
 
     private void performLookups(MessagePlus message, boolean persist) {

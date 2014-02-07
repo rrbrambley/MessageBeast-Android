@@ -1,5 +1,9 @@
 package com.alwaysallthetime.messagebeast.model;
 
+import android.location.Address;
+
+import java.util.List;
+
 /**
  * Geolocation is a class used to contain a human-readable name, locality, and sub-locality for
  * a set of geocoordinates. This is most often constructed after reverse geocoding coordinates to
@@ -10,6 +14,38 @@ public class Geolocation {
     private String mSubLocality;
     private double mLatitude;
     private double mLongitude;
+
+    /**
+     * Get a Geolocation from a List of Addresses and a set of coorindates.
+     *
+     * @param addresses a List of Addresses, typically obtained by reverse geocoding
+     * @param latitude the latitude coordinate
+     * @param longitude the longitude coordinate
+     * @return a Geolocation, or null if a sublocality and locality cannot be obtained.
+     */
+    public static Geolocation getGeolocation(List<Address> addresses, double latitude, double longitude) {
+        String locality = null;
+        String subLocality = null;
+
+        for(Address address : addresses) {
+            if(subLocality == null) {
+                subLocality = address.getSubLocality();
+            }
+            if(subLocality != null || locality == null) {
+                locality = address.getLocality();
+            }
+
+            if(subLocality != null && locality != null) {
+                break;
+            }
+        }
+
+        if(subLocality != null && locality != null) {
+            return new Geolocation(locality, subLocality, latitude, longitude);
+        }
+
+        return null;
+    }
 
     /**
      * Construct a new Geolocation.
