@@ -142,6 +142,25 @@ public class FileManager {
     }
 
     /**
+     * Start uploading a file.
+     *
+     * @param uri the Uri corresponding to the location of the file on disk
+     * @param type the type to be set on the App.net File's "type" field.
+     * @param name the name of the App.net File
+     * @param kind the kind of the App.net file
+     * @param isPublic true if the File is public, false otherwise
+     */
+    public void startFileUpload(Uri uri, String type, String name, String kind, boolean isPublic) {
+        Intent i = new Intent(mContext, FileUploadService.class);
+        i.putExtra(FileUploadService.EXTRA_FILE_URI, uri);
+        i.putExtra(FileUploadService.EXTRA_FILE_TYPE, type);
+        i.putExtra(FileUploadService.EXTRA_FILENAME, name);
+        i.putExtra(FileUploadService.EXTRA_FILE_KIND, kind);
+        i.putExtra(FileUploadService.EXTRA_PUBLIC, isPublic);
+        mContext.startService(i);
+    }
+
+    /**
      * Send all pending file deletions in all Channels.
      */
     public void sendPendingFileDeletions() {
