@@ -55,11 +55,10 @@ public class FileUploadService extends IntentService {
                 if(fileBytes != null) {
                     createFile(fileBytes, pf.getType(), pf.getName(), pf.getMimeType(), pf.getKind(), pf.isPublic(), pendingFileId, channelId);
                 } else {
-                    sendFileNotFoundBroadcast(null);
+                    sendFileNotFoundBroadcast(pendingFileId);
                 }
             } else {
-                //TODO
-                //https://github.com/rrbrambley/MessageBeast-Android/issues/35
+                sendFileNotFoundBroadcast(pendingFileId);
             }
         } else {
             Uri fileUri = intent.getParcelableExtra(EXTRA_FILE_URI);
