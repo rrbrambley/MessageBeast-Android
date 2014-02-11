@@ -1811,7 +1811,6 @@ public class MessageManager {
                                 //modify the in-memory message plusses to use this new copy
                                 //in the future, we might want to change the way unsent messages
                                 //are held on to in memory.
-                                String messageId = message.getId();
                                 String channelId = message.getChannelId();
                                 long time = messagePlus.getDisplayDate().getTime();
                                 TreeMap<Long, MessagePlus> channelMessages = getChannelMessages(channelId);
