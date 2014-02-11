@@ -1745,7 +1745,10 @@ public class MessageManager {
 
     private void insertIntoDatabase(MessagePlus messagePlus) {
         mDatabase.insertOrReplaceMessage(messagePlus);
-        mDatabase.insertOrReplaceHashtagInstances(messagePlus);
+
+        if(mConfiguration.isHashtagExtractionEnabled) {
+            mDatabase.insertOrReplaceHashtagInstances(messagePlus);
+        }
 
         if(mConfiguration.annotationsToExtract != null) {
             for(String annotationType : mConfiguration.annotationsToExtract) {
@@ -1849,6 +1852,7 @@ public class MessageManager {
         }
 
         boolean isLocationLookupEnabled;
+        boolean isHashtagExtractionEnabled;
         MessageDisplayDateAdapter dateAdapter;
         MessageLocationLookupHandler locationLookupHandler;
         Set<String> annotationsToExtract;
@@ -1887,6 +1891,17 @@ public class MessageManager {
          */
         public void setLocationLookupEnabled(boolean isEnabled) {
             this.isLocationLookupEnabled = isEnabled;
+        }
+
+        /**
+         * Enable hashtag extraction. This tells the MessageManager to store references to hashtags
+         * in the database so that you can easily find all messages with a specific hashtag at a
+         * later time.
+         *
+         * @param isEnabled true if hashtag extraction should be enabled, false otherwise.
+         */
+        public void setHashtagExtractionEnabled(boolean isEnabled) {
+            this.isHashtagExtractionEnabled = isEnabled;
         }
 
         /**
