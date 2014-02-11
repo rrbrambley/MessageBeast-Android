@@ -17,6 +17,7 @@ import com.alwaysallthetime.adnlib.data.Channel;
 import com.alwaysallthetime.adnlib.data.File;
 import com.alwaysallthetime.adnlib.data.Message;
 import com.alwaysallthetime.adnlib.data.MessageList;
+import com.alwaysallthetime.adnlib.data.Place;
 import com.alwaysallthetime.adnlib.gson.AppDotNetGson;
 import com.alwaysallthetime.adnlib.response.FileResponseHandler;
 import com.alwaysallthetime.adnlib.response.MessageListResponseHandler;
@@ -25,6 +26,7 @@ import com.alwaysallthetime.asyncgeocoder.AsyncGeocoder;
 import com.alwaysallthetime.asyncgeocoder.response.AsyncGeocoderResponseHandler;
 import com.alwaysallthetime.messagebeast.ADNApplication;
 import com.alwaysallthetime.messagebeast.ADNSharedPreferences;
+import com.alwaysallthetime.messagebeast.AnnotationUtility;
 import com.alwaysallthetime.messagebeast.PrivateChannelUtility;
 import com.alwaysallthetime.messagebeast.db.ADNDatabase;
 import com.alwaysallthetime.messagebeast.db.AnnotationInstances;
@@ -597,6 +599,11 @@ public class MessageManager {
                     messagePlus.setDisplayLocation(displayLocation);
                     if(persist) {
                         mDatabase.insertOrReplaceDisplayLocationInstance(messagePlus);
+
+                        Place place = AnnotationUtility.getPlaceFromCheckinAnnotation(mContext, checkin);
+                        if(place != null) {
+                            mDatabase.insertOrReplacePlace(place);
+                        }
                     }
                     continue;
                 }
