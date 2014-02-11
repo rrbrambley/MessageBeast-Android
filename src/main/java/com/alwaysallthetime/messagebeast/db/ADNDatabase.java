@@ -16,6 +16,7 @@ import com.alwaysallthetime.adnlib.data.Place;
 import com.alwaysallthetime.adnlib.gson.AppDotNetGson;
 import com.alwaysallthetime.messagebeast.manager.MinMaxPair;
 import com.alwaysallthetime.messagebeast.manager.ReverseChronologicalComparator;
+import com.alwaysallthetime.messagebeast.model.CustomPlace;
 import com.alwaysallthetime.messagebeast.model.DisplayLocation;
 import com.alwaysallthetime.messagebeast.model.Geolocation;
 import com.alwaysallthetime.messagebeast.model.MessagePlus;
@@ -77,10 +78,11 @@ public class ADNDatabase {
     public static final String TABLE_LOCATION_INSTANCES_SEARCH = "locations_search";
 
     public static final String TABLE_PLACES = "places";
-    public static final String COL_PLACE_FACTUAL_ID = "place_factual_id";
+    public static final String COL_PLACE_ID = "place_id";
     public static final String COL_PLACE_NAME = "place_name";
     public static final String COL_PLACE_ROUNDED_LATITUDE = "place_rounded_latitude";
     public static final String COL_PLACE_ROUNDED_LONGITUDE = "place_rounded_longitude";
+    public static final String COL_PLACE_IS_CUSTOM = "place_is_custom";
     public static final String COL_PLACE_JSON = "place_json";
 
     public static final String TABLE_ANNOTATION_INSTANCES = "annotation_instances";
@@ -191,13 +193,14 @@ public class ADNDatabase {
 
     private static final String INSERT_OR_REPLACE_PLACE = "INSERT OR REPLACE INTO " + TABLE_PLACES +
             " (" +
-            COL_PLACE_FACTUAL_ID + ", " +
+            COL_PLACE_ID + ", " +
             COL_PLACE_NAME + ", " +
             COL_PLACE_ROUNDED_LATITUDE + ", " +
             COL_PLACE_ROUNDED_LONGITUDE + ", " +
+            COL_PLACE_IS_CUSTOM + ", " +
             COL_PLACE_JSON +
             ") " +
-            "VALUES(?, ?, ?, ?, ?)";
+            "VALUES(?, ?, ?, ?, ?, ?)";
 
     private static final String INSERT_LOCATION_INSTANCES_SEARCH_TEXT = "INSERT INTO " + TABLE_LOCATION_INSTANCES_SEARCH +
             " (docid, " + COL_LOCATION_INSTANCE_CHANNEL_ID + ", " + COL_LOCATION_INSTANCE_NAME + ") " +
@@ -462,12 +465,15 @@ public class ADNDatabase {
         try {
             double latitude = getRoundedValue(place.getLatitude(), 3);
             double longitude = getRoundedValue(place.getLongitude(), 3);
+            boolean isCustomPlace = place instanceof CustomPlace;
+            String id = isCustomPlace ? ((CustomPlace)place).getId() : place.getFactualId();
 
-            mInsertOrReplacePlace.bindString(1, place.getFactualId());
+            mInsertOrReplacePlace.bindString(1, id);
             mInsertOrReplacePlace.bindString(2, place.getName());
             mInsertOrReplacePlace.bindDouble(3, latitude);
             mInsertOrReplacePlace.bindDouble(4, longitude);
-            mInsertOrReplacePlace.bindString(5, AppDotNetGson.getPersistenceInstance().toJson(place));
+            mInsertOrReplacePlace.bindLong(5, isCustomPlace ? 1 : 0);
+            mInsertOrReplacePlace.bindString(6, AppDotNetGson.getPersistenceInstance().toJson(place));
             mInsertOrReplacePlace.execute();
             mDatabase.setTransactionSuccessful();
         } catch(Exception e) {
@@ -1145,25 +1151,29 @@ public class ADNDatabase {
     }
 
     /**
-     * Get a Place by factual id
+     * Get a Place by id.
      *
-     * @param factualId the factual id corresponding to the App.net Place
+     * @param id the factual id corresponding to the App.net Place
      * @return a Place if one with the specified factual id exists, null otherwise.
      */
-    public Place getPlace(String factualId) {
+    public Place getPlace(String id) {
         Place place = null;
         Cursor cursor = null;
         try {
-            String where = COL_PLACE_FACTUAL_ID + " = ?";
+            String where = COL_PLACE_ID + " = ?";
 
             Gson gson = AppDotNetGson.getPersistenceInstance();
 
-            String[] args = new String[] { factualId };
-            String[] cols = new String[] { COL_PLACE_JSON };
+            String[] args = new String[] { id };
+            String[] cols = new String[] { COL_PLACE_IS_CUSTOM, COL_PLACE_JSON };
             cursor = mDatabase.query(TABLE_PLACES, cols, where, args, null, null, null, null);
             if(cursor.moveToNext()) {
-                String json = cursor.getString(0);
+                boolean isCustom = cursor.getInt(0) == 1;
+                String json = cursor.getString(1);
                 place = gson.fromJson(json, Place.class);
+                if(isCustom) {
+                    place = new CustomPlace(id, place);
+                }
             }
         } catch(Exception e) {
             Log.e(TAG, e.getMessage(), e);
@@ -1198,11 +1208,19 @@ public class ADNDatabase {
             String longArg = String.format("%s%%", String.valueOf(getRoundedValue(longitude, precisionDigits)));
 
             String[] args = new String[] { latArg, longArg };
-            String[] cols = new String[] { COL_PLACE_JSON };
+            String[] cols = new String[] { COL_PLACE_ID, COL_PLACE_IS_CUSTOM, COL_PLACE_JSON };
             cursor = mDatabase.query(TABLE_PLACES, cols, where, args, null, null, null, null);
             while(cursor.moveToNext()) {
-                String json = cursor.getString(0);
-                places.add(gson.fromJson(json, Place.class));
+                String id = cursor.getString(0);
+                boolean isCustom = cursor.getInt(1) == 1;
+                String json = cursor.getString(2);
+
+                Place place = gson.fromJson(json, Place.class);
+                if(!isCustom) {
+                    places.add(place);
+                } else {
+                    places.add(new CustomPlace(id, place));
+                }
             }
         } catch(Exception e) {
             Log.e(TAG, e.getMessage(), e);
@@ -1781,7 +1799,7 @@ public class ADNDatabase {
         mDatabase.beginTransaction();
 
         try {
-            String where = COL_PLACE_FACTUAL_ID + " = '" + factualId + "'";
+            String where = COL_PLACE_ID + " = '" + factualId + "'";
             mDatabase.delete(TABLE_PLACES, where, null);
             mDatabase.setTransactionSuccessful();
         } catch(Exception e) {

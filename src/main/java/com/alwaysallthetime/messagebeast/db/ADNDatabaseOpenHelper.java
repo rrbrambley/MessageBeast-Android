@@ -40,10 +40,11 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
             "PRIMARY KEY (" + ADNDatabase.COL_GEOLOCATION_LATITUDE + ", " + ADNDatabase.COL_GEOLOCATION_LONGITUDE + " ))";
 
     private static final String CREATE_PLACES_TABLE = "CREATE TABLE IF NOT EXISTS " + ADNDatabase.TABLE_PLACES + "(" +
-            ADNDatabase.COL_PLACE_FACTUAL_ID + " TEXT PRIMARY KEY, " +
+            ADNDatabase.COL_PLACE_ID + " TEXT PRIMARY KEY, " +
             ADNDatabase.COL_PLACE_NAME + " TEXT NOT NULL, " +
             ADNDatabase.COL_PLACE_ROUNDED_LATITUDE + " REAL NOT NULL, " +
             ADNDatabase.COL_PLACE_ROUNDED_LONGITUDE + " REAL NOT NULL, " +
+            ADNDatabase.COL_PLACE_IS_CUSTOM + " INTEGER NOT NULL, " +
             ADNDatabase.COL_PLACE_JSON + " TEXT NOT NULL " +
             ")";
 

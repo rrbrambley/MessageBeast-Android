@@ -38,6 +38,7 @@ import com.alwaysallthetime.messagebeast.db.PendingFileAttachment;
 import com.alwaysallthetime.messagebeast.db.PendingMessageDeletion;
 import com.alwaysallthetime.messagebeast.filter.MessageFilter;
 import com.alwaysallthetime.messagebeast.filter.MessageInstancesFilter;
+import com.alwaysallthetime.messagebeast.model.CustomPlace;
 import com.alwaysallthetime.messagebeast.model.DisplayLocation;
 import com.alwaysallthetime.messagebeast.model.FullSyncState;
 import com.alwaysallthetime.messagebeast.model.Geolocation;
@@ -614,6 +615,11 @@ public class MessageManager {
                 messagePlus.setDisplayLocation(DisplayLocation.fromOhaiLocation(ohaiLocation));
                 if(persist) {
                     mDatabase.insertOrReplaceDisplayLocationInstance(messagePlus);
+
+                    CustomPlace place = new CustomPlace(ohaiLocation);
+                    if(place != null) {
+                        mDatabase.insertOrReplacePlace(place);
+                    }
                 }
                 continue;
             }
