@@ -3,6 +3,7 @@ package com.alwaysallthetime.messagebeast;
 import com.alwaysallthetime.adnlib.Annotations;
 import com.alwaysallthetime.adnlib.data.Annotation;
 import com.alwaysallthetime.adnlib.data.File;
+import com.alwaysallthetime.messagebeast.model.CustomPlace;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -29,6 +30,67 @@ public class AnnotationFactory {
         replacement.put("factual_id", factualId);
         value.put(Annotations.REPLACEMENT_PLACE, replacement);
         Annotation a = new Annotation(Annotations.CHECKIN);
+        a.setValue(value);
+        return a;
+    }
+
+    public static Annotation getOhaiLocationAnnotation(CustomPlace customPlace) {
+        HashMap<String, Object> value = new HashMap<String, Object>(15);
+        value.put("id", customPlace.getId());
+
+        if(customPlace.getName() != null) {
+            value.put("name", customPlace.getName());
+        }
+        if(customPlace.getAddress() != null) {
+            value.put("address", customPlace.getAddress());
+        }
+        if(customPlace.getAddressExtended() != null) {
+            value.put("address_extended", customPlace.getAddressExtended());
+        }
+        if(customPlace.getLocality() != null) {
+            value.put("locality", customPlace.getLocality());
+        }
+        if(customPlace.getRegion() != null) {
+            value.put("region", customPlace.getRegion());
+        }
+        if(customPlace.getAdminRegion() != null) {
+            value.put("admin_region", customPlace.getAdminRegion());
+        }
+        if(customPlace.getPostTown() != null) {
+            value.put("post_town", customPlace.getPostTown());
+        }
+        if(customPlace.getPoBox() != null) {
+            value.put("po_box", customPlace.getPoBox());
+        }
+        if(customPlace.getPostcode() != null) {
+            value.put("postcode", customPlace.getPostcode());
+        }
+        if(customPlace.getCountryCode() != null) {
+            value.put("country_code", customPlace.getCountryCode());
+        }
+        if(customPlace.getLatitude() != null) {
+            value.put("latitude", customPlace.getLatitude());
+        }
+        if(customPlace.getLongitude() != null) {
+            value.put("longitude", customPlace.getLongitude());
+        }
+        if(customPlace.isOpen() != null) {
+            value.put("is_open", customPlace.isOpen());
+        }
+        if(customPlace.getTelephone() != null) {
+            value.put("telephone", customPlace.getTelephone());
+        }
+        if(customPlace.getFax() != null) {
+            value.put("fax", customPlace.getFax());
+        }
+        if(customPlace.getWebsite() != null) {
+            value.put("website", customPlace.getWebsite());
+        }
+        if(customPlace.getCategories() != null) {
+            value.put("categories", customPlace.getCategories());
+        }
+
+        Annotation a = new Annotation(Annotations.OHAI_LOCATION);
         a.setValue(value);
         return a;
     }
