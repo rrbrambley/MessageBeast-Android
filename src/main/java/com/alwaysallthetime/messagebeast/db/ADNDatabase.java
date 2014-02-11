@@ -1198,6 +1198,23 @@ public class ADNDatabase {
      * is applied.
      */
     public List<Place> getPlaces(double latitude, double longitude, LocationPrecision precision) {
+        return getPlaces(latitude, longitude, precision, false);
+    }
+
+    /**
+     * Get a List of Places whose geocoordinates match the provided coordinate to a certain precision,
+     * optionally excluding custom places.
+     *
+     * Place longitude and latitude are stored by rounding to three decimal places. By providing a less
+     * precise LocationPrecision, you can lookup by locations that match, e.g. 2 or 1 decimal places.
+     *
+     * @param latitude the latitude to match
+     * @param longitude the longitude to match
+     * @param excludeCustomPlaces true if custom places should be excluded, false otherwise.
+     * @return a List of Place objects whose latitude and longitude match when the provided LocationPrecision
+     * is applied.
+     */
+    public List<Place> getPlaces(double latitude, double longitude, LocationPrecision precision, boolean excludeCustomPlaces) {
         ArrayList<Place> places = new ArrayList<Place>();
         Cursor cursor = null;
         try {
@@ -1208,7 +1225,15 @@ public class ADNDatabase {
             String latArg = String.format("%s%%", String.valueOf(getRoundedValue(latitude, precisionDigits)));
             String longArg = String.format("%s%%", String.valueOf(getRoundedValue(longitude, precisionDigits)));
 
-            String[] args = new String[] { latArg, longArg };
+            String[] args = null;
+
+            if(!excludeCustomPlaces) {
+                args = new String[] { latArg, longArg };
+            } else {
+                where += " AND " + COL_PLACE_IS_CUSTOM + " = ?";
+                args = new String[] { latArg, longArg, "0" };
+            }
+
             String[] cols = new String[] { COL_PLACE_ID, COL_PLACE_IS_CUSTOM, COL_PLACE_JSON };
             cursor = mDatabase.query(TABLE_PLACES, cols, where, args, null, null, null, null);
             while(cursor.moveToNext()) {
