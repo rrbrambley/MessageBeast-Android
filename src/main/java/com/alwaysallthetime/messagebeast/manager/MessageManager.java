@@ -43,6 +43,7 @@ import com.alwaysallthetime.messagebeast.model.DisplayLocation;
 import com.alwaysallthetime.messagebeast.model.FullSyncState;
 import com.alwaysallthetime.messagebeast.model.Geolocation;
 import com.alwaysallthetime.messagebeast.model.MessagePlus;
+import com.google.gson.Gson;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -616,9 +617,15 @@ public class MessageManager {
                 if(persist) {
                     mDatabase.insertOrReplaceDisplayLocationInstance(messagePlus);
 
-                    CustomPlace place = new CustomPlace(ohaiLocation);
-                    if(place != null) {
-                        mDatabase.insertOrReplacePlace(place);
+                    HashMap<String,Object> value = ohaiLocation.getValue();
+                    Gson gson = AppDotNetGson.getPersistenceInstance();
+                    String placeJson = gson.toJson(value);
+                    Place place = gson.fromJson(placeJson, Place.class);
+                    String id = (String) value.get("id");
+
+                    if(place != null && place.getName() != null && id != null) {
+                        CustomPlace customPlace = new CustomPlace(id, place);
+                        mDatabase.insertOrReplacePlace(customPlace);
                     }
                 }
                 continue;
