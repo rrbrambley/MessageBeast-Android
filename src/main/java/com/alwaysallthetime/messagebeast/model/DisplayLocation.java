@@ -120,7 +120,8 @@ public class DisplayLocation implements Parcelable {
                 name = getLatLongString(latitude, longitude);
             }
         }
-        DisplayLocation loc = new DisplayLocation(name, (Double)value.get("latitude"), (Double)value.get("longitude"));
+
+        DisplayLocation loc = new DisplayLocation(name, latitude, longitude);
         loc.setType(LocationType.OHAI);
         return loc;
     }
@@ -150,7 +151,7 @@ public class DisplayLocation implements Parcelable {
     public DisplayLocation(String name, double latitude, double longitude) {
         mLatitude = latitude;
         mLongitude = longitude;
-        mName = name;
+        mName = name != null ? name : "";
         mType = LocationType.UNKNOWN;
     }
 
