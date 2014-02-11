@@ -1153,7 +1153,8 @@ public class ADNDatabase {
     /**
      * Get a Place by id.
      *
-     * @param id the factual id corresponding to the App.net Place
+     * @param id the id corresponding to the Place. For App.net Places, this is the factual id,
+     *           for CustomPlaces, this is the value returned by getId().
      * @return a Place if one with the specified factual id exists, null otherwise.
      */
     public Place getPlace(String id) {
