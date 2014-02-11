@@ -1,5 +1,6 @@
 package com.alwaysallthetime.messagebeast;
 
+import android.content.Context;
 import android.util.Log;
 
 import com.alwaysallthetime.adnlib.Annotations;
@@ -7,6 +8,10 @@ import com.alwaysallthetime.adnlib.data.Annotation;
 import com.alwaysallthetime.adnlib.data.Channel;
 import com.alwaysallthetime.adnlib.data.File;
 import com.alwaysallthetime.adnlib.data.Message;
+import com.alwaysallthetime.adnlib.data.Place;
+import com.alwaysallthetime.adnlib.gson.AppDotNetGson;
+import com.alwaysallthetime.messagebeast.db.ADNDatabase;
+import com.google.gson.Gson;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -183,6 +188,34 @@ public class AnnotationUtility {
             return (String) targetMessage.getValue().get(PrivateChannelUtility.TARGET_MESSAGE_KEY_ID);
         }
         return null;
+    }
+
+    /**
+     * Construct a Place from a net.app.core.checkin Annotation. This method also accepts
+     * a replacement value (+net.app.core.place), provided the location with the associated
+     * factual id has been persisted to the sqlite database. Null will be returned if no valid
+     * Place can be constructed.
+     *
+     * @param context a Context
+     * @param annotation the checkin annotation
+     *
+     * @return a Place constructed from the provided checkin Annotation, or null if one cannot
+     * be constructed.
+     */
+    public static Place getPlaceFromCheckinAnnotation(Context context, Annotation annotation) {
+        Place place = null;
+
+        HashMap<String, Object> value = annotation.getValue();
+        Map<String, String> placeValue = (Map<String, String>) value.get(Annotations.REPLACEMENT_PLACE);
+        if(placeValue != null) {
+            String factualId = placeValue.get("factual_id");
+            place = ADNDatabase.getInstance(context).getPlace(factualId);
+        } else {
+            Gson gson = AppDotNetGson.getPersistenceInstance();
+            String placeJson = gson.toJson(value);
+            place = gson.fromJson(placeJson, Place.class);
+        }
+        return place;
     }
 
     private static void initFormatter() {
