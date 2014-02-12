@@ -1187,6 +1187,75 @@ public class ADNDatabase {
     }
 
     /**
+     * Get a List of CustomPlace objects whose names match the provided query.
+     * This uses the full-text search virtual table corresponding to the location instances
+     * to find matching names, so only places with display location instances in the db will
+     * be returned (i.e. if you delete all messages that use a place, then this method will
+     * not return that place, even if the Places table contains it).
+     *
+     * @param query The query to match against the name of the places.
+     * @return a List of CustomPlace objects whose names match the provided query.
+     */
+    public List<CustomPlace> getCustomPlacesWithMatchingName(String query) {
+        Cursor cursor = null;
+        HashSet<String> placeNames = new HashSet<String>();
+        try {
+            String where = COL_LOCATION_INSTANCE_NAME + " MATCH ?";
+            String[] args = new String[] { query };
+            cursor = mDatabase.query(TABLE_LOCATION_INSTANCES_SEARCH, new String[] { COL_LOCATION_INSTANCE_NAME }, where, args, null, null, null, null);
+            while(cursor.moveToNext()) {
+                placeNames.add(cursor.getString(0));
+            }
+        } catch(Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+        } finally {
+            if(cursor != null) {
+                cursor.close();
+            }
+        }
+
+        ArrayList<CustomPlace> places = new ArrayList<CustomPlace>();
+        if(placeNames.size() > 0){
+            try {
+                String where = COL_PLACE_IS_CUSTOM + " = ? AND " + COL_PLACE_NAME + " IN (";
+                String[] args = new String[1+placeNames.size()];
+
+                args[0] = "1";
+                int index = 1;
+                Iterator<String> iterator = placeNames.iterator();
+                while(iterator.hasNext()) {
+                    args[index] = iterator.next();
+                    if(index > 1) {
+                        where += ", ?";
+                    } else {
+                        where += " ?";
+                    }
+                    index++;
+                }
+                where += ")";
+
+                Gson gson = AppDotNetGson.getPersistenceInstance();
+
+                String[] cols = new String[] { COL_PLACE_ID, COL_PLACE_JSON };
+                cursor = mDatabase.query(TABLE_PLACES, cols, where, args, null, null, null, null);
+                while(cursor.moveToNext()) {
+                    String id = cursor.getString(0);
+                    String json = cursor.getString(1);
+                    Place place = gson.fromJson(json, Place.class);
+                    places.add(new CustomPlace(id, place));
+                }
+            } catch(Exception e) {
+                Log.e(TAG, e.getMessage(), e);
+            } finally {
+                if(cursor != null) {
+                    cursor.close();
+                }
+            }
+        }
+        return places;
+    }
+
+    /**
      * Get a List of Places whose geocoordinates match the provided coordinate to a certain precision.
      *
      * Place longitude and latitude are stored by rounding to three decimal places. By providing a less
