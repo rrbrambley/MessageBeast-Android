@@ -2,7 +2,6 @@ package com.alwaysallthetime.messagebeast.db;
 
 import android.content.Context;
 import android.database.Cursor;
-import android.database.DatabaseUtils;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteStatement;
 import android.net.Uri;
@@ -1792,13 +1791,8 @@ public class ADNDatabase {
                 }
             }
 
-            DisplayLocation l = messagePlus.getDisplayLocation();
-            if(l != null) {
-                String where = COL_LOCATION_INSTANCE_NAME + " = " + DatabaseUtils.sqlEscapeString(l.getName()) + " AND " + COL_LOCATION_INSTANCE_MESSAGE_ID + " = " + message.getId() +
-                                                                                   " AND " + COL_LOCATION_INSTANCE_LATITUDE + " = " + l.getLatitude() +
-                                                                                    " AND " + COL_LOCATION_INSTANCE_LONGITUDE + " = " + l.getLongitude();
-                mDatabase.delete(TABLE_LOCATION_INSTANCES, where, null);
-            }
+            String where = COL_LOCATION_INSTANCE_MESSAGE_ID + " = " + message.getId();
+            mDatabase.delete(TABLE_LOCATION_INSTANCES, where, null);
 
             if(messagePlus.hasPendingFileAttachments()) {
                 Map<String, PendingFileAttachment> pendingAttachments = messagePlus.getPendingFileAttachments();
