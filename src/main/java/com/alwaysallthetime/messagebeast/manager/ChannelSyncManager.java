@@ -421,6 +421,18 @@ public class ChannelSyncManager {
         return new HashMap<String, Channel>(mChannels);
     }
 
+    /**
+     * @return true if this manager's Channels have been initialized, false otherwise.
+     */
+    public boolean channelsInitialized() {
+        if(mTargetWithActionChannelsSpecSet != null) {
+            return mActionChannels != null && mTargetChannel != null &&
+                    mTargetWithActionChannelsSpecSet.getNumActionChannels() == mActionChannels.size();
+        } else {
+            return mChannels != null && mChannelSpecSet.getNumChannels() == mChannels.size();
+        }
+    }
+
     private void initChannels(final int index, final ChannelsInitializedHandler initializedHandler) {
         if(index >= mChannelSpecSet.getNumChannels()) {
             initializedHandler.onChannelsInitialized();
