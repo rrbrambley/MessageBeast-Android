@@ -1186,16 +1186,36 @@ public class ADNDatabase {
     }
 
     /**
-     * Get a List of CustomPlace objects whose names match the provided query.
+     * Get a List of Place objects whose names match the provided query.
+     *
      * This uses the full-text search virtual table corresponding to the location instances
      * to find matching names, so only places with display location instances in the db will
      * be returned (i.e. if you delete all messages that use a place, then this method will
      * not return that place, even if the Places table contains it).
      *
      * @param query The query to match against the name of the places.
-     * @return a List of CustomPlace objects whose names match the provided query.
+     * @return a List of Place objects whose names match the provided query.
+     *
+     * @see com.alwaysallthetime.messagebeast.db.ADNDatabase#getPlacesWithMatchingName(String)
      */
-    public List<CustomPlace> getCustomPlacesWithMatchingName(String query) {
+    public List<Place> getPlacesWithMatchingName(String query) {
+        return getPlacesWithMatchingName(query, false);
+    }
+
+    /**
+     * Get a List of Place objects whose names match the provided query, optionally excluding
+     * custom Places.
+     *
+     * This uses the full-text search virtual table corresponding to the location instances
+     * to find matching names, so only places with display location instances in the db will
+     * be returned (i.e. if you delete all messages that use a place, then this method will
+     * not return that place, even if the Places table contains it).
+     *
+     * @param query The query to match against the name of the places.
+     * @param excludeCustom true if CustomPlaces should be excluded, false otherwise.
+     * @return a List of Place objects whose names match the provided query.
+     */
+    public List<Place> getPlacesWithMatchingName(String query, boolean excludeCustom) {
         Cursor cursor = null;
         HashSet<String> placeNames = new HashSet<String>();
         try {
@@ -1213,18 +1233,17 @@ public class ADNDatabase {
             }
         }
 
-        ArrayList<CustomPlace> places = new ArrayList<CustomPlace>();
+        ArrayList<Place> places = new ArrayList<Place>();
         if(placeNames.size() > 0){
             try {
-                String where = COL_PLACE_IS_CUSTOM + " = ? AND " + COL_PLACE_NAME + " IN (";
-                String[] args = new String[1+placeNames.size()];
+                String where = COL_PLACE_NAME + " IN (";
+                String[] args = new String[placeNames.size() + (excludeCustom ? 1 : 0)];
 
-                args[0] = "1";
-                int index = 1;
+                int index = 0;
                 Iterator<String> iterator = placeNames.iterator();
                 while(iterator.hasNext()) {
                     args[index] = iterator.next();
-                    if(index > 1) {
+                    if(index > 0) {
                         where += ", ?";
                     } else {
                         where += " ?";
@@ -1233,15 +1252,25 @@ public class ADNDatabase {
                 }
                 where += ")";
 
+                if(excludeCustom) {
+                    where += " AND " + COL_PLACE_IS_CUSTOM + " = ?";
+                    args[index] = "0";
+                }
+
                 Gson gson = AppDotNetGson.getPersistenceInstance();
 
-                String[] cols = new String[] { COL_PLACE_ID, COL_PLACE_JSON };
+                String[] cols = new String[] { COL_PLACE_ID, COL_PLACE_IS_CUSTOM, COL_PLACE_JSON };
                 cursor = mDatabase.query(TABLE_PLACES, cols, where, args, null, null, null, null);
                 while(cursor.moveToNext()) {
                     String id = cursor.getString(0);
-                    String json = cursor.getString(1);
+                    boolean isCustom = cursor.getInt(1) == 1;
+                    String json = cursor.getString(2);
                     Place place = gson.fromJson(json, Place.class);
-                    places.add(new CustomPlace(id, place));
+                    if(isCustom) {
+                        places.add(new CustomPlace(id, place));
+                    } else {
+                        places.add(place);
+                    }
                 }
             } catch(Exception e) {
                 Log.e(TAG, e.getMessage(), e);
