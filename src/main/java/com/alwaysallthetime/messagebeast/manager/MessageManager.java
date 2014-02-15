@@ -651,13 +651,13 @@ public class MessageManager {
                     }
                     continue;
                 } else {
-                    reverseGeocode(messagePlus, latitude, longitude, persist);
+                    reverseGeocode(messagePlus, latitude, longitude);
                 }
             }
         }
     }
 
-    private void reverseGeocode(final MessagePlus messagePlus, final double latitude, final double longitude, final boolean persist) {
+    private void reverseGeocode(final MessagePlus messagePlus, final double latitude, final double longitude) {
         if(Geocoder.isPresent()) {
             AsyncGeocoder.getInstance(mContext).getFromLocation(latitude, longitude, 5, new AsyncGeocoderResponseHandler() {
                 @Override
@@ -665,11 +665,8 @@ public class MessageManager {
                     Geolocation geolocation = Geolocation.getGeolocation(addresses, latitude, longitude);
                     if(geolocation != null) {
                         messagePlus.setDisplayLocation(DisplayLocation.fromGeolocation(geolocation));
-
-                        if(persist) {
-                            mDatabase.insertOrReplaceGeolocation(geolocation);
-                            mDatabase.insertOrReplaceDisplayLocationInstance(messagePlus);
-                        }
+                        mDatabase.insertOrReplaceGeolocation(geolocation);
+                        mDatabase.insertOrReplaceDisplayLocationInstance(messagePlus);
                     }
                     if(mConfiguration.locationLookupHandler != null) {
                         mConfiguration.locationLookupHandler.onSuccess(messagePlus);
