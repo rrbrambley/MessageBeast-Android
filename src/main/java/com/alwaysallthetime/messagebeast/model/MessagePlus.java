@@ -9,6 +9,7 @@ import com.alwaysallthetime.adnlib.data.File;
 import com.alwaysallthetime.adnlib.data.Message;
 import com.alwaysallthetime.messagebeast.AnnotationFactory;
 import com.alwaysallthetime.messagebeast.AnnotationUtility;
+import com.alwaysallthetime.messagebeast.EntityGenerator;
 import com.alwaysallthetime.messagebeast.db.PendingFileAttachment;
 
 import java.lang.reflect.Field;
@@ -581,7 +582,7 @@ public class MessagePlus {
         setMessageIdWithReflection(messageId, message);
         setChannelIdWithReflection(channelId, message);
 
-//        message.setEntities(EntityGenerator.getEntities(message.getText()));
+        message.setEntities(EntityGenerator.getEntities(message.getText()));
         message.addAnnotation(AnnotationFactory.getDisplayDateAnnotation(date));
 
         MessagePlus messagePlus = new MessagePlus(message);

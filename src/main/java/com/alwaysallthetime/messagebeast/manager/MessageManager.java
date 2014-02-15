@@ -1010,13 +1010,14 @@ public class MessageManager {
             unsentBuilder.addPendingFileAttachment(attachment);
         }
         final MessagePlus messagePlus = unsentBuilder.build();
-        mDatabase.insertOrReplaceMessage(messagePlus);
 
         if(mConfiguration.isLocationLookupEnabled) {
             ArrayList<MessagePlus> mp = new ArrayList<MessagePlus>(1);
             mp.add(messagePlus);
             lookupLocation(mp, true);
         }
+
+        insertIntoDatabase(messagePlus);
 
         TreeMap<Long, MessagePlus> channelUnsentMessages = getUnsentMessages(channelId);
         channelUnsentMessages.put(messagePlus.getDisplayDate().getTime(), messagePlus);

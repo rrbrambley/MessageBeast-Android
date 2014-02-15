@@ -393,36 +393,40 @@ public class ADNDatabase {
 
     public Map<String, HashtagInstances> insertOrReplaceHashtagInstances(MessagePlus message) {
         HashMap<String, HashtagInstances> instances = new HashMap<String, HashtagInstances>();
-        if(mInsertOrReplaceHashtag == null) {
-            mInsertOrReplaceHashtag = mDatabase.compileStatement(INSERT_OR_REPLACE_HASHTAG);
-        }
         Message m = message.getMessage();
-        ArrayList<Entities.Hashtag> hashtags = m.getEntities().getHashtags();
-        mDatabase.beginTransaction();
-        try {
-            for(Entities.Hashtag h : hashtags) {
-                String name = h.getName();
-                String messageId = m.getId();
-                mInsertOrReplaceHashtag.bindString(1, name);
-                mInsertOrReplaceHashtag.bindString(2, messageId);
-                mInsertOrReplaceHashtag.bindString(3, m.getChannelId());
-                mInsertOrReplaceHashtag.bindLong(4, message.getDisplayDate().getTime());
-                mInsertOrReplaceHashtag.execute();
+        Entities entities = m.getEntities();
 
-                HashtagInstances hashtagInstances = instances.get(name);
-                if(hashtagInstances == null) {
-                    hashtagInstances = new HashtagInstances(name, messageId);
-                    instances.put(name, hashtagInstances);
-                } else {
-                    hashtagInstances.addInstance(messageId);
-                }
+        if(entities != null) {
+            if(mInsertOrReplaceHashtag == null) {
+                mInsertOrReplaceHashtag = mDatabase.compileStatement(INSERT_OR_REPLACE_HASHTAG);
             }
-            mDatabase.setTransactionSuccessful();
-        } catch(Exception e) {
-            Log.e(TAG, e.getMessage(), e);
-        } finally {
-            mDatabase.endTransaction();
-            mInsertOrReplaceHashtag.clearBindings();
+            ArrayList<Entities.Hashtag> hashtags = entities.getHashtags();
+            mDatabase.beginTransaction();
+            try {
+                for(Entities.Hashtag h : hashtags) {
+                    String name = h.getName();
+                    String messageId = m.getId();
+                    mInsertOrReplaceHashtag.bindString(1, name);
+                    mInsertOrReplaceHashtag.bindString(2, messageId);
+                    mInsertOrReplaceHashtag.bindString(3, m.getChannelId());
+                    mInsertOrReplaceHashtag.bindLong(4, message.getDisplayDate().getTime());
+                    mInsertOrReplaceHashtag.execute();
+
+                    HashtagInstances hashtagInstances = instances.get(name);
+                    if(hashtagInstances == null) {
+                        hashtagInstances = new HashtagInstances(name, messageId);
+                        instances.put(name, hashtagInstances);
+                    } else {
+                        hashtagInstances.addInstance(messageId);
+                    }
+                }
+                mDatabase.setTransactionSuccessful();
+            } catch(Exception e) {
+                Log.e(TAG, e.getMessage(), e);
+            } finally {
+                mDatabase.endTransaction();
+                mInsertOrReplaceHashtag.clearBindings();
+            }
         }
         return instances;
     }
