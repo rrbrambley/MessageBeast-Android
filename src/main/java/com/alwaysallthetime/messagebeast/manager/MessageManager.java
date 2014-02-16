@@ -1105,7 +1105,7 @@ public class MessageManager {
                         public void onError(Exception error) {
                             super.onError(error);
                             delete();
-                            mDatabase.insertOrReplacePendingMessageDeletion(messagePlus, false);
+                            mDatabase.insertOrReplacePendingMessageDeletion(messagePlus);
                             if(handler != null) {
                                 handler.onError(error);
                             }

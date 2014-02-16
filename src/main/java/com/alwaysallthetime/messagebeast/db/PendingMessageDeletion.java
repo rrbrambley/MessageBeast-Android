@@ -7,20 +7,16 @@ public class PendingMessageDeletion {
 
     private final String mMessageId;
     private final String mChannelId;
-    private final boolean mDeleteAssociatedFiles;
 
     /**
      * Construct a PendingMessageDeletion.
      *
      * @param messageId the id of the Message to be deleted.
      * @param channelId the id of the Channel in which the Message is contained.
-     * @param deleteAssociatedFiles true if file attachments and OEmbeds corresponding to App.net
-     *                              File objects should be deleted as well.
      */
-    public PendingMessageDeletion(String messageId, String channelId, boolean deleteAssociatedFiles) {
+    public PendingMessageDeletion(String messageId, String channelId) {
         mMessageId = messageId;
         mChannelId = channelId;
-        mDeleteAssociatedFiles = deleteAssociatedFiles;
     }
 
     /**
@@ -39,13 +35,5 @@ public class PendingMessageDeletion {
      */
     public String getChannelId() {
         return mChannelId;
-    }
-
-    /**
-     * @return true if file attachments and OEmbeds corresponding to App.net
-     *         File objects should be deleted as well.
-     */
-    public boolean deleteAssociatedFiles() {
-        return mDeleteAssociatedFiles;
     }
 }

@@ -110,7 +110,6 @@ public class ADNDatabase {
     public static final String TABLE_PENDING_MESSAGE_DELETIONS = "pending_message_deletions";
     public static final String COL_PENDING_MESSAGE_DELETION_MESSAGE_ID = "pending_message_deletion_message_id";
     public static final String COL_PENDING_MESSAGE_DELETION_CHANNEL_ID = "pending_message_deletion_channel_id";
-    public static final String COL_PENDING_MESSAGE_DELETION_DELETE_ASSOCIATED_FILES = "pending_message_deletion_delete_files";
 
     public static final String TABLE_PENDING_FILE_DELETIONS = "pending_file_deletions";
     public static final String COL_PENDING_FILE_DELETION_FILE_ID = "pending_file_deletion_file_id";
@@ -231,10 +230,9 @@ public class ADNDatabase {
     private static final String INSERT_OR_REPLACE_PENDING_MESSAGE_DELETION = "INSERT OR REPLACE INTO " + TABLE_PENDING_MESSAGE_DELETIONS +
             " (" +
             COL_PENDING_MESSAGE_DELETION_MESSAGE_ID + ", " +
-            COL_PENDING_MESSAGE_DELETION_CHANNEL_ID + ", " +
-            COL_PENDING_MESSAGE_DELETION_DELETE_ASSOCIATED_FILES +
+            COL_PENDING_MESSAGE_DELETION_CHANNEL_ID +
             ") " +
-            "VALUES(?, ?, ?)";
+            "VALUES(?, ?)";
 
     private static final String INSERT_OR_REPLACE_PENDING_FILE_DELETION = "INSERT OR REPLACE INTO " + TABLE_PENDING_FILE_DELETIONS +
             " (" +
@@ -617,7 +615,7 @@ public class ADNDatabase {
         }
     }
 
-    public void insertOrReplacePendingMessageDeletion(MessagePlus messagePlus, boolean deleteFiles) {
+    public void insertOrReplacePendingMessageDeletion(MessagePlus messagePlus) {
         if(mInsertOrReplacePendingMessageDeletion == null) {
             mInsertOrReplacePendingMessageDeletion = mDatabase.compileStatement(INSERT_OR_REPLACE_PENDING_MESSAGE_DELETION);
         }
@@ -627,7 +625,6 @@ public class ADNDatabase {
             Message message = messagePlus.getMessage();
             mInsertOrReplacePendingMessageDeletion.bindString(1, message.getId());
             mInsertOrReplacePendingMessageDeletion.bindString(2, message.getChannelId());
-            mInsertOrReplacePendingMessageDeletion.bindLong(3, deleteFiles ? 1 : 0);
             mInsertOrReplacePendingMessageDeletion.execute();
             mDatabase.setTransactionSuccessful();
         } catch(Exception e) {
@@ -1764,13 +1761,12 @@ public class ADNDatabase {
         try {
             String where = COL_PENDING_MESSAGE_DELETION_CHANNEL_ID + " = ?";
             String[] args = new String[] { channelId };
-            String[] cols = new String[] { COL_PENDING_MESSAGE_DELETION_MESSAGE_ID, COL_PENDING_MESSAGE_DELETION_DELETE_ASSOCIATED_FILES };
+            String[] cols = new String[] { COL_PENDING_MESSAGE_DELETION_MESSAGE_ID };
             cursor = mDatabase.query(TABLE_PENDING_MESSAGE_DELETIONS, cols, where, args, null, null, null, null);
 
             while(cursor.moveToNext()) {
                 String messageId = cursor.getString(0);
-                boolean deleteAssociatedFiles = cursor.getInt(1) == 1;
-                PendingMessageDeletion deletion = new PendingMessageDeletion(messageId, channelId, deleteAssociatedFiles);
+                PendingMessageDeletion deletion = new PendingMessageDeletion(messageId, channelId);
                 deletions.put(messageId, deletion);
             }
         } catch(Exception e) {
