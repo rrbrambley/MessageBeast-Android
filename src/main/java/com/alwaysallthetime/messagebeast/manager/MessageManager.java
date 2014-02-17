@@ -942,7 +942,7 @@ public class MessageManager {
     }
 
     /**
-     * Create a new unsent Message in the channel with the specified id and attempt to send.
+     * Create a new unsent Message in the channel with the specified id and optionally attempt to send it.
      *
      * If the Message cannot be sent (e.g. no internet connection), it will still be stored in the
      * sqlite database as if the Message exists in the Channel, but with an unsent flag set on it.
@@ -954,6 +954,9 @@ public class MessageManager {
      *
      * @param channelId the id of the Channel in which the Message should be created.
      * @param message The Message to be created.
+     * @param attemptToSendImmediately true if the MessageManager should attempt to send the Message
+     *                                 immediately, false if the client application will send it
+     *                                 at a later time.
      *
      * @see com.alwaysallthetime.messagebeast.manager.MessageManager#sendUnsentMessages(String)
      * @see com.alwaysallthetime.messagebeast.manager.MessageManager#sendPendingDeletions(String, com.alwaysallthetime.messagebeast.manager.MessageManager.MessageDeletionResponseHandler)
@@ -961,8 +964,8 @@ public class MessageManager {
      * @see com.alwaysallthetime.messagebeast.manager.MessageManager#INTENT_ACTION_UNSENT_MESSAGES_SENT
      * @see com.alwaysallthetime.messagebeast.manager.MessageManager#INTENT_ACTION_UNSENT_MESSAGE_SEND_FAILURE
      */
-    public synchronized MessagePlus createUnsentMessageAndAttemptSend(final String channelId, Message message) {
-        return createUnsentMessageAndAttemptSend(channelId, message, new ArrayList<PendingFileAttachment>(0));
+    public synchronized MessagePlus createUnsentMessage(final String channelId, Message message, boolean attemptToSendImmediately) {
+        return createUnsentMessage(channelId, message, new ArrayList<PendingFileAttachment>(0), attemptToSendImmediately);
     }
 
     /**
@@ -980,6 +983,9 @@ public class MessageManager {
      * @param message The Message to be created.
      * @param pendingFileAttachments The pending files that need to be sent before this Message can
      *                               be sent to the server.
+     * @param attemptToSendImmediately true if the MessageManager should attempt to send the Message
+     *                                 immediately, false if the client application will send it
+     *                                 at a later time.
      *
      * @see com.alwaysallthetime.messagebeast.manager.MessageManager#sendUnsentMessages(String)
      * @see com.alwaysallthetime.messagebeast.manager.MessageManager#sendPendingDeletions(String, com.alwaysallthetime.messagebeast.manager.MessageManager.MessageDeletionResponseHandler)
@@ -987,7 +993,7 @@ public class MessageManager {
      * @see com.alwaysallthetime.messagebeast.manager.MessageManager#INTENT_ACTION_UNSENT_MESSAGES_SENT
      * @see com.alwaysallthetime.messagebeast.manager.MessageManager#INTENT_ACTION_UNSENT_MESSAGE_SEND_FAILURE
      */
-    public synchronized MessagePlus createUnsentMessageAndAttemptSend(final String channelId, Message message, List<PendingFileAttachment> pendingFileAttachments) {
+    public synchronized MessagePlus createUnsentMessage(final String channelId, Message message, List<PendingFileAttachment> pendingFileAttachments, boolean attemptToSendImmediately) {
         //An unsent message id is always set to the max id + 1.
         //
         //This will work because we will never allow message retrieval to happen
@@ -1036,7 +1042,9 @@ public class MessageManager {
 
         Log.d(TAG, "Created and stored unsent message with id " + newMessageIdString);
 
-        sendUnsentMessages(channelId);
+        if(attemptToSendImmediately) {
+            sendUnsentMessages(channelId);
+        }
 
         return messagePlus;
     }

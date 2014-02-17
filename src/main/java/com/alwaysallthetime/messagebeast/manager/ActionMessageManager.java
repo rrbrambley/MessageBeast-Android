@@ -282,7 +282,7 @@ public class ActionMessageManager {
             Annotation a = AnnotationFactory.getSingleValueAnnotation(PrivateChannelUtility.MESSAGE_ANNOTATION_TARGET_MESSAGE, PrivateChannelUtility.TARGET_MESSAGE_KEY_ID, targetMessageId);
             m.addAnnotation(a);
 
-            MessagePlus unsentActionMessage = mMessageManager.createUnsentMessageAndAttemptSend(actionChannelId, m);
+            MessagePlus unsentActionMessage = mMessageManager.createUnsentMessage(actionChannelId, m, true);
             mDatabase.insertOrReplaceActionMessageSpec(unsentActionMessage, targetMessageId, message.getChannelId(), targetMessagePlus.getDisplayDate());
         }
     }
