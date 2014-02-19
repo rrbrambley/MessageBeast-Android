@@ -659,16 +659,19 @@ public class ADNDatabase {
     }
 
     public void insertOrReplaceActionMessageSpec(MessagePlus actionMessagePlus, String targetMessageId, String targetChannelId, Date targetMessageDisplayDate) {
+        insertOrReplaceActionMessageSpec(actionMessagePlus.getMessage().getId(), actionMessagePlus.getMessage().getChannelId(), targetMessageId, targetChannelId, targetMessageDisplayDate);
+    }
+
+    public void insertOrReplaceActionMessageSpec(String actionMessageId, String actionMessageChannelId, String targetMessageId, String targetChannelId, Date targetMessageDisplayDate) {
         if(mInsertOrReplaceActionMessageSpec == null) {
             mInsertOrReplaceActionMessageSpec = mDatabase.compileStatement(INSERT_OR_REPLACE_ACTION_MESSAGE_SPEC);
         }
         mDatabase.beginTransaction();
 
         try {
-            Message actionMessage = actionMessagePlus.getMessage();
 
-            mInsertOrReplaceActionMessageSpec.bindString(1, actionMessage.getId());
-            mInsertOrReplaceActionMessageSpec.bindString(2, actionMessage.getChannelId());
+            mInsertOrReplaceActionMessageSpec.bindString(1, actionMessageId);
+            mInsertOrReplaceActionMessageSpec.bindString(2, actionMessageChannelId);
             mInsertOrReplaceActionMessageSpec.bindString(3, targetMessageId);
             mInsertOrReplaceActionMessageSpec.bindString(4, targetChannelId);
             mInsertOrReplaceActionMessageSpec.bindLong(5, targetMessageDisplayDate.getTime());
@@ -756,6 +759,15 @@ public class ADNDatabase {
             }
         }
         return 0;
+    }
+
+    public ActionMessageSpec getActionMessageSpec(String actionMessageId) {
+        String where = COL_ACTION_MESSAGE_ID + "= ? ";
+        List<ActionMessageSpec> actionMessageSpecs = getActionMessageSpecs(where, new String[]{actionMessageId}, null, null);
+        if(actionMessageSpecs.size() > 0) {
+            return actionMessageSpecs.get(0);
+        }
+        return null;
     }
 
     public List<ActionMessageSpec> getActionMessageSpecsForTargetMessages(List<String> targetMessageIds) {

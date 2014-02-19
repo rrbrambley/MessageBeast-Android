@@ -1,9 +1,5 @@
 package com.alwaysallthetime.messagebeast.manager;
 
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
 import android.util.Log;
 
 import com.alwaysallthetime.adnlib.GeneralParameter;
@@ -74,11 +70,9 @@ public class ActionMessageManager {
 
     private ActionMessageManager(MessageManager messageManager) {
         mMessageManager = messageManager;
+        mMessageManager.attachActionMessageManager(this);
         mActionChannels = new HashMap<String, Channel>(1);
-
-        Context context = ADNApplication.getContext();
-        mDatabase = ADNDatabase.getInstance(context);
-        context.registerReceiver(sentMessageReceiver, new IntentFilter(MessageManager.INTENT_ACTION_UNSENT_MESSAGES_SENT));
+        mDatabase = ADNDatabase.getInstance(ADNApplication.getContext());
     }
 
     /**
@@ -282,7 +276,7 @@ public class ActionMessageManager {
             Annotation a = AnnotationFactory.getSingleValueAnnotation(PrivateChannelUtility.MESSAGE_ANNOTATION_TARGET_MESSAGE, PrivateChannelUtility.TARGET_MESSAGE_KEY_ID, targetMessageId);
             m.addAnnotation(a);
 
-            MessagePlus unsentActionMessage = mMessageManager.createUnsentMessage(actionChannelId, m, true);
+            MessagePlus unsentActionMessage = mMessageManager.createUnsentMessage(actionChannelId, m, !targetMessagePlus.isUnsent());
             mDatabase.insertOrReplaceActionMessageSpec(unsentActionMessage, targetMessageId, message.getChannelId(), targetMessagePlus.getDisplayDate());
         }
     }
@@ -329,28 +323,32 @@ public class ActionMessageManager {
         final ActionMessageSpec actionMessageSpec = actionMessageSpecs.get(0);
         MessagePlus actionMessagePlus = mDatabase.getMessage(actionMessageSpec.getActionMessageId());
 
-        //the success/failure of this should not matter - on failure, it will be a pending deletion
-        mMessageManager.deleteMessage(actionMessagePlus, new MessageManager.MessageDeletionResponseHandler() {
-            @Override
-            public void onSuccess() {
-                deleteNext();
-            }
-
-            @Override
-            public void onError(Exception exception) {
-                Log.e(TAG, "Failed to delete action message " + actionMessageSpec.getActionMessageId() + " for target message " + actionMessageSpec.getTargetMessageId());
-                deleteNext();
-            }
-
-            private void deleteNext() {
-                int nextIndex = currentIndex + 1;
-                if(nextIndex < actionMessageSpecs.size()) {
-                    deleteActionMessages(actionMessageSpecs, nextIndex, completionRunnable);
-                } else {
-                    completionRunnable.run();
+        if(actionMessagePlus != null) {
+            //the success/failure of this should not matter - on failure, it will be a pending deletion
+            mMessageManager.deleteMessage(actionMessagePlus, new MessageManager.MessageDeletionResponseHandler() {
+                @Override
+                public void onSuccess() {
+                    deleteNext();
                 }
-            }
-        });
+
+                @Override
+                public void onError(Exception exception) {
+                    Log.e(TAG, "Failed to delete action message " + actionMessageSpec.getActionMessageId() + " for target message " + actionMessageSpec.getTargetMessageId());
+                    deleteNext();
+                }
+
+                private void deleteNext() {
+                    int nextIndex = currentIndex + 1;
+                    if(nextIndex < actionMessageSpecs.size()) {
+                        deleteActionMessages(actionMessageSpecs, nextIndex, completionRunnable);
+                    } else {
+                        completionRunnable.run();
+                    }
+                }
+            });
+        } else {
+            Log.e(TAG, "could not delete action message " + actionMessageSpec.getActionMessageId() + "; no persisted MessagePlus exists");
+        }
     }
 
     private synchronized void processNewActionMessages(List<MessagePlus> actionMessages) {
@@ -375,53 +373,79 @@ public class ActionMessageManager {
         }
     }
 
-    private final BroadcastReceiver sentMessageReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            if(MessageManager.INTENT_ACTION_UNSENT_MESSAGES_SENT.equals(intent.getAction())) {
-                final String channelId = intent.getStringExtra(MessageManager.EXTRA_CHANNEL_ID);
-                final ArrayList<String> sentMessageIds = intent.getStringArrayListExtra(MessageManager.EXTRA_SENT_MESSAGE_IDS);
+    /**
+     * This is intended to be used by MessageManager only.
+     *
+     * ActionMessageManager needs to do processing when unsent messages are sent BEFORE the client
+     * application has a chance to do stuff (to avoid race conditions).
+     *
+     * @param channelId
+     * @param sentMessageIds
+     * @param replacementMessageIds
+     */
+    synchronized void onSentMessagesSentPrivate(final String channelId, final ArrayList<String> sentMessageIds, final ArrayList<String> replacementMessageIds) {
+        //this is not an action channel.
+        //it might be a target channel of one of our action channels though.
+        if(!mActionChannels.containsKey(channelId)) {
 
-                //this is not an action channel.
-                //it might be a target channel of one of our action channels though.
-                if(mActionChannels.get(channelId) == null) {
-                    //remove all action messages that point to this now nonexistent target message id
-                    List<ActionMessageSpec> sentTargetMessages = mDatabase.getActionMessageSpecsForTargetMessages(sentMessageIds);
-                    for(ActionMessageSpec actionMessageSpec : sentTargetMessages) {
-                        String actionChannelId = actionMessageSpec.getActionChannelId();
-                        mDatabase.deleteActionMessageSpec(actionChannelId, actionMessageSpec.getTargetMessageId());
-                    }
+            //for any action messages that targeted the unsent message,
+            //we now need to create a new action message spec that points to the NEW message id
+            //to replace the former one.
+            //
+            //additionally, we need to make sure to send unsent action messages now that their
+            //associated target messages have been sent.
+            //
+            HashSet<String> actionChannelIds = new HashSet<String>();
+            List<ActionMessageSpec> actionMessageSpecs = mDatabase.getActionMessageSpecsForTargetMessages(sentMessageIds);
+            for(ActionMessageSpec actionMessageSpec : actionMessageSpecs) {
+                String actionMessageId = actionMessageSpec.getActionMessageId();
+                String actionChannelId = actionMessageSpec.getActionChannelId();
+                String oldTargetMessageId = actionMessageSpec.getTargetMessageId();
+                String newTargetMessageId = replacementMessageIds.get(sentMessageIds.indexOf(oldTargetMessageId));
+                String targetMessageChannelId = channelId;
+                Date targetMessageDisplayDate = actionMessageSpec.getTargetMessageDisplayDate();
+                //TODO: this target message display date should be updated here (?)
+                mDatabase.insertOrReplaceActionMessageSpec(actionMessageId, actionChannelId, newTargetMessageId, targetMessageChannelId, targetMessageDisplayDate);
+                Log.d(TAG, "Updating action message spec; target id change: " + oldTargetMessageId + " --> " + newTargetMessageId);
+
+                MessagePlus actionMessage = mDatabase.getMessage(actionMessageId);
+                if(actionMessage != null) {
+                    String formerTargetMessageId = AnnotationUtility.getTargetMessageId(actionMessage.getMessage());
+                    actionMessage.replaceTargetMessageAnnotationMessageId(newTargetMessageId);
+                    Log.d(TAG, "replaced message's target message id annotation: " + formerTargetMessageId + " --> " + AnnotationUtility.getTargetMessageId(actionMessage.getMessage()));
+                    mDatabase.insertOrReplaceMessage(actionMessage);
+                    mMessageManager.replaceInMemoryMessage(actionMessage);
+                }
+
+                actionChannelIds.add(actionChannelId);
+            }
+
+            for(String actionChannelId : actionChannelIds) {
+                mMessageManager.sendAllUnsent(actionChannelId);
+                Log.d(TAG, "sending all unsent messages for action channel " + actionChannelId);
+            }
+            mMessageManager.sendUnsentMessagesSentBroadcast(channelId, sentMessageIds, replacementMessageIds);
+        } else {
+            //it's an action channel
+            //replace the old specs' action message ids with the replacement ones
+
+            for(int i = 0; i < sentMessageIds.size(); i++) {
+                String actionMessageId = sentMessageIds.get(i);
+                ActionMessageSpec oldSpec = mDatabase.getActionMessageSpec(actionMessageId);
+                if(oldSpec != null) {
+                    String newActionMessageId = replacementMessageIds.get(i);
+                    mDatabase.insertOrReplaceActionMessageSpec(newActionMessageId, oldSpec.getActionChannelId(),
+                            oldSpec.getTargetMessageId(), oldSpec.getTargetChannelId(), oldSpec.getTargetMessageDisplayDate());
+                    mDatabase.deleteActionMessageSpec(oldSpec.getActionMessageId());
+                    Log.d(TAG, "replaced action message spec; action message id " + oldSpec.getActionMessageId() + " ---> " + newActionMessageId);
                 } else {
-                    //it's an action channel
-                    //delete the action messages in the database with the sent message ids,
-                    //retrieve the new ones
-
-                    Channel actionChannel = mActionChannels.get(channelId);
-                    final String targetChannelId = AnnotationUtility.getTargetChannelId(actionChannel);
-                    mMessageManager.retrieveNewestMessages(channelId, new MessageManager.MessageManagerResponseHandler() {
-                        @Override
-                        public void onSuccess(List<MessagePlus> responseData) {
-                            for(String sentMessageId : sentMessageIds) {
-                                mDatabase.deleteActionMessageSpec(sentMessageId);
-                            }
-                            for(MessagePlus mp : responseData) {
-                                String targetMessageId = AnnotationUtility.getTargetMessageId(mp.getMessage());
-                                MessagePlus targetMessage = mMessageManager.getMessage(targetMessageId);
-                                if(targetMessage != null) {
-                                    mDatabase.insertOrReplaceActionMessageSpec(mp, targetMessageId, targetChannelId, targetMessage.getDisplayDate());
-                                }
-                            }
-                        }
-
-                        @Override
-                        public void onError(Exception exception) {
-                            Log.e(TAG, exception.getMessage(), exception);
-                        }
-                    });
+                    Log.d(TAG, "no action message spec to update for action message with id " + actionMessageId);
                 }
             }
+
+            mMessageManager.sendUnsentMessagesSentBroadcast(channelId, sentMessageIds, replacementMessageIds);
         }
-    };
+    }
 
     private static Comparator<String> sIdComparator = new Comparator<String>() {
         @Override

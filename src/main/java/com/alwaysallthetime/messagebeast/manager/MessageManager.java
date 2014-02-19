@@ -96,6 +96,9 @@ public class MessageManager {
 
     private static final int MAX_MESSAGES_RETURNED_ON_SYNC = 100;
 
+    public static final String ANNOTATION_UNSENT_MESSAGE_ID = "com.alwaysallthetime.messagebeast.unsent_message_id";
+    public static final String ANNOTATION_KEY_UNSENT_MESSAGE_ID = "id";
+
     /**
      * An intent with this action is broadcasted when unsent messages are successfully sent.
      *
@@ -119,6 +122,7 @@ public class MessageManager {
 
     public static final String EXTRA_CHANNEL_ID = "com.alwaysallthetime.messagebeast.manager.MessageManager.extras.channelId";
     public static final String EXTRA_SENT_MESSAGE_IDS = "com.alwaysallthetime.messagebeast.manager.MessageManager.extras.sentMessageIds";
+    public static final String EXTRA_SENT_MESSAGE_REPLACEMENT_IDS = "com.alwaysallthetime.messagebeast.manager.MessageManager.extras.replacementMessageIds";
     public static final String EXTRA_MESSAGE_ID = "com.alwaysallthetime.messagebeast.manager.MessageManager.extras.messageId";
     public static final String EXTRA_SEND_ATTEMPTS = "com.alwaysallthetime.messagebeast.manager.MessageManager.extras.sendAttempts";
 
@@ -186,6 +190,7 @@ public class MessageManager {
     private ADNDatabase mDatabase;
     private AppDotNetClient mClient;
     private MessageManagerConfiguration mConfiguration;
+    private ActionMessageManager mAttachedActionMessageManager;
 
     private HashMap<String, TreeMap<Long, MessagePlus>> mMessages;
     private HashMap<String, TreeMap<Long, MessagePlus>> mUnsentMessages;
@@ -224,6 +229,30 @@ public class MessageManager {
         mParameters.clear();
         mMinMaxPairs.clear();
         mMessagesNeedingPendingFiles.clear();
+    }
+
+    /**
+     * Replace
+     *
+     * @param messagePlus
+     */
+    public synchronized void replaceInMemoryMessage(MessagePlus messagePlus) {
+        String channelId = messagePlus.getMessage().getChannelId();
+        long time = messagePlus.getDisplayDate().getTime();
+
+        TreeMap<Long, MessagePlus> channelMessages = mMessages.get(channelId);
+        if(channelMessages != null) {
+            if(channelMessages.containsKey(time)) {
+                channelMessages.put(time, messagePlus);
+            }
+        }
+
+        TreeMap<Long, MessagePlus> unsentChanneMessages = mUnsentMessages.get(channelId);
+        if(unsentChanneMessages != null) {
+            if(unsentChanneMessages.containsKey(time)) {
+                unsentChanneMessages.put(time, messagePlus);
+            }
+        }
     }
 
     private synchronized OrderedMessageBatch loadPersistedMessageBatch(String channelId, int limit, boolean performLookups) {
@@ -1040,7 +1069,7 @@ public class MessageManager {
         minMaxPair.expandDateIfMinOrMax(messagePlus.getDisplayDate().getTime());
         minMaxPair.maxId = newMessageIdString;
 
-        Log.d(TAG, "Created and stored unsent message with id " + newMessageIdString);
+        Log.d(TAG, "Created and stored unsent message with id " + newMessageIdString + " for channel " + channelId);
 
         if(attemptToSendImmediately) {
             sendUnsentMessages(channelId);
@@ -1525,7 +1554,7 @@ public class MessageManager {
         return retrieveMessages(params, messageFilter, channelId, true, handler);
     }
 
-    private synchronized void sendUnsentMessages(final TreeMap<Long, MessagePlus> unsentMessages, final ArrayList<String> sentMessageIds) {
+    private synchronized void sendUnsentMessages(final TreeMap<Long, MessagePlus> unsentMessages, final ArrayList<String> sentMessageIds, final ArrayList<String> replacementMessageIds) {
         final MessagePlus messagePlus = unsentMessages.get(unsentMessages.keySet().iterator().next());
         if(messagePlus.hasPendingFileAttachments()) {
             String pendingFileId = messagePlus.getPendingFileAttachments().keySet().iterator().next();
@@ -1536,32 +1565,45 @@ public class MessageManager {
         }
         Message theMessage = messagePlus.getMessage();
         final Message message = (Message) AppDotNetObjectCloner.getClone(theMessage);
+        final String channelId = message.getChannelId();
 
         //we had them set for display locally, but we should
         //let the server generate the "real" entities.
         message.setEntities(null);
 
-        mClient.createMessage(message.getChannelId(), message, new MessageResponseHandler() {
+        mClient.createMessage(channelId, message, mParameters.get(channelId), new MessageResponseHandler() {
             @Override
-            public void onSuccess(Message responseData) {
-                Log.d(TAG, "Successfully sent unsent message with id " + message.getId());
+            public void onSuccess(Message newMessage) {
+                String newMessageId = newMessage.getId();
+                Log.d(TAG, "Channel " + channelId + "; Successfully sent unsent message with id " + message.getId() + "; replaced with message " + newMessageId);
 
                 long sentMessageTime = messagePlus.getDisplayDate().getTime();
 
                 unsentMessages.remove(sentMessageTime);
                 sentMessageIds.add(message.getId());
+                replacementMessageIds.add(newMessageId);
 
                 mDatabase.deleteMessage(messagePlus);
 
                 deleteMessageFromChannelMapAndUpdateMinMaxPair(messagePlus);
 
+                MessagePlus newMessagePlus = new MessagePlus(newMessage);
+                Date date = adjustDate(newMessagePlus);
+                performLookups(newMessagePlus, true);
+                insertIntoDatabase(newMessagePlus);
+                getChannelMessages(channelId).put(date.getTime(), newMessagePlus);
+                MinMaxPair minMaxPair = getMinMaxPair(channelId);
+                minMaxPair.expandDateIfMinOrMax(date.getTime());
+                minMaxPair.expandIdIfMinOrMax(newMessageId);
+
                 if(unsentMessages.size() > 0) {
-                    sendUnsentMessages(unsentMessages, sentMessageIds);
+                    sendUnsentMessages(unsentMessages, sentMessageIds, replacementMessageIds);
                 } else {
-                    Intent i = new Intent(INTENT_ACTION_UNSENT_MESSAGES_SENT);
-                    i.putExtra(EXTRA_CHANNEL_ID, message.getChannelId());
-                    i.putStringArrayListExtra(EXTRA_SENT_MESSAGE_IDS, sentMessageIds);
-                    mContext.sendBroadcast(i);
+                    if(mAttachedActionMessageManager != null) {
+                        mAttachedActionMessageManager.onSentMessagesSentPrivate(newMessage.getChannelId(), sentMessageIds, replacementMessageIds);
+                    } else {
+                        sendUnsentMessagesSentBroadcast(newMessage.getChannelId(), sentMessageIds, replacementMessageIds);
+                    }
                 }
             }
 
@@ -1580,6 +1622,14 @@ public class MessageManager {
         });
     }
 
+    void sendUnsentMessagesSentBroadcast(String channelId, ArrayList<String> sentMessageIds, ArrayList<String> replacementMessageIds) {
+        Intent i = new Intent(INTENT_ACTION_UNSENT_MESSAGES_SENT);
+        i.putExtra(EXTRA_CHANNEL_ID, channelId);
+        i.putStringArrayListExtra(EXTRA_SENT_MESSAGE_IDS, sentMessageIds);
+        i.putStringArrayListExtra(EXTRA_SENT_MESSAGE_REPLACEMENT_IDS, replacementMessageIds);
+        mContext.sendBroadcast(i);
+    }
+
     /**
      * Return true if the Channel with the specified id has unsent Messages.
      *
@@ -1592,12 +1642,29 @@ public class MessageManager {
 
     /**
      * Send all pending deletions and unsent Messages in a Channel.
+     * Calling this with an Action Channel will result in an IllegalStateException (you
+     * should never have to manually send Action Channel messages).
+     *
+     * The pending deletions will be sent first.
+     *
+     * @param channel the Channel
+     */
+    public void sendAllUnsent(Channel channel) {
+        if(AnnotationUtility.getActionChannelType(channel) == null) {
+            sendAllUnsent(channel.getId());
+        } else {
+            throw new IllegalStateException("You cannot call MessageManager.sendAllUnsent() with an Action Channel.");
+        }
+    }
+
+    /**
+     * Send all pending deletions and unsent Messages in a Channel.
      *
      * The pending deletions will be sent first.
      *
      * @param channelId the Channel id
      */
-    public synchronized void sendAllUnsent(final String channelId) {
+    synchronized void sendAllUnsent(final String channelId) {
         FileManager.getInstance(mClient).sendPendingFileDeletions();
         sendPendingDeletions(channelId, new MessageDeletionResponseHandler() {
             @Override
@@ -1621,7 +1688,7 @@ public class MessageManager {
      * @param channelId the the Channel id
      * @return true if unsent Messages are being sent, false if none exist
      */
-    public synchronized boolean sendUnsentMessages(final String channelId) {
+    synchronized boolean sendUnsentMessages(final String channelId) {
         TreeMap<Long, MessagePlus> unsentMessages = getUnsentMessages(channelId);
         if(unsentMessages.size() > 0) {
             TreeMap<Long, MessagePlus> channelMessages = getChannelMessages(channelId);
@@ -1630,7 +1697,8 @@ public class MessageManager {
                 loadPersistedMessages(channelId, unsentMessages.size() + 1);
             }
             ArrayList<String> sentMessageIds = new ArrayList<String>(unsentMessages.size());
-            sendUnsentMessages(unsentMessages, sentMessageIds);
+            ArrayList<String> replacementMessageIds = new ArrayList<String>(unsentMessages.size());
+            sendUnsentMessages(unsentMessages, sentMessageIds, replacementMessageIds);
             return true;
         }
         return false;
@@ -1797,6 +1865,10 @@ public class MessageManager {
         while(filteredTimeIterator.hasNext()) {
             fromMap.remove(filteredTimeIterator.next());
         }
+    }
+
+    void attachActionMessageManager(ActionMessageManager actionMessageManager) {
+        mAttachedActionMessageManager = actionMessageManager;
     }
 
     private final BroadcastReceiver fileUploadReceiver = new BroadcastReceiver() {

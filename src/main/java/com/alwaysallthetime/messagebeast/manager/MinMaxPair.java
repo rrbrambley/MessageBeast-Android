@@ -99,6 +99,15 @@ public class MinMaxPair {
         maxDate = maxDate != null ? Math.min(dateInMillis, maxDate) : null;
     }
 
+    public void expandIdIfMinOrMax(String messageId) {
+        Integer thisMin = minId != null ? Integer.parseInt(minId) : null;
+        Integer thisMax = maxId != null ? Integer.parseInt(maxId) : null;
+        Integer candidate = Integer.parseInt(messageId);
+
+        minId = thisMin != null ? String.valueOf(Math.min(thisMin, candidate)) : messageId;
+        maxId = thisMax != null ? String.valueOf(Math.max(thisMax, candidate)) : messageId;
+    }
+
     /**
      * @return the Integer value of the max id.
      */
