@@ -58,12 +58,11 @@ public class PrivateChannelUtility {
     }
 
     /**
-     * Clear Channels and Channel state from in-memory maps and persistence.
+     * Clear Channels and Channel state from in-memory maps.
      */
     public static void clearChannels() {
         sChannels.clear();
         sActionChannels.clear();
-        ADNSharedPreferences.clear();
     }
 
     /**
