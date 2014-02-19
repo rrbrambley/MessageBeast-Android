@@ -140,7 +140,7 @@ public class ChannelSyncManager {
      */
     public ChannelSyncManager(AppDotNetClient appDotNetClient, MessageManager.MessageManagerConfiguration configuration, TargetWithActionChannelsSpecSet channelSpecSet) {
         mMessageManager = new MessageManager(appDotNetClient, configuration);
-        mActionMessageManager = ActionMessageManager.getInstance(mMessageManager);
+        mActionMessageManager = new ActionMessageManager(mMessageManager);
         mTargetWithActionChannelsSpecSet = channelSpecSet;
     }
 

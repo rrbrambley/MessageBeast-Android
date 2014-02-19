@@ -1479,7 +1479,11 @@ public class MessageManager {
         Channel nextChannel = channels[currentChannelIndex];
         String type = nextChannel.getType();
         if(PrivateChannelUtility.CHANNEL_TYPE_ACTION.equals(type)) {
-            ActionMessageManager.getInstance(MessageManager.this).retrieveAndPersistAllActionMessages(nextChannel.getId(), currentChannelSyncHandler);
+            if(mAttachedActionMessageManager != null) {
+                mAttachedActionMessageManager.retrieveAndPersistAllActionMessages(nextChannel.getId(), currentChannelSyncHandler);
+            } else {
+                throw new IllegalStateException("ActionMessageManager must be attached to persist action channel messages.");
+            }
         } else {
             retrieveAndPersistAllMessages(channels[currentChannelIndex].getId(), currentChannelSyncHandler);
         }

@@ -60,15 +60,7 @@ public class ActionMessageManager {
         public void onException(Exception exception);
     }
 
-    private static ActionMessageManager sActionMessageManager;
-    public static ActionMessageManager getInstance(MessageManager messageManager) {
-        if(sActionMessageManager == null) {
-            sActionMessageManager = new ActionMessageManager(messageManager);
-        }
-        return sActionMessageManager;
-    }
-
-    private ActionMessageManager(MessageManager messageManager) {
+    public ActionMessageManager(MessageManager messageManager) {
         mMessageManager = messageManager;
         mMessageManager.attachActionMessageManager(this);
         mActionChannels = new HashMap<String, Channel>(1);
