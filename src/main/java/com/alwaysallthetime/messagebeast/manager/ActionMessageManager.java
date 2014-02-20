@@ -17,7 +17,6 @@ import com.alwaysallthetime.messagebeast.model.MessagePlus;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -438,14 +437,4 @@ public class ActionMessageManager {
             mMessageManager.sendUnsentMessagesSentBroadcast(channelId, sentMessageIds, replacementMessageIds);
         }
     }
-
-    private static Comparator<String> sIdComparator = new Comparator<String>() {
-        @Override
-        public int compare(String lhs, String rhs) {
-            Integer lhsInteger = new Integer(Integer.parseInt(lhs));
-            Integer rhsInteger = new Integer(Integer.parseInt(rhs));
-            //we want desc order (reverse chronological order)
-            return rhsInteger.compareTo(lhsInteger);
-        }
-    };
 }
