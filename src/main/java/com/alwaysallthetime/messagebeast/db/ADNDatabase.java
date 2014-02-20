@@ -1048,6 +1048,20 @@ public class ADNDatabase {
     }
 
     /**
+     * Get the number of instances of a specific display location instance.
+     * This defaults the lookup to a precision of LocationPrecision.ONE_HUNDRED_METERS (actually ~111 m).
+     *
+     * @param channelId The id of the channel
+     * @param location the DisplayLocation
+     *
+     * @return the number of display location instances for the specified DisplayLocation.
+     */
+    public int getNumDisplayLocationInstances(String channelId, DisplayLocation location) {
+        DisplayLocationInstances displayLocationInstances = getDisplayLocationInstances(channelId, location);
+        return displayLocationInstances.getNumInstances();
+    }
+
+    /**
      * Get a DisplayLocationInstances object representing the complete set of messages with which
      * the specified DisplayLocation is associated. Because DisplayLocations might have names that
      * represent larger geographic areas, this method accepts a LocationPrecision that acts as
