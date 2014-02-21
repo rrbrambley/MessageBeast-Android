@@ -1601,7 +1601,7 @@ public class MessageManager {
                     sendUnsentMessages(unsentMessages, sentMessageIds, replacementMessageIds);
                 } else {
                     if(mAttachedActionMessageManager != null) {
-                        mAttachedActionMessageManager.onSentMessagesSentPrivate(newMessage.getChannelId(), sentMessageIds, replacementMessageIds);
+                        mAttachedActionMessageManager.onUnsentMessagesSentPrivate(newMessage.getChannelId(), sentMessageIds, replacementMessageIds);
                     } else {
                         sendUnsentMessagesSentBroadcast(newMessage.getChannelId(), sentMessageIds, replacementMessageIds);
                     }

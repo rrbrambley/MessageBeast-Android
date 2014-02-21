@@ -374,7 +374,7 @@ public class ActionMessageManager {
      * @param sentMessageIds
      * @param replacementMessageIds
      */
-    synchronized void onSentMessagesSentPrivate(final String channelId, final ArrayList<String> sentMessageIds, final ArrayList<String> replacementMessageIds) {
+    synchronized void onUnsentMessagesSentPrivate(final String channelId, final ArrayList<String> sentMessageIds, final ArrayList<String> replacementMessageIds) {
         //this is not an action channel.
         //it might be a target channel of one of our action channels though.
         if(!mActionChannels.containsKey(channelId)) {
