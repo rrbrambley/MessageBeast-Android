@@ -96,9 +96,6 @@ public class MessageManager {
 
     private static final int MAX_MESSAGES_RETURNED_ON_SYNC = 100;
 
-    public static final String ANNOTATION_UNSENT_MESSAGE_ID = "com.alwaysallthetime.messagebeast.unsent_message_id";
-    public static final String ANNOTATION_KEY_UNSENT_MESSAGE_ID = "id";
-
     /**
      * An intent with this action is broadcasted when unsent messages are successfully sent.
      *

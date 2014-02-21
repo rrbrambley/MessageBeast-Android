@@ -12,7 +12,6 @@ import com.alwaysallthetime.messagebeast.AnnotationUtility;
 import com.alwaysallthetime.messagebeast.EntityGenerator;
 import com.alwaysallthetime.messagebeast.PrivateChannelUtility;
 import com.alwaysallthetime.messagebeast.db.PendingFileAttachment;
-import com.alwaysallthetime.messagebeast.manager.MessageManager;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -254,21 +253,6 @@ public class MessagePlus {
      */
     public boolean hasPendingFileAttachments() {
         return mPendingFileAttachments != null && mPendingFileAttachments.size() > 0;
-    }
-
-    /**
-     * Get the unsent Message id from the com.alwaysallthetime.messagebeast.unsent_message_id Annotation
-     * on this MessagePlus, or null if no such Annotation exists. This Annotation is added to all Messages
-     * that are created as unsent Messages.
-     *
-     * @return the unsent Message id, or null if the unsent Message id Annotation exists.
-     */
-    public String getUnsentMessageId() {
-        List<Annotation> unsentMessageId = mMessage.getAnnotationsOfType(MessageManager.ANNOTATION_UNSENT_MESSAGE_ID);
-        if(unsentMessageId != null && unsentMessageId.size() > 0) {
-            return (String) unsentMessageId.get(0).getValueForKey(MessageManager.ANNOTATION_KEY_UNSENT_MESSAGE_ID);
-        }
-        return null;
     }
 
     /**
@@ -607,7 +591,6 @@ public class MessagePlus {
 
         message.setEntities(EntityGenerator.getEntities(message.getText()));
         message.addAnnotation(AnnotationFactory.getDisplayDateAnnotation(date));
-        message.addAnnotation(AnnotationFactory.getSingleValueAnnotation(MessageManager.ANNOTATION_UNSENT_MESSAGE_ID, MessageManager.ANNOTATION_KEY_UNSENT_MESSAGE_ID, messageId));
         MessagePlus messagePlus = new MessagePlus(message);
         messagePlus.setIsUnsent(true);
         messagePlus.setDisplayDate(date);
