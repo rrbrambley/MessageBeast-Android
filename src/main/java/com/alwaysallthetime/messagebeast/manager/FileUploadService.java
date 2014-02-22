@@ -13,7 +13,7 @@ import com.alwaysallthetime.messagebeast.db.PendingFile;
 
 public class FileUploadService extends IntentService {
 
-    private static final String TAG = "ADNLibUtils_FileUploadService";
+    private static final String TAG = "MessageBeast_FileUploadService";
 
     //register a broadcast receiver for this stuff
     public static final String INTENT_ACTION_FILE_UPLOAD_COMPLETE = "com.alwaysallthetime.messagebeast.manager.extras.FileUploadService.action.fileUpload";

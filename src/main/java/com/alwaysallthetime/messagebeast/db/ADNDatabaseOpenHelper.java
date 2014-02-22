@@ -7,7 +7,7 @@ import android.util.Log;
 
 public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
 
-    private static final String TAG = "ADNLibUtils_AADNDatabaseOpenHelper";
+    private static final String TAG = "MessageBeast_AADNDatabaseOpenHelper";
 
     private static final String CREATE_MESSAGES_TABLE = "CREATE TABLE IF NOT EXISTS " + ADNDatabase.TABLE_MESSAGES + "(" +
             ADNDatabase.COL_MESSAGE_ID + " INTEGER PRIMARY KEY, " +

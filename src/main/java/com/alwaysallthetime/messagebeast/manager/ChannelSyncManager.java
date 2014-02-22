@@ -42,7 +42,7 @@ public class ChannelSyncManager {
 
     public static final String INTENT_ACTION_CHANNELS_INITIALIZED = "com.alwaysallthetime.messagebeast.manager.ChannelSyncManager.intent.channelsInitialized";
 
-    private static final String TAG = "ADNLibUtils_ChannelSyncManager";
+    private static final String TAG = "MessageBeast_ChannelSyncManager";
 
     private MessageManager mMessageManager;
     private ActionMessageManager mActionMessageManager;

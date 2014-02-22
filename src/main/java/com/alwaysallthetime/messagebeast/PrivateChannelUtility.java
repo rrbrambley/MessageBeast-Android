@@ -33,7 +33,7 @@ import java.util.List;
  */
 public class PrivateChannelUtility {
 
-    private static final String TAG = "ADNLibUtils_PrivateChannelUtility";
+    private static final String TAG = "MessageBeast_PrivateChannelUtility";
 
     public static final String CHANNEL_TYPE_ACTION = "com.alwaysallthetime.action";
 

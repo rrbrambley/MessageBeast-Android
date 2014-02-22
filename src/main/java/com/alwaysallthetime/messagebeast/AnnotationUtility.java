@@ -25,7 +25,7 @@ import java.util.TimeZone;
  * A Utility for obtaining data from Annotations on App.net resources.
  */
 public class AnnotationUtility {
-    private static final String TAG = "ADNLibUtils_AnnotationUtility";
+    private static final String TAG = "MessageBeast_AnnotationUtility";
 
     public static final String OEMBED_TYPE_PHOTO = "photo";
     public static final String OEMBED_TYPE_HTML5VIDEO = "html5video";

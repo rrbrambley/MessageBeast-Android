@@ -45,7 +45,7 @@ import java.util.TreeMap;
  * To check if an action has been performed on a specific target message, use the isActioned() method.
  */
 public class ActionMessageManager {
-    private static final String TAG = "ADNLibUtils_ActionMessageManager";
+    private static final String TAG = "MessageBeast_ActionMessageManager";
 
     public static final QueryParameters ACTION_MESSAGE_QUERY_PARAMETERS = new QueryParameters(GeneralParameter.INCLUDE_MACHINE,
             GeneralParameter.INCLUDE_MESSAGE_ANNOTATIONS, GeneralParameter.EXCLUDE_DELETED);

@@ -37,7 +37,7 @@ import java.util.TreeMap;
 
 public class ADNDatabase {
 
-    private static final String TAG = "ADNLibUtils_ADNDatabase";
+    private static final String TAG = "MessageBeast_ADNDatabase";
     private static final String DB_NAME = "aadndatabase.db";
     private static final int DB_VERSION = 1;
 

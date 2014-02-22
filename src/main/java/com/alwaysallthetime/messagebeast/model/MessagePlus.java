@@ -28,7 +28,7 @@ import java.util.Map;
  */
 public class MessagePlus {
 
-    private static final String TAG = "ADNLibUtils_MessagePlus";
+    private static final String TAG = "MessageBeast_MessagePlus";
 
     private Message mMessage;
     private Date mDisplayDate;

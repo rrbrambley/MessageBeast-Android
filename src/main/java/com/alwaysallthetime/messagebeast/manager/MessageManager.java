@@ -92,7 +92,7 @@ import java.util.TreeMap;
  */
 public class MessageManager {
 
-    private static final String TAG = "ADNLibUtils_MessageManager";
+    private static final String TAG = "MessageBeast_MessageManager";
 
     private static final int MAX_MESSAGES_RETURNED_ON_SYNC = 100;
 

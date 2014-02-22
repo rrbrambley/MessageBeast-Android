@@ -24,7 +24,7 @@ import java.util.UUID;
  */
 public class FileManager {
 
-    private static final String TAG = "ADNLibUtils_FileManager";
+    private static final String TAG = "MessageBeast_FileManager";
 
     private final Context mContext;
     private final AppDotNetClient mClient;
