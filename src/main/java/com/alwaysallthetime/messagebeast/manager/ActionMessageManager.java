@@ -13,6 +13,7 @@ import com.alwaysallthetime.messagebeast.AnnotationUtility;
 import com.alwaysallthetime.messagebeast.PrivateChannelUtility;
 import com.alwaysallthetime.messagebeast.db.ADNDatabase;
 import com.alwaysallthetime.messagebeast.db.ActionMessageSpec;
+import com.alwaysallthetime.messagebeast.db.OrderedMessageBatch;
 import com.alwaysallthetime.messagebeast.model.MessagePlus;
 
 import java.util.ArrayList;
@@ -339,6 +340,48 @@ public class ActionMessageManager {
     }
 
     /**
+     * Send unsent messages in an Action Channel, provided all of them
+     * correspond to target messages that have already been sent.
+     *
+     * The idea is that it is only safe to send action messages after their target messages have been
+     * sent. But because MessageManager only provides sendAllUnsent(channelId), we will only send
+     * the Action Messages when *all* of them in a given channel fulfill this safety restriction.
+     *
+     * @param actionChannelId The id of the Action Channel
+     * @return true if Action Messages will be sent for the provided channel, false otherwise.
+     */
+    public synchronized boolean sendUnsentActionMessages(String actionChannelId) {
+        if(mActionChannels.containsKey(actionChannelId)) {
+            TreeMap<Long, MessagePlus> unsentActionMessages = mDatabase.getUnsentMessages(actionChannelId);
+            HashSet<String> targetMessageIds = new HashSet<String>(unsentActionMessages.size());
+
+            for(MessagePlus unsentActionMessage : unsentActionMessages.values()) {
+                String targetMessageId = AnnotationUtility.getTargetMessageId(unsentActionMessage.getMessage());
+                targetMessageIds.add(targetMessageId);
+            }
+
+            //
+            //check to see if all target messages associated with messages in this action channel have
+            //been sent. if so, we are good to call sendAllUnsent(actionChanelId).
+            //
+            boolean allSent = true;
+            OrderedMessageBatch targetMessages = mDatabase.getMessages(targetMessageIds);
+            TreeMap<Long, MessagePlus> messages = targetMessages.getMessages();
+            for(MessagePlus targetMessage : messages.values()) {
+                allSent &= !targetMessage.isUnsent();
+            }
+
+            if(allSent) {
+                mMessageManager.sendAllUnsent(actionChannelId);
+                return true;
+            }
+        } else {
+            throw new IllegalStateException("Calling sendUnsentActionMessages() for a channel that ActionMessageManager is unaware of. Did you forget to call initActionChannel() first?");
+        }
+        return false;
+    }
+
+    /**
      * This is intended to be used by MessageManager only.
      *
      * ActionMessageManager needs to do processing when unsent messages are sent BEFORE the client
@@ -387,7 +430,7 @@ public class ActionMessageManager {
 
             for(String actionChannelId : actionChannelIds) {
                 mMessageManager.sendAllUnsent(actionChannelId);
-                Log.d(TAG, "sending all unsent messages for action channel " + actionChannelId);
+                Log.d(TAG, "onUnsentMessagesSentPrivate() - sending all unsent messages for action channel " + actionChannelId);
             }
             mMessageManager.sendUnsentMessagesSentBroadcast(channelId, sentMessageIds, replacementMessageIds);
         } else {
