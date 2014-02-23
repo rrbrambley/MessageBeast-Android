@@ -139,11 +139,24 @@ public class AnnotationFactory {
      * values from the provided File object
      */
     public static Annotation getOEmbedAnnotation(File file) {
+        return getOEmbedAnnotation(file.getFileToken(), file.getId());
+    }
+
+    /**
+     * Get an OEmbed Annotation with a +net.app.core.file replacement key mapped to
+     * values from the provided File object
+     *
+     * @param fileToken the File's file token
+     * @param fileId the File's id
+     * @return an OEmbed Annotation with a +net.app.core.file replacement key mapped to
+     * values from the provided File params.
+     */
+    public static Annotation getOEmbedAnnotation(String fileToken, String fileId) {
         HashMap<String, Object> value = new HashMap<String, Object>(1);
         HashMap<String, String> replacement = new HashMap<String, String>(1);
-        replacement.put("file_token", file.getFileToken());
+        replacement.put("file_token", fileToken);
         replacement.put("format", "oembed");
-        replacement.put("file_id", file.getId());
+        replacement.put("file_id", fileId);
         value.put(Annotations.REPLACEMENT_FILE, replacement);
         Annotation a = new Annotation(Annotations.OEMBED);
         a.setValue(value);
