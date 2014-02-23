@@ -419,10 +419,14 @@ public class ActionMessageManager {
                 MessagePlus actionMessage = mDatabase.getMessage(actionMessageId);
                 if(actionMessage != null) {
                     String formerTargetMessageId = AnnotationUtility.getTargetMessageId(actionMessage.getMessage());
-                    actionMessage.replaceTargetMessageAnnotationMessageId(newTargetMessageId);
-                    Log.d(TAG, "replaced message's target message id annotation: " + formerTargetMessageId + " --> " + AnnotationUtility.getTargetMessageId(actionMessage.getMessage()));
-                    mDatabase.insertOrReplaceMessage(actionMessage);
-                    mMessageManager.replaceInMemoryMessage(actionMessage);
+                    if(formerTargetMessageId != null) {
+                        actionMessage.replaceTargetMessageAnnotationMessageId(newTargetMessageId);
+                        Log.d(TAG, "replaced message's target message id annotation: " + formerTargetMessageId + " --> " + AnnotationUtility.getTargetMessageId(actionMessage.getMessage()));
+                        mDatabase.insertOrReplaceMessage(actionMessage);
+                        mMessageManager.replaceInMemoryMessage(actionMessage);
+                    } else {
+                        Log.e(TAG, "message " + actionMessageId + " is not actually an action message. we're in a bad state. bummer.");
+                    }
                 }
 
                 actionChannelIds.add(actionChannelId);
@@ -445,7 +449,7 @@ public class ActionMessageManager {
                     mDatabase.insertOrReplaceActionMessageSpec(newActionMessageId, oldSpec.getActionChannelId(),
                             oldSpec.getTargetMessageId(), oldSpec.getTargetChannelId(), oldSpec.getTargetMessageDisplayDate());
                     mDatabase.deleteActionMessageSpec(oldSpec.getActionMessageId());
-                    Log.d(TAG, "replaced action message spec; action message id " + oldSpec.getActionMessageId() + " ---> " + newActionMessageId);
+                    Log.d(TAG, "replaced action message spec; action message id " + oldSpec.getActionMessageId() + " ---> " + newActionMessageId + " (target message id " + oldSpec.getTargetMessageId() + ")");
                 } else {
                     Log.d(TAG, "no action message spec to update for action message with id " + actionMessageId);
                 }
