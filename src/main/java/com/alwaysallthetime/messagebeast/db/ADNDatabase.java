@@ -43,6 +43,7 @@ public class ADNDatabase {
 
     public static final String TABLE_MESSAGES = "messages";
     public static final String COL_MESSAGE_ID = "message_id";
+    public static final String COL_MESSAGE_MESSAGE_ID = "message_message_id";
     public static final String COL_MESSAGE_CHANNEL_ID = "message_channel_id";
     public static final String COL_MESSAGE_DATE = "message_date";
     public static final String COL_MESSAGE_JSON = "message_json";
@@ -65,6 +66,7 @@ public class ADNDatabase {
     public static final String COL_GEOLOCATION_LONGITUDE = "geolocation_longitude";
 
     public static final String TABLE_LOCATION_INSTANCES = "locations";
+    public static final String COL_LOCATION_INSTANCE_ID = "location_id";
     public static final String COL_LOCATION_INSTANCE_NAME = "location_name";
     public static final String COL_LOCATION_INSTANCE_SHORT_NAME = "location_short_name";
     public static final String COL_LOCATION_INSTANCE_MESSAGE_ID = "location_message_id";
@@ -145,6 +147,7 @@ public class ADNDatabase {
     private static final String INSERT_OR_REPLACE_MESSAGE = "INSERT OR REPLACE INTO " + TABLE_MESSAGES +
             " (" +
             COL_MESSAGE_ID + ", " +
+            COL_MESSAGE_MESSAGE_ID + ", " +
             COL_MESSAGE_CHANNEL_ID + ", " +
             COL_MESSAGE_DATE + ", " +
             COL_MESSAGE_JSON + ", " +
@@ -152,11 +155,11 @@ public class ADNDatabase {
             COL_MESSAGE_UNSENT + ", " +
             COL_MESSAGE_SEND_ATTEMPTS +
             ") " +
-            "VALUES(?, ?, ?, ?, ?, ?, ?)";
+            "VALUES(?, ?, ?, ?, ?, ?, ?, ?)";
 
     private static final String INSERT_MESSAGE_SEARCH_TEXT = "INSERT INTO " + TABLE_MESSAGES_SEARCH +
-            " (docid, " + COL_MESSAGE_CHANNEL_ID + ", " + COL_MESSAGE_TEXT + ") " +
-            "VALUES (?, ?, ?)";
+            " (docid, " + COL_MESSAGE_MESSAGE_ID + ", " + COL_MESSAGE_CHANNEL_ID + ", " + COL_MESSAGE_TEXT + ") " +
+            "VALUES (?, ?, ?, ?)";
 
     private static final String INSERT_OR_REPLACE_HASHTAG = "INSERT OR REPLACE INTO " + TABLE_HASHTAG_INSTANCES +
             " (" +
@@ -178,6 +181,7 @@ public class ADNDatabase {
 
     private static final String INSERT_OR_REPLACE_LOCATION_INSTANCE = "INSERT OR REPLACE INTO " + TABLE_LOCATION_INSTANCES +
             " (" +
+            COL_LOCATION_INSTANCE_ID + ", " +
             COL_LOCATION_INSTANCE_MESSAGE_ID + ", " +
             COL_LOCATION_INSTANCE_NAME + ", " +
             COL_LOCATION_INSTANCE_SHORT_NAME + ", " +
@@ -187,7 +191,7 @@ public class ADNDatabase {
             COL_LOCATION_INSTANCE_FACTUAL_ID + ", " +
             COL_LOCATION_INSTANCE_DATE +
             ") " +
-            "VALUES(?, ?, ?, ?, ?, ?, ?, ?)";
+            "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     private static final String INSERT_OR_REPLACE_PLACE = "INSERT OR REPLACE INTO " + TABLE_PLACES +
             " (" +
@@ -201,8 +205,8 @@ public class ADNDatabase {
             "VALUES(?, ?, ?, ?, ?, ?)";
 
     private static final String INSERT_LOCATION_INSTANCES_SEARCH_TEXT = "INSERT INTO " + TABLE_LOCATION_INSTANCES_SEARCH +
-            " (docid, " + COL_LOCATION_INSTANCE_CHANNEL_ID + ", " + COL_LOCATION_INSTANCE_NAME + ") " +
-            "VALUES (?, ?, ?)";
+            " (docid, " + COL_LOCATION_INSTANCE_MESSAGE_ID + ", " + COL_LOCATION_INSTANCE_CHANNEL_ID + ", " + COL_LOCATION_INSTANCE_NAME + ") " +
+            "VALUES (?, ?, ?, ?)";
 
     private static final String INSERT_OR_REPLACE_ANNOTATION_INSTANCE = "INSERT OR REPLACE INTO " + TABLE_ANNOTATION_INSTANCES +
             " (" +
@@ -290,15 +294,6 @@ public class ADNDatabase {
         return Build.VERSION.SDK_INT >= 11;
     }
 
-    //http://www.sqlite.org/optoverview.html#minmax
-    public Integer getMaxMessageId() {
-        Cursor cursor = mDatabase.rawQuery("SELECT MAX(" + COL_MESSAGE_ID + ") FROM " + TABLE_MESSAGES, null);
-        if(cursor.moveToFirst()) {
-            return cursor.getInt(0);
-        }
-        return null;
-    }
-
     private ADNDatabase(Context context) {
         ADNDatabaseOpenHelper openHelper = new ADNDatabaseOpenHelper(context, DB_NAME, null, DB_VERSION);
         mDatabase = openHelper.getWritableDatabase();
@@ -337,20 +332,22 @@ public class ADNDatabase {
         Message message = messagePlus.getMessage();
         String text = message.getText();
         message.setText(null);
-        Long messageId = Long.valueOf(message.getId());
+
+        boolean success = false;
 
         try {
-            mInsertOrReplaceMessage.bindLong(1, messageId);
-            mInsertOrReplaceMessage.bindString(2, message.getChannelId());
-            mInsertOrReplaceMessage.bindLong(3, displayDate.getTime());
-            mInsertOrReplaceMessage.bindString(4, mGson.toJson(message));
+            mInsertOrReplaceMessage.bindNull(1);
+            mInsertOrReplaceMessage.bindString(2, message.getId());
+            mInsertOrReplaceMessage.bindString(3, message.getChannelId());
+            mInsertOrReplaceMessage.bindLong(4, displayDate.getTime());
+            mInsertOrReplaceMessage.bindString(5, mGson.toJson(message));
             if(text != null) {
-                mInsertOrReplaceMessage.bindString(5, text);
+                mInsertOrReplaceMessage.bindString(6, text);
             } else {
-                mInsertOrReplaceMessage.bindNull(5);
+                mInsertOrReplaceMessage.bindNull(6);
             }
-            mInsertOrReplaceMessage.bindLong(6, messagePlus.isUnsent() ? 1 : 0);
-            mInsertOrReplaceMessage.bindLong(7, messagePlus.getNumSendAttempts());
+            mInsertOrReplaceMessage.bindLong(7, messagePlus.isUnsent() ? 1 : 0);
+            mInsertOrReplaceMessage.bindLong(8, messagePlus.getNumSendAttempts());
             mInsertOrReplaceMessage.execute();
 
             Map<String, PendingFileAttachment> attachments = messagePlus.getPendingFileAttachments();
@@ -360,24 +357,29 @@ public class ADNDatabase {
                 }
             }
 
-            insertSearchableMessageText(messageId, message.getChannelId(), text);
             mDatabase.setTransactionSuccessful();
+            success = true;
         } catch(Exception e) {
             Log.e(TAG, e.getMessage(), e);
         } finally {
             mDatabase.endTransaction();
             mInsertOrReplaceMessage.clearBindings();
             message.setText(text);
+
+            if(success) {
+                insertSearchableMessageText(getMaxMessageId(), message.getId(), message.getChannelId(), text);
+            }
         }
     }
 
-    private void insertSearchableMessageText(long messageId, String channelId, String text) {
+    private void insertSearchableMessageText(long rowId, String messageId, String channelId, String text) {
         if(isFullTextSearchAvailable() && text != null) {
             mDatabase.beginTransaction();
             try {
-                mInsertMessageSearchText.bindLong(1, messageId);
-                mInsertMessageSearchText.bindString(2, channelId);
-                mInsertMessageSearchText.bindString(3, text);
+                mInsertMessageSearchText.bindLong(1, rowId);
+                mInsertMessageSearchText.bindString(2, messageId);
+                mInsertMessageSearchText.bindString(3, channelId);
+                mInsertMessageSearchText.bindString(4, text);
                 mInsertMessageSearchText.execute();
                 mDatabase.setTransactionSuccessful();
             } catch(Exception e) {
@@ -497,50 +499,58 @@ public class ADNDatabase {
         }
         DisplayLocation location = messagePlus.getDisplayLocation();
         if(location != null) {
-            Long messageId = Long.valueOf(messagePlus.getMessage().getId());
+            String messageId = messagePlus.getMessage().getId();
             String name = location.getName();
             String shortName = location.getShortName();
             String channelId = messagePlus.getMessage().getChannelId();
             String factualId = location.getFactualId();
 
+            boolean success = false;
+
             mDatabase.beginTransaction();
             try {
-                mInsertOrReplaceLocationInstance.bindLong(1, messageId);
-                mInsertOrReplaceLocationInstance.bindString(2, name);
+                mInsertOrReplaceLocationInstance.bindNull(1);
+                mInsertOrReplaceLocationInstance.bindString(2, messageId);
+                mInsertOrReplaceLocationInstance.bindString(3, name);
                 if(shortName != null) {
-                    mInsertOrReplaceLocationInstance.bindString(3, shortName);
+                    mInsertOrReplaceLocationInstance.bindString(4, shortName);
                 } else {
-                    mInsertOrReplaceLocationInstance.bindNull(3);
+                    mInsertOrReplaceLocationInstance.bindNull(4);
                 }
-                mInsertOrReplaceLocationInstance.bindString(4, channelId);
-                mInsertOrReplaceLocationInstance.bindDouble(5, location.getLatitude());
-                mInsertOrReplaceLocationInstance.bindDouble(6, location.getLongitude());
+                mInsertOrReplaceLocationInstance.bindString(5, channelId);
+                mInsertOrReplaceLocationInstance.bindDouble(6, location.getLatitude());
+                mInsertOrReplaceLocationInstance.bindDouble(7, location.getLongitude());
                 if(factualId != null) {
-                    mInsertOrReplaceLocationInstance.bindString(7, factualId);
+                    mInsertOrReplaceLocationInstance.bindString(8, factualId);
                 } else {
-                    mInsertOrReplaceLocationInstance.bindNull(7);
+                    mInsertOrReplaceLocationInstance.bindNull(8);
                 }
-                mInsertOrReplaceLocationInstance.bindLong(8, messagePlus.getDisplayDate().getTime());
+                mInsertOrReplaceLocationInstance.bindLong(9, messagePlus.getDisplayDate().getTime());
                 mInsertOrReplaceLocationInstance.execute();
 
-                insertSearchableDisplayLocation(messageId, channelId, name);
                 mDatabase.setTransactionSuccessful();
+                success = true;
             } catch(Exception e) {
                 Log.e(TAG, e.getMessage(), e);
             } finally {
                 mDatabase.endTransaction();
                 mInsertOrReplaceLocationInstance.clearBindings();
+
+                if(success) {
+                    insertSearchableDisplayLocation(getMaxDisplayLocationInstanceId(), messageId, channelId, name);
+                }
             }
         }
     }
 
-    private void insertSearchableDisplayLocation(long messageId, String channelId, String locationName) {
+    private void insertSearchableDisplayLocation(long rowId, String messageId, String channelId, String locationName) {
         if(isFullTextSearchAvailable() && locationName != null) {
             mDatabase.beginTransaction();
             try {
-                mInsertLocationInstanceSearchText.bindLong(1, messageId);
-                mInsertLocationInstanceSearchText.bindString(2, channelId);
-                mInsertLocationInstanceSearchText.bindString(3, locationName);
+                mInsertLocationInstanceSearchText.bindLong(1, rowId);
+                mInsertLocationInstanceSearchText.bindString(2, messageId);
+                mInsertLocationInstanceSearchText.bindString(3, channelId);
+                mInsertLocationInstanceSearchText.bindString(4, locationName);
                 mInsertLocationInstanceSearchText.execute();
                 mDatabase.setTransactionSuccessful();
             } catch(Exception e) {
@@ -1522,7 +1532,7 @@ public class ADNDatabase {
         Cursor cursor = null;
         HashSet<String> messageIds = new HashSet<String>();
         try {
-            cursor = mDatabase.query(TABLE_MESSAGES_SEARCH, new String[] { "docid" }, where, args, null, null, null, null);
+            cursor = mDatabase.query(TABLE_MESSAGES_SEARCH, new String[] { COL_MESSAGE_MESSAGE_ID }, where, args, null, null, null, null);
             while(cursor.moveToNext()) {
                 messageIds.add(cursor.getString(0));
             }
@@ -1543,7 +1553,7 @@ public class ADNDatabase {
         Cursor cursor = null;
         HashSet<String> messageIds = new HashSet<String>();
         try {
-            cursor = mDatabase.query(TABLE_LOCATION_INSTANCES_SEARCH, new String[] { "docid" }, where, args, null, null, null, null);
+            cursor = mDatabase.query(TABLE_LOCATION_INSTANCES_SEARCH, new String[] { COL_LOCATION_INSTANCE_MESSAGE_ID }, where, args, null, null, null, null);
             while(cursor.moveToNext()) {
                 messageIds.add(cursor.getString(0));
             }
@@ -1576,7 +1586,7 @@ public class ADNDatabase {
      * @return OrderedMessageBatch
      */
     public OrderedMessageBatch getMessages(Collection<String> messageIds) {
-        String where = COL_MESSAGE_ID + " IN (";
+        String where = COL_MESSAGE_MESSAGE_ID + " IN (";
         String[] args = new String[messageIds.size()];
 
         int index = 0;
@@ -1623,16 +1633,16 @@ public class ADNDatabase {
         try {
             cursor = mDatabase.query(TABLE_MESSAGES, null, where, args, null, null, orderBy, limit);
 
-            Integer messageId = null;
+            String messageId = null;
             Long date = null;
 
             while(cursor.moveToNext()) {
-                messageId = cursor.getInt(0);
-                date = cursor.getLong(2);
-                String messageJson = cursor.getString(3);
-                String messageText = cursor.getString(4);
-                boolean isUnsent = cursor.getInt(5) == 1;
-                int numSendAttempts = cursor.getInt(6);
+                messageId = cursor.getString(1);
+                date = cursor.getLong(3);
+                String messageJson = cursor.getString(4);
+                String messageText = cursor.getString(5);
+                boolean isUnsent = cursor.getInt(6) == 1;
+                int numSendAttempts = cursor.getInt(7);
                 Message message = mGson.fromJson(messageJson, Message.class);
                 message.setText(messageText);
 
@@ -1642,15 +1652,22 @@ public class ADNDatabase {
                 messagePlus.setNumSendAttempts(numSendAttempts);
                 messages.put(date, messagePlus);
 
+
                 if(maxDate == null) {
                     maxDate = date;
-                    maxId = messageId;
-                    minId = messageId;
-                } else {
-                    //this must happen because id order is not necessarily same as date order
-                    //(and we know the results are ordered by date)
-                    maxId = Math.max(messageId, maxId);
-                    minId = Math.min(messageId, minId);
+                }
+
+                if(!isUnsent) {
+                    Integer messageIdAsInt = Integer.parseInt(messageId);
+                    if(maxId == null) {
+                        maxId = messageIdAsInt;
+                        minId = messageIdAsInt;
+                    } else {
+                        //this must happen because id order is not necessarily same as date order
+                        //(and we know the results are ordered by date)
+                        maxId = Math.max(messageIdAsInt, maxId);
+                        minId = Math.min(messageIdAsInt, minId);
+                    }
                 }
 
                 //this is just for efficiency
@@ -1694,16 +1711,15 @@ public class ADNDatabase {
         try {
             String where = COL_MESSAGE_CHANNEL_ID + " = ? AND " + COL_MESSAGE_UNSENT + " = ?";
             String[] args = new String[] { channelId, String.valueOf(1) };
-            String[] cols = new String[] { COL_MESSAGE_ID, COL_MESSAGE_DATE, COL_MESSAGE_JSON, COL_MESSAGE_TEXT, COL_MESSAGE_SEND_ATTEMPTS };
+            String[] cols = new String[] {COL_MESSAGE_DATE, COL_MESSAGE_JSON, COL_MESSAGE_TEXT, COL_MESSAGE_SEND_ATTEMPTS };
             String orderBy = COL_MESSAGE_DATE + " ASC";
 
             cursor = mDatabase.query(TABLE_MESSAGES, cols, where, args, null, null, orderBy, null);
             while(cursor.moveToNext()) {
-                String messageId = cursor.getString(0);
-                long date = cursor.getLong(1);
-                String messageJson = cursor.getString(2);
-                String messageText = cursor.getString(3);
-                int sendAttempts = cursor.getInt(4);
+                long date = cursor.getLong(0);
+                String messageJson = cursor.getString(1);
+                String messageText = cursor.getString(2);
+                int sendAttempts = cursor.getInt(3);
 
                 Message message = mGson.fromJson(messageJson, Message.class);
                 message.setText(messageText);
@@ -1829,10 +1845,10 @@ public class ADNDatabase {
 
         try {
             Message message = messagePlus.getMessage();
-            Long messageId = Long.valueOf(message.getId());
-            mDatabase.delete(TABLE_MESSAGES_SEARCH, "docid=" + messageId, null);
-            mDatabase.delete(TABLE_LOCATION_INSTANCES_SEARCH, "docid=" + messageId, null);
-            mDatabase.delete(TABLE_MESSAGES, COL_MESSAGE_ID + " = " + messageId, null);
+            String messageId = message.getId();
+            mDatabase.delete(TABLE_MESSAGES_SEARCH, COL_MESSAGE_MESSAGE_ID + " = '" + messageId + "'", null);
+            mDatabase.delete(TABLE_LOCATION_INSTANCES_SEARCH, COL_LOCATION_INSTANCE_MESSAGE_ID + " = '" + messageId + "'", null);
+            mDatabase.delete(TABLE_MESSAGES, COL_MESSAGE_MESSAGE_ID + " = '" + messageId + "'", null);
 
             deleteAnnotationInstances(message.getId());
 
@@ -1846,8 +1862,7 @@ public class ADNDatabase {
                 }
             }
 
-            String where = COL_LOCATION_INSTANCE_MESSAGE_ID + " = " + message.getId();
-            mDatabase.delete(TABLE_LOCATION_INSTANCES, where, null);
+            mDatabase.delete(TABLE_LOCATION_INSTANCES, COL_LOCATION_INSTANCE_MESSAGE_ID + " = '" + messageId + "'", null);
 
             if(messagePlus.hasPendingFileAttachments()) {
                 Map<String, PendingFileAttachment> pendingAttachments = messagePlus.getPendingFileAttachments();
@@ -1969,5 +1984,22 @@ public class ADNDatabase {
     private double getRoundedValue(double value, int numDecimals) {
         BigDecimal bigValue = new BigDecimal(value);
         return bigValue.setScale(numDecimals, BigDecimal.ROUND_DOWN).doubleValue();
+    }
+
+    //http://www.sqlite.org/optoverview.html#minmax
+    private Integer getMaxMessageId() {
+        Cursor cursor = mDatabase.rawQuery("SELECT MAX(" + COL_MESSAGE_ID + ") FROM " + TABLE_MESSAGES, null);
+        if(cursor.moveToFirst()) {
+            return cursor.getInt(0);
+        }
+        return null;
+    }
+
+    private Integer getMaxDisplayLocationInstanceId() {
+        Cursor cursor = mDatabase.rawQuery("SELECT MAX(" + COL_LOCATION_INSTANCE_ID + ") FROM " + TABLE_LOCATION_INSTANCES, null);
+        if(cursor.moveToFirst()) {
+            return cursor.getInt(0);
+        }
+        return null;
     }
 }

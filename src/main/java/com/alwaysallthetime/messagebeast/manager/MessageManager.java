@@ -57,6 +57,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.UUID;
 
 /**
  * MessageManager is used to retrieve, create, and delete Messages in any number of channels.<br><br>
@@ -1033,9 +1034,7 @@ public class MessageManager {
             loadPersistedMessages(channelId, 1);
         }
 
-        Integer maxInteger = mDatabase.getMaxMessageId();
-        Integer newMessageId = maxInteger != null ? maxInteger + 1 : 1;
-        String newMessageIdString = String.valueOf(newMessageId);
+        String newMessageIdString = UUID.randomUUID().toString();
 
         MessagePlus.UnsentMessagePlusBuilder unsentBuilder = MessagePlus.UnsentMessagePlusBuilder.newBuilder(channelId, newMessageIdString, message);
         for(PendingFileAttachment attachment : pendingFileAttachments) {
@@ -1064,7 +1063,6 @@ public class MessageManager {
         //but we have to check to see if the time is min or max
         MinMaxPair minMaxPair = getMinMaxPair(channelId);
         minMaxPair.expandDateIfMinOrMax(messagePlus.getDisplayDate().getTime());
-        minMaxPair.maxId = newMessageIdString;
 
         Log.d(TAG, "Created and stored unsent message with id " + newMessageIdString + " for channel " + channelId);
 
@@ -1278,12 +1276,15 @@ public class MessageManager {
                     minMaxPair.maxDate = nextTime;
                 }
 
-                Integer nextId = Integer.parseInt(channelMessages.get(nextTime).getMessage().getId());
-                if(adjustMax && maxIdAsInteger > nextId && (newMaxId == null || nextId > newMaxId)) {
-                    newMaxId = nextId;
-                }
-                if(adjustMin && minIdAsInteger < nextId && (newMinId == null || nextId < newMinId)) {
-                    newMinId = nextId;
+                MessagePlus nextMessagePlus = channelMessages.get(nextTime);
+                if(!nextMessagePlus.isUnsent()) {
+                    Integer nextId = Integer.parseInt(nextMessagePlus.getMessage().getId());
+                    if(adjustMax && maxIdAsInteger > nextId && (newMaxId == null || nextId > newMaxId)) {
+                        newMaxId = nextId;
+                    }
+                    if(adjustMin && minIdAsInteger < nextId && (newMinId == null || nextId < newMinId)) {
+                        newMinId = nextId;
+                    }
                 }
                 secondToLastDate = lastDate;
                 lastDate = nextTime;
