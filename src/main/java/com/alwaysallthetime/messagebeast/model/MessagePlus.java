@@ -585,14 +585,18 @@ public class MessagePlus {
     }
 
     private static MessagePlus newUnsentMessagePlus(String channelId, String messageId, Message message) {
-        Date date = new Date();
+        Date date = null;
         setMessageIdWithReflection(messageId, message);
         setChannelIdWithReflection(channelId, message);
 
         message.setEntities(EntityGenerator.getEntities(message.getText()));
-        
-        if(message.getFirstAnnotationOfType(Annotations.OHAI_DISPLAY_DATE) == null) {
+
+        Annotation displayDateAnnotation = message.getFirstAnnotationOfType(Annotations.OHAI_DISPLAY_DATE);
+        if(displayDateAnnotation == null) {
+            date = new Date();
             message.addAnnotation(AnnotationFactory.getDisplayDateAnnotation(date));
+        } else {
+            date = AnnotationUtility.getOhaiDisplayDate(message);
         }
 
         MessagePlus messagePlus = new MessagePlus(message);
