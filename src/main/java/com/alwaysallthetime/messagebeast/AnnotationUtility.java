@@ -220,7 +220,7 @@ public class AnnotationUtility {
 
     private static void initFormatter() {
         if(mIso8601Format == null) {
-            mIso8601Format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+            mIso8601Format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
             mIso8601Format.setTimeZone(TimeZone.getTimeZone("UTC"));
         }
     }
