@@ -780,6 +780,12 @@ public class ADNDatabase {
         return null;
     }
 
+    public List<ActionMessageSpec> getActionMessageSpecsForTargetMessage(String messageId) {
+        ArrayList<String> messageIds = new ArrayList<String>(1);
+        messageIds.add(messageId);
+        return getActionMessageSpecsForTargetMessages(messageIds);
+    }
+
     public List<ActionMessageSpec> getActionMessageSpecsForTargetMessages(List<String> targetMessageIds) {
         return getActionMessageSpecsForTargetMessages(null, targetMessageIds);
     }
