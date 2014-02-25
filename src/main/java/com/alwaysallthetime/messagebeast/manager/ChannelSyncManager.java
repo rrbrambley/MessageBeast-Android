@@ -7,6 +7,9 @@ import com.alwaysallthetime.adnlib.AppDotNetClient;
 import com.alwaysallthetime.adnlib.data.Channel;
 import com.alwaysallthetime.messagebeast.ADNApplication;
 import com.alwaysallthetime.messagebeast.PrivateChannelUtility;
+import com.alwaysallthetime.messagebeast.db.ADNDatabase;
+import com.alwaysallthetime.messagebeast.db.ActionMessageSpec;
+import com.alwaysallthetime.messagebeast.db.OrderedMessageBatch;
 import com.alwaysallthetime.messagebeast.filter.MessageFilter;
 import com.alwaysallthetime.messagebeast.model.ChannelRefreshResult;
 import com.alwaysallthetime.messagebeast.model.ChannelRefreshResultSet;
@@ -17,8 +20,10 @@ import com.alwaysallthetime.messagebeast.model.MessagePlus;
 import com.alwaysallthetime.messagebeast.model.TargetWithActionChannelsSpecSet;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * ChannelSyncManager simplifies the syncing of several channels simultaneously.<br><br>
@@ -292,6 +297,58 @@ public class ChannelSyncManager {
         } else {
             retrieveNewestMessagesInChannelsList(0, new ChannelRefreshResultSet(), refreshHandler);
         }
+    }
+
+    /**
+     * Delete a MessagePlus and any Action Messages associated with it.
+     *
+     * If the provided MessagePlus has files associated with it, they will not be deleted by this
+     * method.
+     *
+     * @param messagePlus the target MessagePlus to be deleted.
+     */
+    public void deleteMessageAndAssociatedActionMessages(MessagePlus messagePlus) {
+        deleteMessageAndAssociatedActionMessages(messagePlus, false);
+    }
+
+    /**
+     * Delete a MessagePlus and any Action Messages associated with it.
+     *
+     * @param messagePlus the target MessagePlus to be deleted.
+     * @param deleteAssociatedFiles true if the target MessagePlus' associated files should be deleted,
+     *                              false otherwise.
+     */
+    public void deleteMessageAndAssociatedActionMessages(MessagePlus messagePlus, boolean deleteAssociatedFiles) {
+        deleteMessageAndAssociatedActionMessages(messagePlus, deleteAssociatedFiles, null);
+    }
+
+    /**
+     * Delete a MessagePlus and any Action Messages associated with it.
+     *
+     * The response handler is used to indicate the completion of the target MessagePlus deletion,
+     * i.e. the action messages are not guaranteed to be deleted before the response handler is called.
+     *
+     * @param messagePlus the target MessagePlus to be deleted.
+     * @param deleteAssociatedFiles true if the target MessagePlus' associated files should be deleted,
+     *                              false otherwise.
+     * @param handler The MessageDeletionResponseHandler. Can be null.
+     */
+    public void deleteMessageAndAssociatedActionMessages(final MessagePlus messagePlus, boolean deleteAssociatedFiles, final MessageManager.MessageDeletionResponseHandler handler) {
+        ADNDatabase db = ADNDatabase.getInstance(ADNApplication.getContext());
+        List<ActionMessageSpec> actionMessageSpecs = db.getActionMessageSpecsForTargetMessage(messagePlus.getMessage().getId());
+
+        if(actionMessageSpecs.size() > 0) {
+            HashSet<String> actionMessageIds = new HashSet<String>(actionMessageSpecs.size());
+            for(ActionMessageSpec spec : actionMessageSpecs) {
+                actionMessageIds.add(spec.getActionMessageId());
+            }
+            OrderedMessageBatch actionMessageBatch = db.getMessages(actionMessageIds);
+            TreeMap<Long, MessagePlus> actionMessages = actionMessageBatch.getMessages();
+            for(MessagePlus mp : actionMessages.values()) {
+                mMessageManager.deleteMessage(mp);
+            }
+        }
+        mMessageManager.deleteMessage(messagePlus, deleteAssociatedFiles, handler);
     }
 
     private void retrieveNewestMessagesInChannelsList(final int index, final ChannelRefreshResultSet refreshResultSet, final ChannelRefreshHandler refreshHandler) {
