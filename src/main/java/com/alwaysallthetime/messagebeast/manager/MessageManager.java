@@ -1064,7 +1064,7 @@ public class MessageManager {
         MinMaxPair minMaxPair = getMinMaxPair(channelId);
         minMaxPair.expandDateIfMinOrMax(messagePlus.getDisplayDate().getTime());
 
-        Log.d(TAG, "Created and stored unsent message with id " + newMessageIdString + " for channel " + channelId);
+        Log.d(TAG, "Created and stored unsent message with id " + newMessageIdString + " for channel " + channelId + " and time " + messagePlus.getDisplayDate().getTime());
 
         if(attemptToSendImmediately) {
             sendUnsentMessages(channelId);
