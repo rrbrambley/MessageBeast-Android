@@ -31,7 +31,7 @@ public class AnnotationUtility {
     public static final String OEMBED_TYPE_HTML5VIDEO = "html5video";
 
     private static SimpleDateFormat mIso8601Format;
-
+    private static SimpleDateFormat mIso8601WithMillisFormat;
 
     /**
      * Get the date specified by an Annotation of type net.app.ohai.displaydate, if it exists.
@@ -62,9 +62,15 @@ public class AnnotationUtility {
     public static Date getDateFromIso8601String(String date) {
         initFormatter();
         try {
-            return mIso8601Format.parse(date);
+            return mIso8601WithMillisFormat.parse(date);
         } catch(ParseException e) {
             Log.e(TAG, e.getMessage(), e);
+
+            try {
+                return mIso8601Format.parse(date);
+            } catch(ParseException e1) {
+                Log.e(TAG, e1.getMessage(), e1);
+            }
         }
         return null;
     }
@@ -77,7 +83,7 @@ public class AnnotationUtility {
      */
     public static String getIso8601StringfromDate(Date date) {
         initFormatter();
-        return mIso8601Format.format(date);
+        return mIso8601WithMillisFormat.format(date);
     }
 
     /**
@@ -219,8 +225,11 @@ public class AnnotationUtility {
     }
 
     private static void initFormatter() {
-        if(mIso8601Format == null) {
-            mIso8601Format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+        if(mIso8601WithMillisFormat == null) {
+            mIso8601WithMillisFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+            mIso8601WithMillisFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+
+            mIso8601Format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
             mIso8601Format.setTimeZone(TimeZone.getTimeZone("UTC"));
         }
     }
