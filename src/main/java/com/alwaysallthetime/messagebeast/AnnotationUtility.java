@@ -64,8 +64,6 @@ public class AnnotationUtility {
         try {
             return mIso8601WithMillisFormat.parse(date);
         } catch(ParseException e) {
-            Log.e(TAG, e.getMessage(), e);
-
             try {
                 return mIso8601Format.parse(date);
             } catch(ParseException e1) {
