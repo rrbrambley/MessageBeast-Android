@@ -1873,65 +1873,69 @@ public class MessageManager {
         mAttachedActionMessageManager = actionMessageManager;
     }
 
+    private synchronized void onFileUploadComplete(Intent intent) {
+        String pendingFileId = intent.getStringExtra(FileUploadService.EXTRA_PENDING_FILE_ID);
+        String associatedChannelId = intent.getStringExtra(FileUploadService.EXTRA_ASSOCIATED_CHANNEL_ID);
+        if(pendingFileId != null) {
+            boolean success = intent.getBooleanExtra(FileUploadService.EXTRA_SUCCESS, false);
+            if(success) {
+                Log.d(TAG, "Successfully uploaded pending file with id " + pendingFileId);
+
+                Set<String> messagesIdsNeedingFile = getMessageIdsNeedingPendingFile(pendingFileId);
+                if(messagesIdsNeedingFile != null) {
+                    TreeMap<Long, MessagePlus> messagesNeedingFile = mDatabase.getMessages(messagesIdsNeedingFile).getMessages();
+
+                    //always add the associated channel Id so that we can finish the
+                    //sending of the unsent message in the channel that triggered the upload.
+                    HashSet<String> channelIdsWithMessagesToSend = new HashSet<String>();
+                    channelIdsWithMessagesToSend.add(associatedChannelId);
+
+                    String fileJson = intent.getStringExtra(FileUploadService.EXTRA_FILE);
+                    File file = AppDotNetGson.getPersistenceInstance().fromJson(fileJson, File.class);
+
+                    for(MessagePlus messagePlus : messagesNeedingFile.values()) {
+                        Message message = messagePlus.getMessage();
+                        messagePlus.replacePendingFileAttachmentWithAnnotation(pendingFileId, file);
+
+                        //TODO: this is kind of crappy, but needs to be done
+                        //modify the in-memory message plusses to use this new copy
+                        //in the future, we might want to change the way unsent messages
+                        //are held on to in memory.
+                        String channelId = message.getChannelId();
+                        long time = messagePlus.getDisplayDate().getTime();
+                        TreeMap<Long, MessagePlus> channelMessages = getChannelMessages(channelId);
+                        if(channelMessages.containsKey(time)) {
+                            channelMessages.put(time, messagePlus);
+                        }
+                        TreeMap<Long, MessagePlus> unsentMessages = getUnsentMessages(channelId);
+                        if(unsentMessages.containsKey(time)) {
+                            unsentMessages.put(time, messagePlus);
+                        }
+
+                        mDatabase.insertOrReplaceMessage(messagePlus);
+                        mDatabase.deletePendingFileAttachment(pendingFileId, message.getId());
+
+                        if(messagePlus.getPendingFileAttachments().size() == 0) {
+                            channelIdsWithMessagesToSend.add(channelId);
+                        }
+                    }
+
+                    mMessagesNeedingPendingFiles.remove(pendingFileId);
+
+                    for(String channelId : channelIdsWithMessagesToSend) {
+                        sendUnsentMessages(channelId);
+                        Log.d(TAG, "Now retrying send for unsent messages in channel " + channelId);
+                    }
+                }
+            }
+        }
+    }
+
     private final BroadcastReceiver fileUploadReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             if(FileUploadService.INTENT_ACTION_FILE_UPLOAD_COMPLETE.equals(intent.getAction())) {
-                String pendingFileId = intent.getStringExtra(FileUploadService.EXTRA_PENDING_FILE_ID);
-                String associatedChannelId = intent.getStringExtra(FileUploadService.EXTRA_ASSOCIATED_CHANNEL_ID);
-                if(pendingFileId != null) {
-                    boolean success = intent.getBooleanExtra(FileUploadService.EXTRA_SUCCESS, false);
-                    if(success) {
-                        Log.d(TAG, "Successfully uploaded pending file with id " + pendingFileId);
-
-                        Set<String> messagesIdsNeedingFile = getMessageIdsNeedingPendingFile(pendingFileId);
-                        if(messagesIdsNeedingFile != null) {
-                            TreeMap<Long, MessagePlus> messagesNeedingFile = mDatabase.getMessages(messagesIdsNeedingFile).getMessages();
-
-                            //always add the associated channel Id so that we can finish the
-                            //sending of the unsent message in the channel that triggered the upload.
-                            HashSet<String> channelIdsWithMessagesToSend = new HashSet<String>();
-                            channelIdsWithMessagesToSend.add(associatedChannelId);
-
-                            String fileJson = intent.getStringExtra(FileUploadService.EXTRA_FILE);
-                            File file = AppDotNetGson.getPersistenceInstance().fromJson(fileJson, File.class);
-
-                            for(MessagePlus messagePlus : messagesNeedingFile.values()) {
-                                Message message = messagePlus.getMessage();
-                                messagePlus.replacePendingFileAttachmentWithAnnotation(pendingFileId, file);
-
-                                //TODO: this is kind of crappy, but needs to be done
-                                //modify the in-memory message plusses to use this new copy
-                                //in the future, we might want to change the way unsent messages
-                                //are held on to in memory.
-                                String channelId = message.getChannelId();
-                                long time = messagePlus.getDisplayDate().getTime();
-                                TreeMap<Long, MessagePlus> channelMessages = getChannelMessages(channelId);
-                                if(channelMessages.containsKey(time)) {
-                                    channelMessages.put(time, messagePlus);
-                                }
-                                TreeMap<Long, MessagePlus> unsentMessages = getUnsentMessages(channelId);
-                                if(unsentMessages.containsKey(time)) {
-                                    unsentMessages.put(time, messagePlus);
-                                }
-
-                                mDatabase.insertOrReplaceMessage(messagePlus);
-                                mDatabase.deletePendingFileAttachment(pendingFileId, message.getId());
-
-                                if(messagePlus.getPendingFileAttachments().size() == 0) {
-                                    channelIdsWithMessagesToSend.add(channelId);
-                                }
-                            }
-
-                            mMessagesNeedingPendingFiles.remove(pendingFileId);
-
-                            for(String channelId : channelIdsWithMessagesToSend) {
-                                sendUnsentMessages(channelId);
-                                Log.d(TAG, "Now retrying send for unsent messages in channel " + channelId);
-                            }
-                        }
-                    }
-                }
+                onFileUploadComplete(intent);
             }
         }
     };
