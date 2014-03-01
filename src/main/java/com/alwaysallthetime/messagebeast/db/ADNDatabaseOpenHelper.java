@@ -11,7 +11,7 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
 
     private static final String CREATE_MESSAGES_TABLE = "CREATE TABLE IF NOT EXISTS " + ADNDatabase.TABLE_MESSAGES + "(" +
             ADNDatabase.COL_MESSAGE_ID + " INTEGER PRIMARY KEY, " +
-            ADNDatabase.COL_MESSAGE_MESSAGE_ID + " STRING UNIQUE, " +
+            ADNDatabase.COL_MESSAGE_MESSAGE_ID + " TEXT UNIQUE, " +
             ADNDatabase.COL_MESSAGE_CHANNEL_ID + " TEXT NOT NULL, " +
             ADNDatabase.COL_MESSAGE_DATE + " INTEGER NOT NULL, " +
             ADNDatabase.COL_MESSAGE_JSON + " TEXT NOT NULL, " +
@@ -52,7 +52,7 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
 
     private static final String CREATE_LOCATION_INSTANCES_TABLE = "CREATE TABLE IF NOT EXISTS " + ADNDatabase.TABLE_LOCATION_INSTANCES + "(" +
             ADNDatabase.COL_LOCATION_INSTANCE_ID + " INTEGER PRIMARY KEY, " +
-            ADNDatabase.COL_LOCATION_INSTANCE_MESSAGE_ID + " STRING UNIQUE, " +
+            ADNDatabase.COL_LOCATION_INSTANCE_MESSAGE_ID + " TEXT UNIQUE, " +
             ADNDatabase.COL_LOCATION_INSTANCE_NAME + " TEXT NOT NULL, " +
             ADNDatabase.COL_LOCATION_INSTANCE_SHORT_NAME + " TEXT, " +
             ADNDatabase.COL_LOCATION_INSTANCE_CHANNEL_ID + " TEXT NOT NULL, " +
