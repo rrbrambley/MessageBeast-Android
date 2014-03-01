@@ -230,9 +230,10 @@ public class MessageManager {
     }
 
     /**
-     * Replace
+     * Replace in-memory instances of the provided MessagePlus (as identified by
+     * channel id and display date) with the new copy.
      *
-     * @param messagePlus
+     * @param messagePlus the new copy of the MessagePlus to replace old versions of the same one.
      */
     public synchronized void replaceInMemoryMessage(MessagePlus messagePlus) {
         String channelId = messagePlus.getMessage().getChannelId();
