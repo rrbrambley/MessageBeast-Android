@@ -295,20 +295,10 @@ private final BroadcastReceiver sentMessageReceiver = new BroadcastReceiver() {
     public void onReceive(Context context, Intent intent) {
         String channelId = intent.getStringExtra(MessageManager.EXTRA_CHANNEL_ID);
         ArrayList<String> sentMessageIds = intent.getStringArrayListExtra(MessageManager.EXTRA_SENT_MESSAGE_IDS);
+        ArrayList<String> replacedMessageIds = intent.getStringArrayListExtra(MessageManager.EXTRA_SENT_MESSAGE_REPLACEMENT_IDS);
         
-        //after the unsent messages are successfully sent, the local copies are deleted.
-        //do this to retrieve the newly sent messages:
-        myMessageManager.retrieveNewestMessages(channelId, new MessageManager.MessageManagerResponseHandler() {
-            @Override
-            public void onSuccess(List<MessagePlus> responseData) {
-                //we got our new messages.
-            }
-    
-            @Override
-            public void onError(Exception exception) {
-                Log.e(TAG, exception.getMessage(), exception);
-            }
-        });
+        //the sent messages will have new ids – those in the replacementMessageIds List
+        //the sentMessageIds.get(0) corresponds to the new id from replaceedMessageIds.get(0), etc.
     }
 };
 ```
