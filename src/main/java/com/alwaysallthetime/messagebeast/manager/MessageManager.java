@@ -1121,13 +1121,16 @@ public class MessageManager {
             final Runnable runnable = new Runnable() {
                 @Override
                 public void run() {
+                    mDatabase.insertOrReplacePendingMessageDeletion(messagePlus);
+                    mDatabase.deleteMessage(messagePlus); //this one because the deleted one doesn't have the entities.
+                    deleteMessageFromChannelMapAndUpdateMinMaxPair(messagePlus);
+
                     mClient.deleteMessage(messagePlus.getMessage(), new MessageResponseHandler() {
                         //note: if the message was previously deleted, then we get a 200 and
                         //onSuccess() is called. this differs from file deletion behavior -
                         //the same scenario with a file deletion would result in a 403.
                         @Override
                         public void onSuccess(Message responseData) {
-                            delete();
                             mDatabase.deletePendingMessageDeletion(responseData.getId());
                             if(handler != null) {
                                 handler.onSuccess();
@@ -1137,15 +1140,9 @@ public class MessageManager {
                         @Override
                         public void onError(Exception error) {
                             super.onError(error);
-                            delete();
                             if(handler != null) {
                                 handler.onError(error);
                             }
-                        }
-
-                        private void delete() {
-                            mDatabase.deleteMessage(messagePlus); //this one because the deleted one doesn't have the entities.
-                            deleteMessageFromChannelMapAndUpdateMinMaxPair(messagePlus);
                         }
                     });
                 }
