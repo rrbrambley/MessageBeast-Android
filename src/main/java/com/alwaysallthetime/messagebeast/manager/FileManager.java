@@ -202,8 +202,12 @@ public class FileManager {
                 } else if(pendingFileId != null) {
                     Log.e(TAG, "Failed to upload pending file with id " + pendingFileId);
                     PendingFile pendingFile = mDatabase.getPendingFile(pendingFileId);
-                    pendingFile.incrementSendAttempts();
-                    mDatabase.insertOrReplacePendingFile(pendingFile);
+                    if(pendingFile != null) {
+                        pendingFile.incrementSendAttempts();
+                        mDatabase.insertOrReplacePendingFile(pendingFile);
+                    } else {
+                        Log.e(TAG, "File " + pendingFileId + " is not in the database");
+                    }
                 }
             }
         }
