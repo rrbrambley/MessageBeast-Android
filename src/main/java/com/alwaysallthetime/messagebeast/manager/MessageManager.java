@@ -1138,7 +1138,6 @@ public class MessageManager {
                         public void onError(Exception error) {
                             super.onError(error);
                             delete();
-                            mDatabase.insertOrReplacePendingMessageDeletion(messagePlus);
                             if(handler != null) {
                                 handler.onError(error);
                             }
@@ -1152,6 +1151,7 @@ public class MessageManager {
                 }
             };
 
+            mDatabase.insertOrReplacePendingMessageDeletion(messagePlus);
             if(deleteAssociatedFiles) {
                 List<Annotation> oEmbeds = messagePlus.getMessage().getAnnotationsOfType(Annotations.OEMBED);
                 deleteOEmbed(0, oEmbeds, new Runnable() {
