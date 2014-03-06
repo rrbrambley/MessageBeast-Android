@@ -54,6 +54,16 @@ public class ADNSharedPreferences {
         return gson.fromJson(tokenJson, Token.class);
     }
 
+    public static void setToken(Token token) {
+        final SharedPreferences.Editor editor = sPrefs.edit();
+        if(token != null) {
+            editor.putString(TOKEN_OBJECT, gson.toJson(token));
+        } else {
+            editor.remove(TOKEN_OBJECT);
+        }
+        editor.commit();
+    }
+
     public static void saveCredentials(String accessToken, Token token) {
         final SharedPreferences.Editor editor = sPrefs.edit();
         final String tokenJson = gson.toJson(token);
