@@ -20,6 +20,12 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
             ADNDatabase.COL_MESSAGE_SEND_ATTEMPTS + " INTEGER " +
             ")";
 
+    private static final String CREATE_MESSAGE_DRAFTS_TABLE = "CREATE TABLE IF NOT EXISTS " + ADNDatabase.TABLE_MESSAGE_DRAFTS + "(" +
+            ADNDatabase.COL_MESSAGE_DRAFT_ID + " STRING PRIMARY KEY, " +
+            ADNDatabase.COL_MESSAGE_DRAFT_DATE + " INTEGER NOT NULL, " +
+            ADNDatabase.COL_MESSAGE_DRAFT_JSON + " TEXT NOT NULL " +
+            ")";
+
     private static final String CREATE_MESSAGES_SEARCH_TABLE = "CREATE VIRTUAL TABLE " + ADNDatabase.TABLE_MESSAGES_SEARCH + " USING fts4(" +
             "content=" + "\"" + ADNDatabase.TABLE_MESSAGES + "\"," +
             ADNDatabase.COL_MESSAGE_MESSAGE_ID + " TEXT, " +
@@ -123,6 +129,7 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
 
         try {
             db.execSQL(CREATE_MESSAGES_TABLE);
+            db.execSQL(CREATE_MESSAGE_DRAFTS_TABLE);
             db.execSQL(CREATE_HASHTAG_INSTANCES_TABLE);
             db.execSQL(CREATE_GEOLOCATIONS_TABLE);
             db.execSQL(CREATE_PLACES_TABLE);

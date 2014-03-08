@@ -51,6 +51,11 @@ public class ADNDatabase {
     public static final String COL_MESSAGE_UNSENT = "message_unsent";
     public static final String COL_MESSAGE_SEND_ATTEMPTS = "message_send_attempts";
 
+    public static final String TABLE_MESSAGE_DRAFTS = "message_drafts";
+    public static final String COL_MESSAGE_DRAFT_ID = "message_draft_id";
+    public static final String COL_MESSAGE_DRAFT_DATE = "message_draft_date";
+    public static final String COL_MESSAGE_DRAFT_JSON = "message_draft_json";
+
     public static final String TABLE_MESSAGES_SEARCH = "messages_search";
 
     public static final String TABLE_HASHTAG_INSTANCES = "hashtags";
@@ -156,6 +161,14 @@ public class ADNDatabase {
             COL_MESSAGE_SEND_ATTEMPTS +
             ") " +
             "VALUES(?, ?, ?, ?, ?, ?, ?, ?)";
+
+    private static final String INSERT_OR_REPLACE_MESSAGE_DRAFT = "INSERT OR REPLACE INTO " + TABLE_MESSAGE_DRAFTS +
+            " (" +
+            COL_MESSAGE_DRAFT_ID + ", " +
+            COL_MESSAGE_DRAFT_DATE + ", " +
+            COL_MESSAGE_DRAFT_JSON +
+            ") " +
+            "VALUES(?, ?, ?)";
 
     private static final String INSERT_MESSAGE_SEARCH_TEXT = "INSERT INTO " + TABLE_MESSAGES_SEARCH +
             " (docid, " + COL_MESSAGE_MESSAGE_ID + ", " + COL_MESSAGE_CHANNEL_ID + ", " + COL_MESSAGE_TEXT + ") " +
@@ -267,6 +280,7 @@ public class ADNDatabase {
 
     private SQLiteDatabase mDatabase;
     private SQLiteStatement mInsertOrReplaceMessage;
+    private SQLiteStatement mInsertOrReplaceMessageDraft;
     private SQLiteStatement mInsertMessageSearchText;
     private SQLiteStatement mInsertOrReplaceHashtag;
     private SQLiteStatement mInsertOrReplaceGeolocation;
@@ -369,6 +383,26 @@ public class ADNDatabase {
             if(success) {
                 insertSearchableMessageText(getMaxMessageId(), message.getId(), message.getChannelId(), text);
             }
+        }
+    }
+
+    public void insertOrReplaceMessageDraft(MessagePlus messagePlus) {
+        if(mInsertOrReplaceMessageDraft == null) {
+            mInsertOrReplaceMessageDraft = mDatabase.compileStatement(INSERT_OR_REPLACE_MESSAGE_DRAFT);
+        }
+
+        try {
+            Message message = messagePlus.getMessage();
+            mInsertOrReplaceMessageDraft.bindString(1, message.getId());
+            mInsertOrReplaceMessageDraft.bindLong(2, messagePlus.getDisplayDate().getTime());
+            mInsertOrReplaceMessageDraft.bindString(3, mGson.toJson(message));
+
+            mDatabase.setTransactionSuccessful();
+        } catch(Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+        } finally {
+            mDatabase.endTransaction();
+            mInsertOrReplaceMessageDraft.clearBindings();
         }
     }
 
@@ -1890,7 +1924,8 @@ public class ADNDatabase {
     }
 
     public void deletePendingMessageDeletion(String messageId) {
-        mDatabase.delete(TABLE_PENDING_MESSAGE_DELETIONS, COL_PENDING_MESSAGE_DELETION_MESSAGE_ID + " = '" + messageId + "'", null);
+        int delete = mDatabase.delete(TABLE_PENDING_MESSAGE_DELETIONS, COL_PENDING_MESSAGE_DELETION_MESSAGE_ID + " = '" + messageId + "'", null);
+        Log.d(TAG, "num rows: " + delete);
     }
 
     public void deletePendingFileDeletion(String fileId) {
