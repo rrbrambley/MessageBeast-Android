@@ -38,6 +38,7 @@ public class MessagePlus {
 
     private HashMap<String, PendingFileAttachment> mPendingFileAttachments;
     private boolean mIsUnsent;
+    private boolean mIsDraft;
     private int mSendAttempts;
 
     /**
@@ -235,6 +236,27 @@ public class MessagePlus {
      */
     public boolean isUnsent() {
         return mIsUnsent;
+    }
+
+    /**
+     * Set the draft flag on this MessagePlus. By setting a MessagePlus' isDraft field to true,
+     * you will also be setting isUnsent to true.
+     *
+     * @param isDraft
+     */
+    public void setIsDraft(boolean isDraft) {
+        mIsDraft = isDraft;
+
+        if(isDraft) {
+            mIsUnsent = true;
+        }
+    }
+
+    /**
+     * @return true if this is a draft, false otherwise.
+     */
+    public boolean isDraft() {
+        return mIsDraft;
     }
 
     /**

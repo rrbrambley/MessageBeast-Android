@@ -1745,6 +1745,70 @@ public class ADNDatabase {
         return new OrderedMessageBatch(messages, new MinMaxPair(minIdString, maxIdString, minDate, maxDate));
     }
 
+    public MessagePlus getMessageDraft(String messageDraftId) {
+        Cursor cursor = null;
+        MessagePlus messagePlus = null;
+        try {
+            String where = COL_MESSAGE_DRAFT_ID + " = ?";
+            String[] args = new String[] { messageDraftId };
+            String[] cols = new String[] { COL_MESSAGE_DRAFT_DATE, COL_MESSAGE_DRAFT_JSON };
+
+            cursor = mDatabase.query(TABLE_MESSAGE_DRAFTS, cols, where, args, null, null, null, null);
+            if(cursor.moveToNext()) {
+                long date = cursor.getLong(0);
+                String messageJson = cursor.getString(1);
+
+                Message message = mGson.fromJson(messageJson, Message.class);
+                messagePlus = new MessagePlus(message);
+                messagePlus.setDisplayDate(new Date(date));
+                messagePlus.setIsDraft(true);
+            }
+        } catch(Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+        } finally {
+            if(cursor != null) {
+                cursor.close();
+            }
+        }
+        ArrayList<MessagePlus> drafts = new ArrayList<MessagePlus>(1);
+        drafts.add(messagePlus);
+        populatePendingFileAttachments(drafts);
+        return messagePlus;
+    }
+
+    public List<MessagePlus> getMessageDrafts(String channelId) {
+        ArrayList<MessagePlus> drafts = new ArrayList<MessagePlus>();
+
+        Cursor cursor = null;
+        try {
+            String where = COL_MESSAGE_DRAFT_CHANNEL_ID + " = ?";
+            String[] args = new String[] { channelId };
+            String[] cols = new String[] { COL_MESSAGE_DRAFT_DATE, COL_MESSAGE_DRAFT_JSON };
+            String orderBy = COL_MESSAGE_DRAFT_DATE + " ASC";
+
+            cursor = mDatabase.query(TABLE_MESSAGE_DRAFTS, cols, where, args, null, null, orderBy, null);
+            while(cursor.moveToNext()) {
+                long date = cursor.getLong(0);
+                String messageJson = cursor.getString(1);
+
+                Message message = mGson.fromJson(messageJson, Message.class);
+                MessagePlus messagePlus = new MessagePlus(message);
+                messagePlus.setDisplayDate(new Date(date));
+                messagePlus.setIsDraft(true);
+                drafts.add(messagePlus);
+            }
+        } catch(Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+        } finally {
+            if(cursor != null) {
+                cursor.close();
+            }
+        }
+        populatePendingFileAttachments(drafts);
+
+        return drafts;
+    }
+
     /**
      * Get all messages marked as unsent in a channel.
      * 
@@ -1883,6 +1947,7 @@ public class ADNDatabase {
         mDatabase.delete(TABLE_LOCATION_INSTANCES, null, null);
         mDatabase.delete(TABLE_LOCATION_INSTANCES_SEARCH, null, null);
         mDatabase.delete(TABLE_MESSAGES, null, null);
+        mDatabase.delete(TABLE_MESSAGE_DRAFTS, null, null);
         mDatabase.delete(TABLE_MESSAGES_SEARCH, null, null);
         mDatabase.delete(TABLE_PENDING_FILE_ATTACHMENTS, null, null);
         mDatabase.delete(TABLE_PENDING_FILE_DELETIONS, null, null);
@@ -1915,16 +1980,7 @@ public class ADNDatabase {
 
             mDatabase.delete(TABLE_LOCATION_INSTANCES, COL_LOCATION_INSTANCE_MESSAGE_ID + " = '" + messageId + "'", null);
 
-            if(messagePlus.hasPendingFileAttachments()) {
-                Map<String, PendingFileAttachment> pendingAttachments = messagePlus.getPendingFileAttachments();
-                for(String pendingFileId : pendingAttachments.keySet()) {
-                    deletePendingFileAttachment(pendingFileId, message.getId());
-
-                    //TODO: can multiple message plus objects use the same pending file Id?
-                    //if so, we shouldn't do this here - must make sure no other MPs need it.
-                    deletePendingFile(pendingFileId);
-                }
-            }
+            deleteAssociatedPendingFileAttachments(messagePlus);
 
             mDatabase.setTransactionSuccessful();
         } catch(Exception e) {
@@ -1934,9 +1990,28 @@ public class ADNDatabase {
         }
     }
 
+    public void deleteMessageDraft(MessagePlus messagePlus) {
+        String messageId = messagePlus.getMessage().getId();
+        mDatabase.delete(TABLE_MESSAGE_DRAFTS, COL_MESSAGE_DRAFT_ID + " = '" + messageId + "'", null);
+
+        deleteAssociatedPendingFileAttachments(messagePlus);
+    }
+
+    private void deleteAssociatedPendingFileAttachments(MessagePlus messagePlus) {
+        if(messagePlus.hasPendingFileAttachments()) {
+            Map<String, PendingFileAttachment> pendingAttachments = messagePlus.getPendingFileAttachments();
+            for(String pendingFileId : pendingAttachments.keySet()) {
+                deletePendingFileAttachment(pendingFileId, messagePlus.getMessage().getId());
+
+                //TODO: can multiple message plus objects use the same pending file Id?
+                //if so, we shouldn't do this here - must make sure no other MPs need it.
+                deletePendingFile(pendingFileId);
+            }
+        }
+    }
+
     public void deletePendingMessageDeletion(String messageId) {
-        int delete = mDatabase.delete(TABLE_PENDING_MESSAGE_DELETIONS, COL_PENDING_MESSAGE_DELETION_MESSAGE_ID + " = '" + messageId + "'", null);
-        Log.d(TAG, "num rows: " + delete);
+        mDatabase.delete(TABLE_PENDING_MESSAGE_DELETIONS, COL_PENDING_MESSAGE_DELETION_MESSAGE_ID + " = '" + messageId + "'", null);
     }
 
     public void deletePendingFileDeletion(String fileId) {
