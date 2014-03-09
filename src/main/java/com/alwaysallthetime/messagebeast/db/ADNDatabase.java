@@ -366,12 +366,7 @@ public class ADNDatabase {
             mInsertOrReplaceMessage.bindLong(8, messagePlus.getNumSendAttempts());
             mInsertOrReplaceMessage.execute();
 
-            Map<String, PendingFileAttachment> attachments = messagePlus.getPendingFileAttachments();
-            if(attachments != null) {
-                for(String pendingFileId : attachments.keySet()) {
-                    insertOrReplacePendingFileAttachment(pendingFileId, message.getId(), message.getChannelId(), attachments.get(pendingFileId).isOEmbed());
-                }
-            }
+            insertPendingFileAttachments(messagePlus);
 
             mDatabase.setTransactionSuccessful();
             success = true;
@@ -400,12 +395,25 @@ public class ADNDatabase {
             mInsertOrReplaceMessageDraft.bindLong(3, messagePlus.getDisplayDate().getTime());
             mInsertOrReplaceMessageDraft.bindString(4, mGson.toJson(message));
             mInsertOrReplaceMessageDraft.execute();
+
+            insertPendingFileAttachments(messagePlus);
+
             mDatabase.setTransactionSuccessful();
         } catch(Exception e) {
             Log.e(TAG, e.getMessage(), e);
         } finally {
             mDatabase.endTransaction();
             mInsertOrReplaceMessageDraft.clearBindings();
+        }
+    }
+
+    private void insertPendingFileAttachments(MessagePlus messagePlus) {
+        Message message = messagePlus.getMessage();
+        Map<String, PendingFileAttachment> attachments = messagePlus.getPendingFileAttachments();
+        if(attachments != null) {
+            for(String pendingFileId : attachments.keySet()) {
+                insertOrReplacePendingFileAttachment(pendingFileId, message.getId(), message.getChannelId(), attachments.get(pendingFileId).isOEmbed());
+            }
         }
     }
 
