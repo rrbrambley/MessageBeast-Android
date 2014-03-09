@@ -53,6 +53,7 @@ public class ADNDatabase {
 
     public static final String TABLE_MESSAGE_DRAFTS = "message_drafts";
     public static final String COL_MESSAGE_DRAFT_ID = "message_draft_id";
+    public static final String COL_MESSAGE_DRAFT_CHANNEL_ID = "message_draft_channel_id";
     public static final String COL_MESSAGE_DRAFT_DATE = "message_draft_date";
     public static final String COL_MESSAGE_DRAFT_JSON = "message_draft_json";
 
@@ -165,10 +166,11 @@ public class ADNDatabase {
     private static final String INSERT_OR_REPLACE_MESSAGE_DRAFT = "INSERT OR REPLACE INTO " + TABLE_MESSAGE_DRAFTS +
             " (" +
             COL_MESSAGE_DRAFT_ID + ", " +
+            COL_MESSAGE_DRAFT_CHANNEL_ID + ", " +
             COL_MESSAGE_DRAFT_DATE + ", " +
             COL_MESSAGE_DRAFT_JSON +
             ") " +
-            "VALUES(?, ?, ?)";
+            "VALUES(?, ?, ?, ?)";
 
     private static final String INSERT_MESSAGE_SEARCH_TEXT = "INSERT INTO " + TABLE_MESSAGES_SEARCH +
             " (docid, " + COL_MESSAGE_MESSAGE_ID + ", " + COL_MESSAGE_CHANNEL_ID + ", " + COL_MESSAGE_TEXT + ") " +
@@ -394,8 +396,9 @@ public class ADNDatabase {
         try {
             Message message = messagePlus.getMessage();
             mInsertOrReplaceMessageDraft.bindString(1, message.getId());
-            mInsertOrReplaceMessageDraft.bindLong(2, messagePlus.getDisplayDate().getTime());
-            mInsertOrReplaceMessageDraft.bindString(3, mGson.toJson(message));
+            mInsertOrReplaceMessageDraft.bindString(2, message.getChannelId());
+            mInsertOrReplaceMessageDraft.bindLong(3, messagePlus.getDisplayDate().getTime());
+            mInsertOrReplaceMessageDraft.bindString(4, mGson.toJson(message));
 
             mDatabase.setTransactionSuccessful();
         } catch(Exception e) {

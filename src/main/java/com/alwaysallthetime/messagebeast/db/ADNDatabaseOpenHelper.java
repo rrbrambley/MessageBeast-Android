@@ -21,7 +21,8 @@ public class ADNDatabaseOpenHelper extends SQLiteOpenHelper {
             ")";
 
     private static final String CREATE_MESSAGE_DRAFTS_TABLE = "CREATE TABLE IF NOT EXISTS " + ADNDatabase.TABLE_MESSAGE_DRAFTS + "(" +
-            ADNDatabase.COL_MESSAGE_DRAFT_ID + " STRING PRIMARY KEY, " +
+            ADNDatabase.COL_MESSAGE_DRAFT_ID + " TEXT PRIMARY KEY, " +
+            ADNDatabase.COL_MESSAGE_DRAFT_CHANNEL_ID + " TEXT NOT NULL, " +
             ADNDatabase.COL_MESSAGE_DRAFT_DATE + " INTEGER NOT NULL, " +
             ADNDatabase.COL_MESSAGE_DRAFT_JSON + " TEXT NOT NULL " +
             ")";
