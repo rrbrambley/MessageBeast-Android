@@ -302,6 +302,8 @@ public class ChannelSyncManager {
     /**
      * Delete a MessagePlus and any Action Messages associated with it.
      *
+     * This works with all MessagePlusses - whether sent or unsent, or even if it's a draft.
+     *
      * If the provided MessagePlus has files associated with it, they will not be deleted by this
      * method.
      *
@@ -314,6 +316,8 @@ public class ChannelSyncManager {
     /**
      * Delete a MessagePlus and any Action Messages associated with it.
      *
+     * This works with all MessagePlusses - whether sent or unsent, or even if it's a draft.
+     *
      * @param messagePlus the target MessagePlus to be deleted.
      * @param deleteAssociatedFiles true if the target MessagePlus' associated files should be deleted,
      *                              false otherwise.
@@ -325,6 +329,8 @@ public class ChannelSyncManager {
     /**
      * Delete a MessagePlus and any Action Messages associated with it.
      *
+     * This works with all MessagePlusses - whether sent or unsent, or even if it's a draft.
+     *
      * The response handler is used to indicate the completion of the target MessagePlus deletion,
      * i.e. the action messages are not guaranteed to be deleted before the response handler is called.
      *
@@ -333,7 +339,20 @@ public class ChannelSyncManager {
      *                              false otherwise.
      * @param handler The MessageDeletionResponseHandler. Can be null.
      */
-    public void deleteMessageAndAssociatedActionMessages(final MessagePlus messagePlus, boolean deleteAssociatedFiles, final MessageManager.MessageDeletionResponseHandler handler) {
+    public void deleteMessageAndAssociatedActionMessages(MessagePlus messagePlus, boolean deleteAssociatedFiles, final MessageManager.MessageDeletionResponseHandler handler) {
+        deleteAssociatedActionMessages(messagePlus);
+
+        if(messagePlus.isDraft()) {
+            mMessageManager.deleteMessageDraft(messagePlus);
+            if(handler != null) {
+                handler.onSuccess();
+            }
+        } else {
+            mMessageManager.deleteMessage(messagePlus, deleteAssociatedFiles, handler);
+        }
+    }
+
+    private void deleteAssociatedActionMessages(MessagePlus messagePlus) {
         ADNDatabase db = ADNDatabase.getInstance(ADNApplication.getContext());
         List<ActionMessageSpec> actionMessageSpecs = db.getActionMessageSpecsForTargetMessage(messagePlus.getMessage().getId());
 
@@ -348,7 +367,6 @@ public class ChannelSyncManager {
                 mMessageManager.deleteMessage(mp);
             }
         }
-        mMessageManager.deleteMessage(messagePlus, deleteAssociatedFiles, handler);
     }
 
     private void retrieveNewestMessagesInChannelsList(final int index, final ChannelRefreshResultSet refreshResultSet, final ChannelRefreshHandler refreshHandler) {

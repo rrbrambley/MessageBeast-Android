@@ -470,6 +470,36 @@ public class MessageManager {
     }
 
     /**
+     * Get a Message draft.
+     *
+     * The Message will be returned after performing DisplayLocation and OEmbed lookup, provided those
+     * features are enabled in the MessageManagerConfiguration.
+     *
+     * @param messageDraftId the id of the Message draft
+     * @return a MessagePlus if a draft with the specified id exist, null otherwise.
+     */
+    public MessagePlus getMessageDraft(String messageDraftId) {
+        MessagePlus messageDraft = mDatabase.getMessageDraft(messageDraftId);
+        performLookups(messageDraft, false);
+        return messageDraft;
+    }
+
+    /**
+     * Get draft Messages for a Channel.
+     *
+     * Messages will be returned after performing DisplayLocation and OEmbed lookup, provided those
+     * features are enabled in the MessageManagerConfiguration.
+     *
+     * @param channelId the id of the the id of the Channel
+     * @return a List of MessagePlus objects ordered by reverse chronological creation date.
+     */
+    public List<MessagePlus> getMessageDrafts(String channelId) {
+        List<MessagePlus> messageDrafts = mDatabase.getMessageDrafts(channelId);
+        performLookups(messageDrafts, false);
+        return messageDrafts;
+    }
+
+    /**
      * Load a persisted Message without keeping it in MessageManager memory.
      *
      * The Message will be returned after performing DisplayLocation and OEmbed lookup, provided those
@@ -1075,6 +1105,43 @@ public class MessageManager {
     }
 
     /**
+     * Create a draft MessagePlus and persist it to the the database.
+     *
+     * Although drafts are considered "unsent," they will not be sent by sendAllUnsent().
+     *
+     * Additionally, draft MessagePlus objects will not have annotations or hashtags extracted.
+     *
+     * @param channelId the id of the Channel in which the Message should be created.
+     * @param message The Message to be created.
+     * @return the draft MessagePlus that was created and persisted.
+     */
+    public synchronized MessagePlus createMessageDraft(final String channelId, Message message) {
+        return createMessageDraft(channelId, message, new ArrayList<PendingFileAttachment>(0));
+    }
+
+    /**
+     * Create a draft MessagePlus that requires pending files to be uploaded prior to creation.
+     *
+     * Although drafts are considered "unsent," they will not be sent by sendAllUnsent().
+     *
+     * Additionally, draft MessagePlus objects will not have annotations or hashtags extracted.
+     *
+     * @param channelId the id of the Channel in which the Message should be created.
+     * @param message The Message to be created.
+     * @return the draft MessagePlus that was created and persisted.
+     */
+    public synchronized MessagePlus createMessageDraft(String channelId, Message message, List<PendingFileAttachment> pendingFileAttachments) {
+        String newMessageIdString = UUID.randomUUID().toString();
+        MessagePlus.UnsentMessagePlusBuilder unsentBuilder = MessagePlus.UnsentMessagePlusBuilder.newBuilder(channelId, newMessageIdString, message);
+        for(PendingFileAttachment attachment : pendingFileAttachments) {
+            unsentBuilder.addPendingFileAttachment(attachment);
+        }
+        final MessagePlus messagePlus = unsentBuilder.build();
+        mDatabase.insertOrReplaceMessageDraft(messagePlus);
+        return messagePlus;
+    }
+
+    /**
      * Delete a Message. If the specified Message is unsent, it will simply be deleted from the local
      * sqlite database and no server request is required.
      *
@@ -1162,6 +1229,15 @@ public class MessageManager {
                 runnable.run();
             }
         }
+    }
+
+    /**
+     * Delete a Message draft.
+     *
+     * @param messagePlus the draft to delete.
+     */
+    public void deleteMessageDraft(MessagePlus messagePlus) {
+        mDatabase.deleteMessageDraft(messagePlus);
     }
 
     private synchronized void deleteOEmbed(final int index, final List<Annotation> oEmbedAnnotations, final Runnable completionRunnable) {
