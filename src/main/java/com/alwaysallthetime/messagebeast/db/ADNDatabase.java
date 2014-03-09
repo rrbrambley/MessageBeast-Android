@@ -392,14 +392,14 @@ public class ADNDatabase {
         if(mInsertOrReplaceMessageDraft == null) {
             mInsertOrReplaceMessageDraft = mDatabase.compileStatement(INSERT_OR_REPLACE_MESSAGE_DRAFT);
         }
-
+        mDatabase.beginTransaction();
         try {
             Message message = messagePlus.getMessage();
             mInsertOrReplaceMessageDraft.bindString(1, message.getId());
             mInsertOrReplaceMessageDraft.bindString(2, message.getChannelId());
             mInsertOrReplaceMessageDraft.bindLong(3, messagePlus.getDisplayDate().getTime());
             mInsertOrReplaceMessageDraft.bindString(4, mGson.toJson(message));
-
+            mInsertOrReplaceMessageDraft.execute();
             mDatabase.setTransactionSuccessful();
         } catch(Exception e) {
             Log.e(TAG, e.getMessage(), e);
