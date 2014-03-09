@@ -8,7 +8,16 @@ import java.util.Calendar;
 import java.util.Date;
 
 public class ConfigurationUtility {
-    public static void updateConfiguration(AppDotNetClient client) {
+
+    /**
+     * Update the Configuration if due.
+     *
+     * http://developers.app.net/docs/resources/config/#how-to-use-the-configuration-object
+     *
+     * @param client the AppDotNetClient to use for the request
+     * @return true if the configuration is being fetched, false otherwise.
+     */
+    public static boolean updateConfiguration(AppDotNetClient client) {
         Date configurationSaveDate = ADNSharedPreferences.getConfigurationSaveDate();
         boolean fetchNewConfig = configurationSaveDate == null;
         if(!fetchNewConfig) {
@@ -28,5 +37,6 @@ public class ConfigurationUtility {
                 }
             });
         }
+        return fetchNewConfig;
     }
 }
