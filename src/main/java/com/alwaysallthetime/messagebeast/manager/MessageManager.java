@@ -1189,7 +1189,7 @@ public class MessageManager {
                 @Override
                 public void run() {
                     mDatabase.insertOrReplacePendingMessageDeletion(messagePlus);
-                    mDatabase.deleteMessage(messagePlus); //this one because the deleted one doesn't have the entities.
+                    mDatabase.deleteMessage(messagePlus);
                     deleteMessageFromChannelMapAndUpdateMinMaxPair(messagePlus);
 
                     mClient.deleteMessage(messagePlus.getMessage(), new MessageResponseHandler() {
@@ -1215,7 +1215,6 @@ public class MessageManager {
                 }
             };
 
-            mDatabase.insertOrReplacePendingMessageDeletion(messagePlus);
             if(deleteAssociatedFiles) {
                 List<Annotation> oEmbeds = messagePlus.getMessage().getAnnotationsOfType(Annotations.OEMBED);
                 deleteOEmbed(0, oEmbeds, new Runnable() {
