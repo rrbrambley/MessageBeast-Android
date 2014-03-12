@@ -911,6 +911,13 @@ public class ADNDatabase {
         return actionMessageSpecs;
     }
 
+    /**
+     * Get a PendingFile by id
+     *
+     * @param id the id of the PendingFile
+     * @return a PendingFile with the specified id, or null if no PendingFile with the specified id
+     * exists.
+     */
     public PendingFile getPendingFile(String id) {
         Cursor cursor = null;
         PendingFile file = null;
@@ -940,6 +947,13 @@ public class ADNDatabase {
         return file;
     }
 
+    /**
+     * Get a List of PendingFileAttachment objects for the message with the specified id.
+     *
+     * @param messageId the id of the message
+     * @return a List of PendingFileAttachments. It will be empty if no pending file attachments
+     * are associated with the provided message id.
+     */
     public List<PendingFileAttachment> getPendingFileAttachments(String messageId) {
         ArrayList<PendingFileAttachment> pendingAttachments = new ArrayList<PendingFileAttachment>();
         Cursor cursor = null;
@@ -1577,6 +1591,15 @@ public class ADNDatabase {
         return instances;
     }
 
+    /**
+     * Get an OrderedMessageBatch containing Messages whose text matches the specified search
+     * query.
+     *
+     * @param channelId the id of the channel in which to search
+     * @param query the search query
+     * @return an OrderedMessageBatch containing Messages whose text matches the specified search
+     * query.
+     */
     public OrderedMessageBatch searchForMessages(String channelId, String query) {
         String where = COL_MESSAGE_CHANNEL_ID + " = ? AND " + COL_MESSAGE_TEXT + " MATCH ?";
         String[] args = new String[] { channelId, query };
@@ -1598,6 +1621,15 @@ public class ADNDatabase {
         return getMessages(messageIds);
     }
 
+    /**
+     * Get an OrderedMessageBatch containing Messages whose DisplayLocation name matches the specified search
+     * query.
+     *
+     * @param channelId the id of the channel in which to search
+     * @param query the search query
+     * @return an OrderedMessageBatch containing Messages whose DisplayLocation name matches the specified search
+     * query.
+     */
     public OrderedMessageBatch searchForMessagesByDisplayLocation(String channelId, String query) {
         String where = COL_LOCATION_INSTANCE_CHANNEL_ID + " = ? AND " + COL_LOCATION_INSTANCE_NAME + " MATCH ?";
         String[] args = new String[] { channelId, query };
@@ -1619,6 +1651,12 @@ public class ADNDatabase {
         return getMessages(messageIds);
     }
 
+    /**
+     * Get a single MessagePlus by Message id
+     *
+     * @param messageId the id of the Message
+     * @return a MessagePlus corresponding to the specified messageId, or null if none exists.
+     */
     public MessagePlus getMessage(String messageId) {
         HashSet<String> ids = new HashSet<String>(1);
         ids.add(messageId);
@@ -1656,6 +1694,13 @@ public class ADNDatabase {
         return getMessages(where, args, orderBy, null);
     }
 
+    /**
+     * Get Messages in a Channel. This returns Messages in reverse chronological order.
+     *
+     * @param channelId the id of the Channel
+     * @param limit the maximum number of Messages to return
+     * @return an OrderedMessagesBatch containing messages in the specified Channel.
+     */
     public OrderedMessageBatch getMessages(String channelId, int limit) {
         return getMessages(channelId, null, limit);
     }
