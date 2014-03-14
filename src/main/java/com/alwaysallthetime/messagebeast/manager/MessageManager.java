@@ -226,7 +226,6 @@ public class MessageManager {
         mMessagesNeedingPendingFiles.clear();
         mParameters.clear();
         mMinMaxPairs.clear();
-        mMessagesNeedingPendingFiles.clear();
     }
 
     /**
