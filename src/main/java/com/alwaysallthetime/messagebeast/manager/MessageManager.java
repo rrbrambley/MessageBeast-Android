@@ -1625,7 +1625,7 @@ public class MessageManager {
         QueryParameters params = (QueryParameters) mParameters.get(channelId).clone();
         params.put("since_id", sinceId);
         params.put("before_id", beforeId);
-        return retrieveMessages(params, messageFilter, channelId, true, handler);
+        return retrieveMessages(params, messageFilter, channelId, false, handler);
     }
 
     private synchronized void sendUnsentMessages(final TreeMap<Long, MessagePlus> unsentMessages, final ArrayList<String> sentMessageIds, final ArrayList<String> replacementMessageIds) {
@@ -1822,7 +1822,7 @@ public class MessageManager {
     private synchronized boolean retrieveMessages(final QueryParameters queryParameters,
                                                   final MessageFilter filter,
                                                   final String channelId,
-                                                  final boolean keepInMemory,
+                                                  final boolean forceKeepInMemory,
                                                   final MessageManagerResponseHandler handler) {
         TreeMap<Long, MessagePlus> unsentMessages = getUnsentMessages(channelId);
         HashMap<String, PendingMessageDeletion> pendingMessageDeletions = mDatabase.getPendingMessageDeletions(channelId);
@@ -1838,16 +1838,28 @@ public class MessageManager {
 
                 newFullChannelMessagesMap.putAll(channelMessages);
 
+                MinMaxPair minMaxPair = getMinMaxPair(channelId);
+                
                 for(Message m : responseData) {
                     MessagePlus messagePlus = new MessagePlus(m);
                     Date date = adjustDate(messagePlus);
-                    newestMessagesMap.put(date.getTime(), messagePlus);
-                    newFullChannelMessagesMap.put(date.getTime(), messagePlus);
+
+                    long time = date.getTime();
+                    newestMessagesMap.put(time, messagePlus);
+
+                    //only keep messages in memory if they are newer than the ones
+                    //we currently have in memory. so, if nothing is in memory for this
+                    //channel, then we don't keep any of these in memory.
+                    //(unless forceKeepMemory == true)
+                    if(forceKeepInMemory || (minMaxPair.maxDate != null && time > minMaxPair.maxDate)) {
+                        newFullChannelMessagesMap.put(time, messagePlus);
+                    }
                 }
 
                 if(filter != null) {
                     TreeMap<Long, MessagePlus> excludedResults = filter.getExcludedResults(newestMessagesMap);
                     removeExcludedMessages(newFullChannelMessagesMap, excludedResults);
+                    removeExcludedMessages(newestMessagesMap, excludedResults);
                     if(handler != null) {
                         handler.setExcludedResults(excludedResults);
                     }
@@ -1861,20 +1873,22 @@ public class MessageManager {
                     insertIntoDatabase(messagePlus);
 
                     Long time = messagePlus.getDisplayDate().getTime();
-                    if(minDate == null || time < minDate) {
-                        minDate = time;
-                    }
-                    if(maxDate == null || time > maxDate) {
-                        maxDate = time;
+
+                    //only consider this a candidate for a min/max if
+                    //we kept it in the newFullChannelMessagesMap - a couple steps above.
+                    if(newFullChannelMessagesMap.containsKey(time)) {
+                        if(minDate == null || time < minDate) {
+                            minDate = time;
+                        }
+                        if(maxDate == null || time > maxDate) {
+                            maxDate = time;
+                        }
                     }
                 }
 
-                if(keepInMemory) {
-                    mMessages.put(channelId, newFullChannelMessagesMap);
-
-                    MinMaxPair minMaxPair = getMinMaxPair(channelId);
-                    minMaxPair.updateWithCombinedValues(new MinMaxPair(getMinId(), getMaxId(), minDate, maxDate));
-                }
+                //the important stuff.
+                mMessages.put(channelId, newFullChannelMessagesMap);
+                minMaxPair.updateWithCombinedValues(new MinMaxPair(getMinId(), getMaxId(), minDate, maxDate));
 
                 ArrayList<MessagePlus> newestMessages = new ArrayList<MessagePlus>(responseData.size());
                 newestMessages.addAll(newestMessagesMap.values());
