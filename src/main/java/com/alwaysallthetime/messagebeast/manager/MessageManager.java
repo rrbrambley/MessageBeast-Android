@@ -1661,14 +1661,22 @@ public class MessageManager {
 
                 deleteMessageFromChannelMapAndUpdateMinMaxPair(messagePlus);
 
+                MinMaxPair minMaxPair = getMinMaxPair(channelId);
                 MessagePlus newMessagePlus = new MessagePlus(newMessage);
                 Date date = adjustDate(newMessagePlus);
                 performLookups(newMessagePlus, true);
                 insertIntoDatabase(newMessagePlus);
-                getChannelMessages(channelId).put(date.getTime(), newMessagePlus);
-                MinMaxPair minMaxPair = getMinMaxPair(channelId);
-                minMaxPair.expandDateIfMinOrMax(date.getTime());
-                minMaxPair.expandIdIfMinOrMax(newMessageId);
+                TreeMap<Long, MessagePlus> channelMessages = getChannelMessages(channelId);
+
+                //just like with retrieveMessages(), only keep this message in memory if
+                //it is replacing an existing message in memory, or if the date is greater
+                //than the current min date in memory.
+                long time = date.getTime();
+                if(channelMessages.containsKey(time) || (minMaxPair.minDate != null && time >= minMaxPair.minDate)) {
+                    channelMessages.put(time, newMessagePlus);
+                    minMaxPair.expandDateIfMinOrMax(time);
+                    minMaxPair.expandIdIfMinOrMax(newMessageId);
+                }
 
                 if(unsentMessages.size() > 0) {
                     sendUnsentMessages(unsentMessages, sentMessageIds, replacementMessageIds);
