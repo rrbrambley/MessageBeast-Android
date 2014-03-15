@@ -1325,7 +1325,11 @@ public class ADNDatabase {
             String[] args = new String[] { query };
             cursor = mDatabase.query(TABLE_LOCATION_INSTANCES_SEARCH, new String[] { COL_LOCATION_INSTANCE_NAME }, where, args, null, null, null, null);
             while(cursor.moveToNext()) {
-                placeNames.add(cursor.getString(0));
+                String placeName = cursor.getString(0);
+                //TODO: figure out why placeName is sometimes null.
+                if(placeName != null) {
+                    placeNames.add(placeName);
+                }
             }
         } catch(Exception e) {
             Log.e(TAG, e.getMessage(), e);
@@ -1336,7 +1340,7 @@ public class ADNDatabase {
         }
 
         ArrayList<Place> places = new ArrayList<Place>();
-        if(placeNames.size() > 0){
+        if(placeNames.size() > 0) {
             try {
                 String where = COL_PLACE_NAME + " IN (";
                 String[] args = new String[placeNames.size() + (excludeCustom ? 1 : 0)];
@@ -1348,7 +1352,7 @@ public class ADNDatabase {
                     if(index > 0) {
                         where += ", ?";
                     } else {
-                        where += " ?";
+                        where += "?";
                     }
                     index++;
                 }
