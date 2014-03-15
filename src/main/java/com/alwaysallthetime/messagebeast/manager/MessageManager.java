@@ -1851,7 +1851,7 @@ public class MessageManager {
                     //we currently have in memory. so, if nothing is in memory for this
                     //channel, then we don't keep any of these in memory.
                     //(unless forceKeepMemory == true)
-                    if(forceKeepInMemory || (minMaxPair.maxDate != null && time > minMaxPair.maxDate)) {
+                    if(forceKeepInMemory || (minMaxPair.minDate != null && time >= minMaxPair.minDate)) {
                         newFullChannelMessagesMap.put(time, messagePlus);
                     }
                 }
