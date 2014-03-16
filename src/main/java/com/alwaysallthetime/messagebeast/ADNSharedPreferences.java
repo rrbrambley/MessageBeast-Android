@@ -118,6 +118,10 @@ public class ADNSharedPreferences {
         editor.commit();
     }
 
+    public static void deleteUser(String userId) {
+        sPrefs.edit().remove(USER_OBJECT + "_" + userId).commit();
+    }
+
     public static Channel getPrivateChannel(String channelType) {
         final String json = sPrefs.getString(CHANNEL_OBJECT + "_" + channelType, null);
         if(json != null) {
