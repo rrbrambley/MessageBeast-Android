@@ -316,6 +316,15 @@ public class ADNDatabase {
         mGson = AppDotNetGson.getPersistenceInstance();
     }
 
+    /**
+     * Insert a pending file attachment. A pending file attachment consists of a pending file
+     * that will be attached to a Message.
+     *
+     * @param pendingFileId the id of the pending file
+     * @param messageId the id of the Message
+     * @param channelId the id of the Channel
+     * @param isOEmbed true if this attachment is an OEmbed, false otherwise.
+     */
     private void insertOrReplacePendingFileAttachment(String pendingFileId, String messageId, String channelId, boolean isOEmbed) {
         if(mInsertOrReplacePendingFileAttachment == null) {
             mInsertOrReplacePendingFileAttachment = mDatabase.compileStatement(INSERT_OR_REPLACE_PENDING_FILE_ATTACHMENT);
@@ -337,6 +346,11 @@ public class ADNDatabase {
         }
     }
 
+    /**
+     * Insert a MessagePlus.
+     *
+     * @param messagePlus the MessagePlus to insert.
+     */
     public void insertOrReplaceMessage(MessagePlus messagePlus) {
         if(mInsertOrReplaceMessage == null) {
             mInsertOrReplaceMessage = mDatabase.compileStatement(INSERT_OR_REPLACE_MESSAGE);
@@ -383,6 +397,12 @@ public class ADNDatabase {
         }
     }
 
+    /**
+     * Insert a Message draft. Message drafts are stored separately from Messages and are retrieved
+     * with their own getter methods.
+     *
+     * @param messagePlus the MessagePlus to store as a draft
+     */
     public void insertOrReplaceMessageDraft(MessagePlus messagePlus) {
         if(mInsertOrReplaceMessageDraft == null) {
             mInsertOrReplaceMessageDraft = mDatabase.compileStatement(INSERT_OR_REPLACE_MESSAGE_DRAFT);
@@ -436,6 +456,13 @@ public class ADNDatabase {
         }
     }
 
+    /**
+     * Examine the hashtags on the provided MessagePlus and insert its hashtags as hashtag
+     * instances.
+     *
+     * @param message
+     * @return a Map whose keys are hashtag names mapped to HashtagInstances objects.
+     */
     public Map<String, HashtagInstances> insertOrReplaceHashtagInstances(MessagePlus message) {
         HashMap<String, HashtagInstances> instances = new HashMap<String, HashtagInstances>();
         Message m = message.getMessage();
