@@ -1653,7 +1653,7 @@ public class MessageManager {
 
                 long sentMessageTime = messagePlus.getDisplayDate().getTime();
 
-                unsentMessages.remove(sentMessageTime);
+                MessagePlus removed = unsentMessages.remove(sentMessageTime);
                 sentMessageIds.add(message.getId());
                 replacementMessageIds.add(newMessageId);
 
@@ -1672,7 +1672,7 @@ public class MessageManager {
                 //it is replacing an existing message in memory, or if the date is greater
                 //than the current min date in memory.
                 long time = date.getTime();
-                if(channelMessages.containsKey(time) || (minMaxPair.minDate != null && time >= minMaxPair.minDate)) {
+                if(removed != null || minMaxPair.minDate == null || time >= minMaxPair.minDate) {
                     channelMessages.put(time, newMessagePlus);
                     minMaxPair.expandDateIfMinOrMax(time);
                     minMaxPair.expandIdIfMinOrMax(newMessageId);
@@ -1856,10 +1856,10 @@ public class MessageManager {
                     newestMessagesMap.put(time, messagePlus);
 
                     //only keep messages in memory if they are newer than the ones
-                    //we currently have in memory. so, if nothing is in memory for this
-                    //channel, then we don't keep any of these in memory.
+                    //we currently have in memory, or no messages are in memory, indicating
+                    //that there are no persisted messages.
                     //(unless forceKeepMemory == true)
-                    if(forceKeepInMemory || (minMaxPair.minDate != null && time >= minMaxPair.minDate)) {
+                    if(forceKeepInMemory || minMaxPair.minDate == null || time >= minMaxPair.minDate) {
                         newFullChannelMessagesMap.put(time, messagePlus);
                     }
                 }
