@@ -297,6 +297,12 @@ public class ADNDatabase {
     private SQLiteStatement mInsertOrReplaceActionMessageSpec;
     private Gson mGson;
 
+    /**
+     * Get a singleton instance of ADNDatabase
+     *
+     * @param context
+     * @return the singleton instance of ADNDatabase
+     */
     public static synchronized ADNDatabase getInstance(Context context) {
         if(sInstance == null) {
             sInstance = new ADNDatabase(context);
@@ -503,6 +509,14 @@ public class ADNDatabase {
         return instances;
     }
 
+    /**
+     * Insert a Geolocation.
+     *
+     * The inserted latiitude and longitude values for the provided Geolocation are rounded to
+     * three decimal points.
+     *
+     * @param geolocation the Geolocation to insert
+     */
     public void insertOrReplaceGeolocation(Geolocation geolocation) {
         if(mInsertOrReplaceGeolocation == null) {
             mInsertOrReplaceGeolocation = mDatabase.compileStatement(INSERT_OR_REPLACE_GEOLOCATION);
@@ -532,6 +546,11 @@ public class ADNDatabase {
         }
     }
 
+    /**
+     * Insert a Place. This may be a CustomPlace (user-defined).
+     *
+     * @param place the Place or CustomPlace to insert.
+     */
     public void insertOrReplacePlace(Place place) {
         if(mInsertOrReplacePlace == null) {
             mInsertOrReplacePlace = mDatabase.compileStatement(INSERT_OR_REPLACE_PLACE);
@@ -634,6 +653,14 @@ public class ADNDatabase {
         }
     }
 
+    /**
+     * Extract the Annotations of the provided type from the MessagePlus and insert a row for
+     * each instance in order to associate it with the provided message's ID. If no Annotations
+     * of the provided type are found, then this is a no-op.
+     *
+     * @param annotationType the type of Annotation
+     * @param messagePlus the MessagePlus form which Annotation instances will be stored.
+     */
     public void insertOrReplaceAnnotationInstances(String annotationType, MessagePlus messagePlus) {
         if(mInsertOrReplaceAnnotationInstance == null) {
             mInsertOrReplaceAnnotationInstance = mDatabase.compileStatement(INSERT_OR_REPLACE_ANNOTATION_INSTANCE);
@@ -663,10 +690,29 @@ public class ADNDatabase {
         }
     }
 
+    /**
+     * Insert a PendingFile.
+     *
+     * @param pendingFile the PendingFile to insert
+     */
     public void insertOrReplacePendingFile(PendingFile pendingFile) {
         insertOrReplacePendingFile(pendingFile.getId(), pendingFile.getUri().toString(), pendingFile.getType(), pendingFile.getName(), pendingFile.getMimeType(), pendingFile.getKind(), pendingFile.isPublic(), pendingFile.getNumSendAttempts());
     }
 
+    /**
+     * Insert a PendingFile with the provided fields.
+     *
+     * @param id the id of the PendingFile
+     * @param uri the location of the file
+     * @param type the file type, as required by App.net File objects
+     * @param name the file name
+     * @param mimeType the file MIMEType
+     * @param kind the file kind
+     * @param isPublic true if this file will be a public App.net File, false otherwise
+     * @param numSendAttempts the number of times we have attempted to send this file to App.net. This
+     *                        should be incremented upon send failures and thus serve as a way of
+     *                        determining whether a File may not be acceptable by App.net
+     */
     public void insertOrReplacePendingFile(String id, String uri, String type, String name, String mimeType, String kind, boolean isPublic, int numSendAttempts) {
         if(mInsertOrReplacePendingFile == null) {
             mInsertOrReplacePendingFile = mDatabase.compileStatement(INSERT_OR_REPLACE_PENDING_FILE);
@@ -697,6 +743,12 @@ public class ADNDatabase {
         }
     }
 
+    /**
+     * Insert a pending Message deletion for the provided MessagePlus
+     *
+     * @param messagePlus the MessagePlus containing the Message that should be deleted from the
+     *                    App.net servers.
+     */
     public void insertOrReplacePendingMessageDeletion(MessagePlus messagePlus) {
         if(mInsertOrReplacePendingMessageDeletion == null) {
             mInsertOrReplacePendingMessageDeletion = mDatabase.compileStatement(INSERT_OR_REPLACE_PENDING_MESSAGE_DELETION);
