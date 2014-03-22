@@ -2237,8 +2237,21 @@ public class ADNDatabase {
     }
 
     private double getRoundedValue(double value, int numDecimals) {
-        BigDecimal bigValue = new BigDecimal(value);
-        return bigValue.setScale(numDecimals, BigDecimal.ROUND_DOWN).doubleValue();
+        //if decimalPlaces = numDecimals, BigDecimal will round unnecessarily.
+        //TODO: this seems inefficient.
+        String text = Double.toString(Math.abs(value));
+        int integerPlaces = text.indexOf('.');
+        int decimalPlaces = 0;
+        if(integerPlaces != -1) {
+            decimalPlaces = text.length() - integerPlaces - 1;
+        }
+
+        if(decimalPlaces != numDecimals) {
+            BigDecimal bigValue = new BigDecimal(value);
+            return bigValue.setScale(numDecimals, BigDecimal.ROUND_DOWN).doubleValue();
+        } else {
+            return value;
+        }
     }
 
     //http://www.sqlite.org/optoverview.html#minmax
