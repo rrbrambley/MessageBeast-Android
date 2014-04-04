@@ -1653,6 +1653,11 @@ public class MessageManager {
 
                 long sentMessageTime = messagePlus.getDisplayDate().getTime();
 
+                //
+                //TODO: is using this "removed" in the if block below the right
+                //thing to be doing? how does that mean it's replacing an existing
+                //message in memory? add comment with explanation!
+                //
                 MessagePlus removed = unsentMessages.remove(sentMessageTime);
                 sentMessageIds.add(message.getId());
                 replacementMessageIds.add(newMessageId);
