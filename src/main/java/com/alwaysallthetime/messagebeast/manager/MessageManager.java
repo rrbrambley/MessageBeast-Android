@@ -1435,7 +1435,7 @@ public class MessageManager {
 
                     insertIntoDatabase(mPlus);
 
-                    if(channelMessages != null) { //could be null of channel messages weren't loaded first, etc.
+                    if(channelMessages != null && channelMessages.containsKey(mPlus.getDisplayDate().getTime())) { //could be null of channel messages weren't loaded first, etc.
                         channelMessages.put(mPlus.getDisplayDate().getTime(), mPlus);
                     }
 
